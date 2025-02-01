@@ -37,12 +37,12 @@ void fuhe::io::TumToStamps(const std::string& tum_file, std::vector<double>& tim
 void fuhe::io::TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>& out_poses) {
   // -------------------- Parse tum file with reader object
   tum_benchmark::FileReader<EntryFormat> reader(tum_file);
-  tum_benchmark::FileReader<EntryFormat> rDistCopy(
+  tum_benchmark::FileReader<EntryFormat> r_dist_copy(
       tum_file);  // duplicate of reader for getting total number of poses since reader does not properly work with std::distance
 
   // -------------------- Allocate output vectors with number of total poses
   // Get total number of poses
-  int nPoses = std::distance(rDistCopy.begin(), rDistCopy.end());  // NOTE: reader iterator useless after distance operation.
+  int nPoses = std::distance(r_dist_copy.begin(), r_dist_copy.end());  // NOTE: reader iterator useless after distance operation.
   out_poses.resize(nPoses);
 
   // -------------------- Iterate over all tum poses
