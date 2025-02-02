@@ -33,23 +33,15 @@ find_package(Ceres REQUIRED)
 # apt installed eigen3
 find_package(Eigen3 REQUIRED)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(${CERES_INCLUDE_DIRS})
 include_directories(colmap::colmap)
 
-set(SOURCES
-    src/fusion_helper/io.cpp
-    src/fusion_helper/col_utils.cpp
-    src/high_level_fusion/fusion_graph_interface.cpp
-)
-
-# Define our repo as custom library
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+# make dependencies from above available as library to all submodules
+add_library(${PROJECT_NAME} INTERFACE)
 # link external colmap to our custom library
-target_link_libraries(${PROJECT_NAME} PUBLIC colmap::colmap)
+target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap)
 
-
-# Build the executable
-add_executable(metric_odom_bundle_adjust src/high_level_fusion/metric_odom_bundle_adjust.cpp)
-target_link_libraries(metric_odom_bundle_adjust ${PROJECT_NAME};${glog_LIBRARIES})
+# add submodules which contain the actual code
+add_subdirectory(src/fusion_helper)
+# add_subdirectory(src/high_level_fusion)
