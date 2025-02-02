@@ -16,6 +16,7 @@
 #include "fusion_helper/types.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <colmap/geometry/rigid3.h>
 #include <stdlib.h>
 
 typedef tum_benchmark::FileReader<tum_benchmark::Trajectory> TumPoseReader;
@@ -61,5 +62,7 @@ void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>
  */
 void TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec& out_poses_map, const bool cut_precision = true);
 
+
+void Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool inv = false);
 }  // namespace io
 }  // namespace fuhe

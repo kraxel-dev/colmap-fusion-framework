@@ -2,6 +2,7 @@
 
 #include "fusion_helper/tum_benchmark/eigen_support.hpp"
 #include <Eigen/src/Geometry/Transform.h>
+#include <glog/logging.h>
 
 typedef tum_benchmark::Trajectory EntryFormat;
 
@@ -72,4 +73,23 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
     }
     out_poses_map[stamp] = poses.at(i);
   }
+}
+
+void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool inv) {
+  std::fstream outFile(tum_file, std::istream::out);
+
+  VLOG(2) << "Exporting trajectory to : " << tum_file;
+
+  int n = 0;
+  // write each optimized pose into _fumfile
+  for (const colmap::Rigid3d T : X) {
+    // invert pose if desired (remember that colmap poses are world poses expressed in camera frame)
+    const colmap::Rigid3d outPose = (inv) ? colmap::Inverse(T) : T;
+    // write write write
+    outFile << n << " " << outPose.translation.x() << " " << outPose.translation.y() << " " << outPose.translation.z() << " "
+            << outPose.rotation.x() << " " << outPose.rotation.y() << " " << outPose.rotation.z() << " " << outPose.rotation.w() << '\n';
+    n++;
+  }
+
+  outFile.close();
 }
