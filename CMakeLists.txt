@@ -40,9 +40,16 @@ include_directories(colmap::colmap)
 
 set(SOURCES
     src/fusion_helper/io.cpp
+    src/fusion_helper/col_utils.cpp
+    src/high_level_fusion/fusion_graph_interface.cpp
 )
 
 # Define our repo as custom library
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 # link external colmap to our custom library
 target_link_libraries(${PROJECT_NAME} PUBLIC colmap::colmap)
+
+
+# Build the executable
+add_executable(metric_odom_bundle_adjust src/high_level_fusion/metric_odom_bundle_adjust.cpp)
+target_link_libraries(metric_odom_bundle_adjust ${PROJECT_NAME};${glog_LIBRARIES})
