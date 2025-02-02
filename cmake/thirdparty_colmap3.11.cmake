@@ -27,7 +27,7 @@ ExternalProject_Add(
     SOURCE_DIR ${PREFIX_3RD_PARTY}/${PROJECT_NAME_AND_VERSION} # where repo will be cloned to
     BINARY_DIR ${PREFIX_3RD_PARTY}/${PROJECT_NAME_AND_VERSION}_build # build files for 3rd party colmap
     INSTALL_DIR ${INSTALL_PREFIX} # local install space
-    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX};-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX};-DCMAKE_EXPORT_COMPILE_COMMANDS=ON;-DBUILD_SHARED_LIBS=ON"
     BUILD_ALWAYS OFF  # prevent rebuilding unless necessary
     UPDATE_COMMAND ""  # also prevents rebuilding unless necessary
 
