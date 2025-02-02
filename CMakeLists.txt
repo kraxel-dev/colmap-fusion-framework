@@ -40,8 +40,8 @@ include_directories(colmap::colmap)
 # make dependencies from above available as library to all submodules
 add_library(${PROJECT_NAME} INTERFACE)
 # link external colmap to our custom library
-target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap)
+target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;${glog_LIBRARIES})
 
 # add submodules which contain the actual code
 add_subdirectory(src/fusion_helper)
-# add_subdirectory(src/high_level_fusion)
+add_subdirectory(src/high_level_fusion)
