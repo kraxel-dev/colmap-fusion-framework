@@ -78,7 +78,6 @@ std::vector<ceres::ResidualBlockId> hifuse::AddReprojectionFactor(const colmap::
   return reproj_residual_ids;
 }
 
-// TODO: check order covarinace matrix i to j or j to i
 ceres::ResidualBlockId hifuse::AddBetweenFactor(const colmap::image_t img_id_i,
                                                 const colmap::image_t img_id_j,
                                                 const Eigen::Isometry3d& i_from_j,
@@ -96,7 +95,7 @@ ceres::ResidualBlockId hifuse::AddBetweenFactor(const colmap::image_t img_id_i,
 
   // -------------------- Create between factor and add to problem
   ceres::ResidualBlockId
-      odom_residual_id;  // id for current odom factor such that we can refer to it in upstream code sections (e.g for residual evaluaten)
+      odom_residual_id;  // id for current odom factor such that we can refer to it in upstream code sections (e.g for residual evaluation)
 
   // convert raltive eigen pose to colmap format
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
@@ -118,8 +117,6 @@ ceres::ResidualBlockId hifuse::AddBetweenFactor(const colmap::image_t img_id_i,
 
   VLOG(3) << "Adding residual block to ceres graph!";
   // order of params: q_i, t_i, q_j, t_j
-  // ceres_graph->AddResidualBlock(weighted_cost_function, new ceres::HuberLoss(1.5), q_i, t_i, q_j, t_j);  // TODO: investiage loss
-  // function usage in this residual
   odom_residual_id = ceres_graph->AddResidualBlock(
       weighted_cost_function, nullptr, q_i, t_i, q_j, t_j);  // TODO: investiage loss function usage in this residual
 
