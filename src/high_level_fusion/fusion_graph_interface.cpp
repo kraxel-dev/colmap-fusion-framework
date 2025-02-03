@@ -81,7 +81,7 @@ std::vector<ceres::ResidualBlockId> hifuse::AddReprojectionFactor(const colmap::
 // TODO: check order covarinace matrix i to j or j to i
 ceres::ResidualBlockId hifuse::AddBetweenFactor(const colmap::image_t img_id_i,
                                                 const colmap::image_t img_id_j,
-                                                const Eigen::Affine3d& i_from_j,
+                                                const Eigen::Isometry3d& i_from_j,
                                                 const Eigen::Matrix<double, 6, 6> cov_i_from_j,
                                                 std::shared_ptr<ceres::Problem> ceres_graph,
                                                 std::shared_ptr<colmap::Reconstruction> model) {

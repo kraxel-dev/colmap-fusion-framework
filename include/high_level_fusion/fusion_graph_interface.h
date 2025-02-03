@@ -43,7 +43,7 @@ std::vector<ceres::ResidualBlockId> AddReprojectionFactor(const colmap::image_t 
 
 ceres::ResidualBlockId AddBetweenFactor(const colmap::image_t img_id_i,
                                         const colmap::image_t img_id_j,
-                                        const Eigen::Affine3d& i_from_j,
+                                        const Eigen::Isometry3d& i_from_j,
                                         const Eigen::Matrix<double, 6, 6> cov_i_from_j,
                                         std::shared_ptr<ceres::Problem> ceres_graph,
                                         std::shared_ptr<colmap::Reconstruction> model);
