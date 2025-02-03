@@ -7,15 +7,15 @@ set(CMAKE_COLOR_MAKEFILE ON)
 project(colmap_fusion_framework)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Include cmake to build third-party dependencies
+# include nested cmakes to build third-party dependencies
+include(cmake/thirdparty_rerun_sdk.cmake)
 include(cmake/thirdparty_colmap3.11.cmake)
+message(STATUS "Rerun_sdk build and install steps will be handled automatically and be kept local.")
 ExternalProject_Get_Property(colmap_3.11.1 SOURCE_DIR BINARY_DIR INSTALL_DIR)
-
 message(STATUS "Locaition for cloning original colmap 3.11.1 as 3rd party package: ${SOURCE_DIR}")
 message(STATUS "Build space will be: ${BINARY_DIR}")
 message(STATUS "Local install space will be: ${INSTALL_DIR}")
-
-# Notify cmake where to find locally installed colmap
+# notify cmake where to find locally installed colmap
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${INSTALL_DIR})
 
 # locally installed colmap from cmake file of this repo
@@ -43,5 +43,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;${glog_LIBRARIES})
 
 # add submodules which contain the actual code
+# NOTE: Respect order of adding the subdirectories, as they might depend on each other
 add_subdirectory(src/fusion_helper)
 add_subdirectory(src/high_level_fusion)
