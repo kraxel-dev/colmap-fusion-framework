@@ -1,10 +1,12 @@
 // TODO: write brief
 
+#include <ostream>
 #include <thread>
 
+#include "fusion_helper/io.h"
+#include "fusion_helper/stream_utils.h"
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/cov_utils.h"
-#include "fusion_helper/io.h"
 #include "high_level_fusion/fusion_graph_interface.h"
 #include <Eigen/Core>
 #include <ceres/problem.h>
@@ -12,6 +14,7 @@
 #include <colmap/util/file.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
@@ -112,8 +115,8 @@ int main(int argc, char** argv) {
       VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
 
       // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
-      const Eigen::Affine3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
-      VLOG(5) << "Relataive motion is: \n" << T_i_from_j.matrix();
+      const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
+      VLOG(5) << "Relataive motion is: " << T_i_from_j;
       
       // Define covariance of relative motion.
       Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * cov;

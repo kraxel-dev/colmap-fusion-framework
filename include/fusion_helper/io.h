@@ -4,9 +4,9 @@
  * @brief Helper functions for reading and writing tum trajectory data or other sensor / pose related files (imu, gps?)
  * @version 0.1
  * @date 2025-02-01
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
@@ -55,13 +55,12 @@ void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>
 
 /**
  * @brief Parse poses from tum trajectory file and store in a map, accessible and sorted by their timestamps in seconds
- * 
+ *
  * @param tum_file tum trajectory file path
  * @param out_poses_map map to store poses
  * @param cut_precision cut off precision of timestamps to x amount of digits specified by DIGIT_PRECISION
  */
 void TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec& out_poses_map, const bool cut_precision = true);
-
 
 void Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool inv = false);
 }  // namespace io
