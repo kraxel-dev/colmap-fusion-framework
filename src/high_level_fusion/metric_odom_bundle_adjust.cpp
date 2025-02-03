@@ -1,6 +1,9 @@
 // TODO: write brief
 
+#include <thread>
+
 #include "fusion_helper/col_utils.h"
+#include "fusion_helper/cov_utils.h"
 #include "fusion_helper/io.h"
 #include "high_level_fusion/fusion_graph_interface.h"
 #include <Eigen/Core>
@@ -15,13 +18,15 @@ int main(int argc, char** argv) {
   std::string input_path;
   std::string output_path;
   int max_consecutive_nonmonotonic_steps = 0;
-  double cov = 1;  // certainty for relative odometry. The smaller the stronger relative odometry is considered
+  double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
+  double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
 
   colmap::OptionManager col_options;
 
   col_options.AddRequiredOption("input_path", &input_path);
   col_options.AddRequiredOption("output_path", &output_path);
   col_options.AddDefaultOption("cov", &cov);
+  col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
   col_options.AddBundleAdjustmentOptions();
   col_options.Parse(argc, argv);
 
@@ -30,7 +35,7 @@ int main(int argc, char** argv) {
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  FLAGS_log_dir = "./../logs";
+  FLAGS_log_dir = "./../logs"; // TODO: fix log dir
 
   google::InitGoogleLogging(argv[0]);
 
@@ -80,7 +85,7 @@ int main(int argc, char** argv) {
     curr_img_stamp = pair.first;
     colmap::image_t curr_img_id = pair.second;
 
-    LOG(INFO) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
+    VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
 
     // -------------------- First iteration init condition
     if (i == 0) {
@@ -99,7 +104,6 @@ int main(int argc, char** argv) {
     }
 
     // -------------------- Add BA and rel pose factors to graph
-
     // add image to bundle adjustment with variable position and 3d points
     reprojection_error_ids.push_back(hifuse::AddReprojectionFactor(curr_img_id, ceres_problem, reconstruction, false, false, false));
 
@@ -109,23 +113,12 @@ int main(int argc, char** argv) {
 
       // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
       const Eigen::Affine3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
+      VLOG(5) << "Relataive motion is: \n" << T_i_from_j.matrix();
+      
       // Define covariance of relative motion.
       Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * cov;
-      // Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * 10000;
-      //   const double uncert_scale_rot = 1e+6;  // factor by which me multiply uncertain dimensions
-      //   const double uncert_scale_trans = 1e+3;
-
-      //   // -------------------- Tune covariance for wheel odom case (no informatin on vehicle roll and pitch)
-      //   // increase uncertainty for vehicle roll, pitch and non-forwards facing motion
-      //   // x axis rot local cam frame
-      //   covarince_i_from_j(0, 0) *= uncert_scale_rot;  // vehicle pitch is local x axis in camera frame
-      //   // z axis rot local cam frame
-      //   covarince_i_from_j(2, 2) *= uncert_scale_rot;  // vehicle roll is local z axis in camera frame
-      //   // FIXME
-      //   // x axis translat local cam frame
-      //   covarince_i_from_j(3, 3) *= uncert_scale_trans;  // motion along vehicle lateral is x axis of local camera frame
-      //   // y axis tranlats local cam frame
-      //   covarince_i_from_j(4, 4) *= uncert_scale_trans;  // motion along vehicle height is -y axis of local camera frame
+      // weight non local z-axis motion and rotation in relative odometry
+      fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
 
       // -------------------- Inlcude metric relative pose factor in BA
       colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
@@ -153,10 +146,11 @@ int main(int argc, char** argv) {
   }
 
   ceres::Solver::Options solver_options = col_options.bundle_adjustment->solver_options;
-  //   solver_options.num_threads = std::thread::hardware_concurrency();  // TODO: reactivate concurrency
+  solver_options.num_threads = std::thread::hardware_concurrency();
 
   solver_options.minimizer_progress_to_stdout = true;
 
+    //TODO: implement residual eval correctly
   // -------------------- Evaluate errors
   //   VLOG(3) << "Starting to calc absolute odom error in graph before optimization!";
   //   if (VLOG_IS_ON(3)) {
@@ -170,6 +164,7 @@ int main(int argc, char** argv) {
 
   VLOG(1) << summary.FullReport();
 
+    //TODO: implement residual eval correctly
   // --------------------Metrics after optim
   //   VLOG(3) << "Starting to calc absolute odom error in graph after optimization!";
   //   if (VLOG_IS_ON(3)) {
