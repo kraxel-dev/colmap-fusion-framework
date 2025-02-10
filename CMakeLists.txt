@@ -7,6 +7,9 @@ set(CMAKE_COLOR_MAKEFILE ON)
 project(colmap_fusion_framework)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# propagate building shared libraries to all fetched dependencies
+option(BUILD_SHARED_LIBS "Build shared libraries is: " ON)  # can be overridden by user from command line
+
 # include nested cmakes to build third-party dependencies
 include(cmake/thirdparty_rerun_sdk.cmake)
 include(cmake/thirdparty_colmap3.11.cmake)
@@ -22,6 +25,9 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${INSTALL_DIR})
 find_package(colmap 3.11.1 QUIET)
 if(NOT colmap_FOUND)
     message(WARNING "First run: Original colmap not yet built and installed locally as thirdparty module. CMake will stop here but has gathered info to fetch and install colmap. Run `make` to install colmap, then re-run this CMake again to build the actual repo.")
+    return() # gracefully exit the CMake script
+elseif(rerun_sdk_FOUND)
+    message(WARNING "First run: rerun_sdk not yet built and installed locally as thirdparty module. CMake will stop here but has gathered info to fetch and install rerun. Run `make` to install rerun, then re-run this CMake again to build the actual repo.")
     return() # gracefully exit the CMake script
 endif()
 
@@ -40,7 +46,7 @@ include_directories(colmap::colmap)
 # make dependencies from above available as library to all submodules
 add_library(${PROJECT_NAME} INTERFACE)
 # link external colmap to our custom library
-target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;${glog_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;rerun_sdk;${glog_LIBRARIES})
 
 # add submodules which contain the actual code
 # NOTE: Respect order of adding the subdirectories, as they might depend on each other

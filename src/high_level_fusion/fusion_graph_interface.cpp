@@ -68,9 +68,9 @@ std::vector<ceres::ResidualBlockId> hifuse::AddReprojectionFactor(const colmap::
       VLOG(5) << "x [px]: " << residuals[0] << " y [px]: " << residuals[1];
     }
 
-    // if user defined constant 3d point positions associated to this image
+    // if user doenst want 3d poisiton to be optimized in ceres problem
     if (const_3d_pts) {
-      //  Force 3d point to consant position
+      //  force 3d point to consant position
       ceres_graph->SetParameterBlockConstant(point3D.xyz.data());
       VLOG(2) << "Set 3d point of id " << point2D.point3D_id << " to constant!";
     }
