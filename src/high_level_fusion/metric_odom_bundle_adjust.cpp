@@ -8,7 +8,6 @@
 #include "fusion_helper/io.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
-
 #include <Eigen/Core>
 #include <ceres/problem.h>
 #include <colmap/controllers/option_manager.h>
@@ -23,6 +22,7 @@ int main(int argc, char** argv) {
   int max_consecutive_nonmonotonic_steps = 0;
   double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
+  bool log_to_rerun = true;         // whether to log data to rerun viewer
 
   colmap::OptionManager col_options;
 
@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("output_path", &output_path);
   col_options.AddDefaultOption("cov", &cov);
   col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
+  col_options.AddDefaultOption("rerun", &log_to_rerun);
   col_options.AddBundleAdjustmentOptions();
   col_options.Parse(argc, argv);
 
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  const std::string log_dir = fuhe::io::GetRepoRootDir() +  "/logs";
+  const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
   FLAGS_log_dir = log_dir;
   VLOG(3) << "Logging path is: " << log_dir;
 
@@ -76,8 +77,7 @@ int main(int argc, char** argv) {
   std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
 
   // -------------------- Create fusion interface object
-  bool is_rerun = true;
-  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, is_rerun);
+  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun);
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
   int i = 0;  // image iteration counter

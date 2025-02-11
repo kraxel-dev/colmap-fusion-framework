@@ -108,4 +108,7 @@ std::string fuhe::io::GetRepoRootDir() {
     }
     repo_root = repo_root.parent_path();
   }
+  
+  LOG(WARNING) << "Path to colmap_fusion_framework repo root dir not found. Returning path to currently run exe instead.";
+  return exe_path;
 }

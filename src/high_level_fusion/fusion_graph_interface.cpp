@@ -10,9 +10,11 @@ hifuse::FusionGraphInterface::FusionGraphInterface(std::shared_ptr<colmap::Recon
                                                    std::shared_ptr<ceres::Problem>& ceres_graph,
                                                    bool log_to_rerun)
     : log_to_rerun(log_to_rerun), ceres_graph(ceres_graph), reconstruction(reconstruction) {
-  if (log_to_rerun) {
-    InitRerunViewer();
+  if (!log_to_rerun) {
+    VLOG(2) << "Rerun logging and visualization turned off!";
+    return;
   }
+  InitRerunViewer();
 }
 
 void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t img_id,
@@ -133,6 +135,7 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Focal length of first camera in model: " << focal_length_x << " and " << focal_length_y;
   VLOG(2) << "Resolution of first camera in model: " << width << " and " << height;
 
+  // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole =
       std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}));
 }
