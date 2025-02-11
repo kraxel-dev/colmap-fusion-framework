@@ -3,10 +3,10 @@
 #include <ostream>
 #include <thread>
 
-#include "fusion_helper/io.h"
-#include "fusion_helper/stream_utils.h"
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/cov_utils.h"
+#include "fusion_helper/io.h"
+#include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
 #include <Eigen/Core>
 #include <ceres/problem.h>
@@ -14,7 +14,6 @@
 #include <colmap/util/file.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-
 
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
@@ -38,7 +37,7 @@ int main(int argc, char** argv) {
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  FLAGS_log_dir = "./../logs"; // TODO: fix log dir
+  FLAGS_log_dir = "./../logs";  // TODO: fix log dir
 
   google::InitGoogleLogging(argv[0]);
 
@@ -73,10 +72,9 @@ int main(int argc, char** argv) {
   // -------------------- Create Ceres problem
   std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
 
-  // define ids to obtain resiudals per type
-  std::vector<std::vector<ceres::ResidualBlockId>>
-      reprojection_error_ids;  // NOTE: each entry contains id for ALL reprojection residuals per image
-  std::vector<ceres::ResidualBlockId> odom_error_ids;
+  // -------------------- Create fusion interface object
+  bool is_rerun = true;
+  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, is_rerun);
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
   int i = 0;  // image iteration counter
@@ -97,7 +95,7 @@ int main(int argc, char** argv) {
         VLOG(1) << "Found matching pose in tumfile! Kickoff factor graph construction";
 
         // add image reference image to bundle adjustment and force constant position but variable 3d pts
-        reprojection_error_ids.push_back(hifuse::AddReprojectionFactor(curr_img_id, ceres_problem, reconstruction, true, true, false));
+        fusion_interface.AddReprojectionFactor(curr_img_id, true, true, false);
 
         // preparing next iteration
         prev_stamp = curr_img_stamp;
@@ -108,29 +106,32 @@ int main(int argc, char** argv) {
 
     // -------------------- Add BA and rel pose factors to graph
     // add image to bundle adjustment with variable position and 3d points
-    reprojection_error_ids.push_back(hifuse::AddReprojectionFactor(curr_img_id, ceres_problem, reconstruction, false, false, false));
+    fusion_interface.AddReprojectionFactor(curr_img_id, false, false, false);
+
+    // check if external odom is available for current image
+    if (metric_poses.find(curr_img_stamp) == metric_poses.end()) {
+      i++;
+      continue;
+    }
 
     // -------------------- Add relative odometry factor
-    if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
-      VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
+    VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
 
-      // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
-      const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
-      VLOG(5) << "Relataive motion is: " << T_i_from_j;
-      
-      // Define covariance of relative motion.
-      Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * cov;
-      // weight non local z-axis motion and rotation in relative odometry
-      fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
+    // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
+    const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
+    VLOG(5) << "Relataive motion is: " << T_i_from_j;
 
-      // -------------------- Inlcude metric relative pose factor in BA
-      colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
-      odom_error_ids.push_back(
-          hifuse::AddBetweenFactor(prev_img_id, curr_img_id, T_i_from_j, covarince_i_from_j, ceres_problem, reconstruction));
+    // Define covariance of relative motion.
+    Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * cov;
+    // weight non local z-axis motion and rotation in relative odometry
+    fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
 
-      // preparing next iteration
-      prev_stamp = curr_img_stamp;
-    }
+    // -------------------- Inlcude metric relative pose factor in BA
+    colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
+    fusion_interface.AddBetweenFactor(prev_img_id, curr_img_id, T_i_from_j, covarince_i_from_j);
+
+    // preparing next iteration
+    prev_stamp = curr_img_stamp;
     i++;
   }
 
@@ -153,7 +154,7 @@ int main(int argc, char** argv) {
 
   solver_options.minimizer_progress_to_stdout = true;
 
-    //TODO: implement residual eval correctly
+  // TODO: implement residual eval correctly
   // -------------------- Evaluate errors
   //   VLOG(3) << "Starting to calc absolute odom error in graph before optimization!";
   //   if (VLOG_IS_ON(3)) {
@@ -167,7 +168,7 @@ int main(int argc, char** argv) {
 
   VLOG(1) << summary.FullReport();
 
-    //TODO: implement residual eval correctly
+  // TODO: implement residual eval correctly
   // --------------------Metrics after optim
   //   VLOG(3) << "Starting to calc absolute odom error in graph after optimization!";
   //   if (VLOG_IS_ON(3)) {

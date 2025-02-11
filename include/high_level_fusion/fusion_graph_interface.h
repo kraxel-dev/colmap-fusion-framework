@@ -17,34 +17,46 @@
 
 #include <cstdlib>
 
+#include "high_level_fusion/collection_adapters.h"
 #include <ceres/problem.h>
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/exe/sfm.h>
+#include <rerun.hpp>
 
 namespace hifuse {  // high-level fusion
 
-/**
-* @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required by ceres for
-considering image pose as parameters for the optimization problem in the factor graph. Takes care of quaternion normalization for
-convenience.
+class FusionGraphInterface {
+ public:
+  FusionGraphInterface(std::shared_ptr<colmap::Reconstruction>& reconstruction, std::shared_ptr<ceres::Problem>& ceres_graph, bool log_to_rerun = true);
+  ~FusionGraphInterface() = default;
 
-* @param img Reference to colmap image whose pose we want retrieve as paramter for optimization.
-* @param q_c_from_w pointer to first quaternion value (double) in memory
-* @param t_c_from_w pointer to first translation value (double) in memory
-*/
-void GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_from_w);
+  void AddReprojectionFactor(const colmap::image_t img_id,
+                             const bool const_t = false,
+                             const bool const_q = false,
+                             const bool const_3d_pts = false);
 
-std::vector<ceres::ResidualBlockId> AddReprojectionFactor(const colmap::image_t img_id,
-                                                          std::shared_ptr<ceres::Problem> ceres_graph,
-                                                          std::shared_ptr<colmap::Reconstruction> reconstruction,
-                                                          const bool const_t = false,
-                                                          const bool const_q = false,
-                                                          const bool const_3d_pts = false);
+  void AddBetweenFactor(const colmap::image_t img_id_i,
+                        const colmap::image_t img_id_j,
+                        const Eigen::Isometry3d& i_from_j,
+                        const Eigen::Matrix<double, 6, 6> cov_i_from_j);
 
-ceres::ResidualBlockId AddBetweenFactor(const colmap::image_t img_id_i,
-                                        const colmap::image_t img_id_j,
-                                        const Eigen::Isometry3d& i_from_j,
-                                        const Eigen::Matrix<double, 6, 6> cov_i_from_j,
-                                        std::shared_ptr<ceres::Problem> ceres_graph,
-                                        std::shared_ptr<colmap::Reconstruction> model);
+  std::shared_ptr<ceres::Problem> GetCeresGraph() const { return this->ceres_graph; }
+  std::shared_ptr<colmap::Reconstruction> GetReconstruction() const { return this->reconstruction; }
+
+ private:
+  bool log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
+  std::shared_ptr<rerun::RecordingStream> rec = nullptr;  // rerun logger and viewer object
+  std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;  // rerun pinhole model representing the camera used in colmap model
+
+  std::shared_ptr<ceres::Problem> ceres_graph;             // ceres problem that acts as factor graph
+  std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction
+
+  std::vector<std::vector<ceres::ResidualBlockId>>
+      reproj_residual_ids;  // ceres ids for registerd reprojection factors for all images (each image has multiple residuals)
+  std::vector<ceres::ResidualBlockId>
+      odom_residual_ids;  // ceres ids for registerd odom factors such that we can perform residual evaluation
+
+  void InitRerunViewer();
+};
+
 }  // namespace hifuse

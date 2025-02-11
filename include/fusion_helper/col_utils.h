@@ -1,8 +1,8 @@
 // TODO: docstring
 #pragma once
 
-#include <set>
 #include <map>
+#include <set>
 
 #include <colmap/scene/reconstruction.h>
 
@@ -20,5 +20,15 @@ namespace col_utils {
 std::map<const double, colmap::image_t> ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
                                                         std::shared_ptr<colmap::Reconstruction> reconstruction);
 
+/**
+    * @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required by ceres
+    for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for
+    convenience.
+
+    * @param img Reference to colmap image whose pose we want retrieve as paramter for optimization.
+    * @param q_c_from_w pointer to first quaternion value (double) in memory
+    * @param t_c_from_w pointer to first translation value (double) in memory
+    */
+void GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_from_w);
 }  // namespace col_utils
 }  // namespace fuhe

@@ -31,3 +31,16 @@ std::map<const double, colmap::image_t> fuhe::col_utils::ImageIdsByStamp(const s
   }
   return ordered_image_stamps;
 }
+
+void fuhe::col_utils::GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_from_w) {
+  // -------------------- Recover pointers to image poses from colmap model
+  // recover image pose from colmap model
+
+  img.CamFromWorld().rotation.normalize();
+
+  // cam from world -> pose of world expressed in camera frame
+  q_c_from_w = img.CamFromWorld().rotation.coeffs().data();  // pointer to quaternion part of image pose.
+                                                             // represents ceres parameter pointer to position part of image pose.
+  t_c_from_w = img.CamFromWorld().translation.data();        // pointer to translation part of image pose.
+                                                             // represents ceres parameter pointer to position part of image pose.
+}
