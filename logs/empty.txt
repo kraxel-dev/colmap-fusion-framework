@@ -1,0 +1,1 @@
+# Place holder to force empty log folder in repository

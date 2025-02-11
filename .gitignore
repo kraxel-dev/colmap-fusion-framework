@@ -1,5 +1,6 @@
 ### Project Specific ###
 thirdparty/
+logs/
 
 ### C++ ###
 # Prerequisites

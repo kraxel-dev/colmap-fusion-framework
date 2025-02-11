@@ -8,6 +8,7 @@
 #include "fusion_helper/io.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
+
 #include <Eigen/Core>
 #include <ceres/problem.h>
 #include <colmap/controllers/option_manager.h>
@@ -37,7 +38,9 @@ int main(int argc, char** argv) {
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  FLAGS_log_dir = "./../logs";  // TODO: fix log dir
+  const std::string log_dir = fuhe::io::GetRepoRootDir() +  "/logs";
+  FLAGS_log_dir = log_dir;
+  VLOG(3) << "Logging path is: " << log_dir;
 
   google::InitGoogleLogging(argv[0]);
 

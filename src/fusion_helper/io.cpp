@@ -1,5 +1,7 @@
 #include "fusion_helper/io.h"
 
+#include <filesystem>
+
 #include "fusion_helper/tum_benchmark/eigen_support.hpp"
 #include <Eigen/src/Geometry/Transform.h>
 #include <glog/logging.h>
@@ -92,4 +94,18 @@ void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& 
   }
 
   outFile.close();
+}
+
+std::string fuhe::io::GetRepoRootDir() {
+  const std::filesystem::path exe_path = std::filesystem::current_path();  // Get the executable's working directory
+  std::filesystem::path repo_root = exe_path;                              // use exe path as startpoint
+
+  // Traverse up until we find a known root marker (e.g., .git directory)
+  while (repo_root.has_parent_path()) {
+    if (std::filesystem::exists(repo_root / ".git") && std::filesystem::exists(repo_root / "src") &&
+        std::filesystem::exists(repo_root / "include")) {  // check for root dir pattern of this repo
+      return repo_root;
+    }
+    repo_root = repo_root.parent_path();
+  }
 }

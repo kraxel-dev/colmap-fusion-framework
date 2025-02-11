@@ -63,5 +63,8 @@ void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>
 void TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec& out_poses_map, const bool cut_precision = true);
 
 void Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool inv = false);
+
+/// find root dir of current repo
+std::string GetRepoRootDir();
 }  // namespace io
 }  // namespace fuhe
