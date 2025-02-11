@@ -1,5 +1,6 @@
 {
     "clangd.arguments": [
-        "--function-arg-placeholders=0"
+        "--function-arg-placeholders=0",
+        "--header-insertion=never"
     ]
 }
