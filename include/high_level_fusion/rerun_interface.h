@@ -24,13 +24,13 @@ namespace rrfuse {  // rerun interface namespace
  * @param img
  * @param id
  */
-void LogCamPose(std::shared_ptr<rerun::RecordingStream>& rec,
-                std::shared_ptr<rerun::Pinhole>& rrpinhole,
+void LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
+                const std::shared_ptr<rerun::Pinhole>& rrpinhole,
                 const colmap::Image& img,
                 const colmap::image_t& id);
 
-void LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec,
-                      std::shared_ptr<rerun::Pinhole>& rrpinhole,
+void LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
+                      const std::shared_ptr<rerun::Pinhole>& rrpinhole,
                       const colmap::Rigid3d& T_ij,
                       const colmap::Image& img_i,
                       const colmap::image_t& id_i,

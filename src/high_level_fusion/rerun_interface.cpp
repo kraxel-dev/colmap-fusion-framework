@@ -5,8 +5,8 @@
 #include <Eigen/Core>
 #include <colmap/geometry/rigid3.h>
 
-void rrfuse::LogCamPose(std::shared_ptr<rerun::RecordingStream>& rec,
-                        std::shared_ptr<rerun::Pinhole>& rrpinhole,
+void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
+                        const std::shared_ptr<rerun::Pinhole>& rrpinhole,
                         const colmap::Image& img,
                         const colmap::image_t& id) {
   std::string cam_name = "world/cam" + std::to_string(id);
@@ -21,8 +21,8 @@ void rrfuse::LogCamPose(std::shared_ptr<rerun::RecordingStream>& rec,
   rec->log(cam_name, *rrpinhole);
 }
 
-void rrfuse::LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec,
-                              std::shared_ptr<rerun::Pinhole>& rrpinhole,
+void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
+                              const std::shared_ptr<rerun::Pinhole>& rrpinhole,
                               const colmap::Rigid3d& T_ij,
                               const colmap::Image& img_i,
                               const colmap::image_t& id_i,
@@ -38,14 +38,14 @@ void rrfuse::LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec,
   std::string edge_pred_pose_to_dest = source_cam_name + "_pred_pose_to_" + std::to_string(id_j);
 
   // downcast to float to match rerun adapter type. Invert to obtain pose of cam with respect to world.
-  Eigen::Vector3f t_i = colmap::Inverse(img_i.CamFromWorld()).translation.cast<float>();
-  Eigen::Vector3f t_j = colmap::Inverse(img_j.CamFromWorld()).translation.cast<float>();
+  const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(img_i.CamFromWorld(), true).first;
+  const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(img_j.CamFromWorld(), true).first;
   std::pair<rerun::Vec3D, rerun::Mat3x3> T_ij_pred = fuhe::rr_utils::ToRerunPose3D(predicted_w_from_j, false);
 
   std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
-  line_segments.emplace_back(t_i.data());
+  line_segments.push_back(t_i);
   line_segments.push_back(T_ij_pred.first);
-  line_segments.emplace_back(t_j.data());
+  line_segments.push_back(t_j);
   rerun::LineStrip3D line_strip(line_segments);
 
   // log predicted camera pose to rerun.
