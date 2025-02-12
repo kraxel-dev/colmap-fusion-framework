@@ -6,6 +6,7 @@ set(FUSION_HELPER_SOURCES
     col_utils.cpp
     cov_utils.cpp
     ceres_eval_utils.cpp
+    rr_utils.cpp
 )
 add_library(fusion_helper SHARED ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use
 target_include_directories(fusion_helper PUBLIC ${PROJECT_SOURCE_DIR}/include)

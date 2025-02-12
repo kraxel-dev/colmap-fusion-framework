@@ -1,6 +1,6 @@
 #include "fusion_helper/rr_utils.h"
 
-#include "fusion_helper/collection_adapters.h"
+#include "fusion_helper/rr_collection_adapters.h"
 
 std::pair<rerun::Vec3D, rerun::Mat3x3> fuhe::rr_utils::ToRerunPose3D(const colmap::Rigid3d& T, const bool inv) {
   // when required, invert to obtain pose of cam with respect to world.
