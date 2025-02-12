@@ -68,12 +68,25 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
       fuhe::ceres_eval_utils::LogReprojFactorCost(cost_function, q_cw, t_cw, pt3Dxyz, camera_params);
     }
 
-    // if user doenst want 3d poisiton to be optimized in ceres problem
+    // if user doenst want poisiton of 3d points to be optimized in ceres problem
     if (const_3d_pts) {
       //  force 3d point to consant position
       ceres_graph->SetParameterBlockConstant(point3D.xyz.data());
       VLOG(2) << "Set 3d point of id " << point2D.point3D_id << " to constant!";
     }
+  }
+  // if user doenst want camera poisiton to be optimized in ceres problem
+  if (const_t) {
+    //  force 3d point to consant position
+    ceres_graph->SetParameterBlockConstant(t_cw);
+    VLOG(2) << "Set cam position of id " << img_id << " to constant!";
+  }
+
+  // if user doenst want camera poisiton to be optimized in ceres problem
+  if (const_q) {
+    //  force 3d point to consant position
+    ceres_graph->SetParameterBlockConstant(q_cw);
+    VLOG(2) << "Set cam orientation of id " << img_id << " to constant!";
   }
   this->reproj_residual_ids.push_back(reproj_residual_ids_curr_img);
 }
