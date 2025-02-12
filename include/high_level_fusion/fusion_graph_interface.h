@@ -46,6 +46,7 @@ class FusionGraphInterface {
   bool is_log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
   std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger and viewer object
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;  // rerun pinhole model representing the camera used in colmap model
+  std::shared_ptr<rerun::Pinhole> rr_pinhole_pred = nullptr;  // rerun pinhole model representing the predicted position through odometry
 
   std::shared_ptr<ceres::Problem> ceres_graph;             // ceres problem that acts as factor graph
   std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction

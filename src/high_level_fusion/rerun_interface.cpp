@@ -44,14 +44,14 @@ void rrfuse::LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec,
 
   std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
   line_segments.emplace_back(t_i.data());
-  line_segments.emplace_back(T_ij_pred.first);
+  line_segments.push_back(T_ij_pred.first);
   line_segments.emplace_back(t_j.data());
   rerun::LineStrip3D line_strip(line_segments);
 
   // log predicted camera pose to rerun.
   rec->log(pred_cam_name, rerun::Transform3D(T_ij_pred.first, T_ij_pred.second));
   // establish camera for logged pose under same name as pose
-  // rec->log(pred_cam_name, *rrpinhole);
+  rec->log(pred_cam_name, *rrpinhole);
 
   // log linestrips connecting the factors
   rec->log(edge_pred_pose_to_dest, rerun::LineStrips3D(line_strip));

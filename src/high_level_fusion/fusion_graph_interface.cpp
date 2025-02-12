@@ -96,7 +96,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
   if (this->is_log_to_rerun) {
-    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole, T_ij_rigid, img_i, img_id_i, img_j, img_id_j);
+    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole_pred, T_ij_rigid, img_i, img_id_i, img_j, img_id_j);
   }
 
   VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
@@ -142,4 +142,7 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole =
       std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}));
+  // create different looking pinhole object for pose predicted from wheel odom
+  this->rr_pinhole_pred = std::make_shared<rerun::Pinhole>(
+      rerun::Pinhole::from_focal_length_and_resolution({focal_length_y / 2, focal_length_x / 2}, {height / 2, width / 2}));
 }
