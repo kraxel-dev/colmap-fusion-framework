@@ -18,7 +18,7 @@
 /*
 NOTE:
 Keeping stream operator overloads restrictive to Pose Matrices and Covariances of certain dimension for now.
-Might template them in future to make them more generic. But also keep in mind that overriding stream
+Might template them in future to make them more generic. But keep in mind that overriding stream
 operators in global namespace and in header files in general is not recommended.
  */
 

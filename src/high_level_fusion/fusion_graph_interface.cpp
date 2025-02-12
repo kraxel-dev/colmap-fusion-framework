@@ -9,7 +9,7 @@
 hifuse::FusionGraphInterface::FusionGraphInterface(std::shared_ptr<colmap::Reconstruction>& reconstruction,
                                                    std::shared_ptr<ceres::Problem>& ceres_graph,
                                                    bool log_to_rerun)
-    : log_to_rerun(log_to_rerun), ceres_graph(ceres_graph), reconstruction(reconstruction) {
+    : is_log_to_rerun(log_to_rerun), ceres_graph(ceres_graph), reconstruction(reconstruction) {
   if (!log_to_rerun) {
     VLOG(2) << "Rerun logging and visualization turned off!";
     return;
@@ -32,8 +32,8 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   double* camera_params = cam.params.data();
 
   // log camera pose to rerun
-  if (this->log_to_rerun) {
-    rrfuse::LogCamPose(this->rec, this->rr_pinhole, img, img_id);
+  if (this->is_log_to_rerun) {
+    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img, img_id);
   }
 
   // -------------------- Iterate over all 2d points associated to image
@@ -95,6 +95,10 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   // convert raltive eigen pose to colmap format
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
+  if (this->is_log_to_rerun) {
+    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole, T_ij_rigid, img_i, img_id_i, img_j, img_id_j);
+  }
+
   VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
   // create ceres relaitve pose factor weighted by its covariance
   ceres::CostFunction* weighted_cost_function =
@@ -121,10 +125,10 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
 
 void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
-  this->rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
-  this->rec->spawn().exit_on_failure();
+  this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
+  this->rr_rec->spawn().exit_on_failure();
 
-  this->rec->log_static("world", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
+  this->rr_rec->log_static("world", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
 
   // TODO: make generic for all registered cameras (currently we assume that the same pinhole model was used)
   // obtain camera params from first image in colmap model
@@ -133,7 +137,7 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   const float focal_length_x = cam.FocalLengthX(), focal_length_y = cam.FocalLengthY();
   const float width = cam.width, height = cam.height;
   VLOG(2) << "Focal length of first camera in model: " << focal_length_x << " and " << focal_length_y;
-  VLOG(2) << "Resolution of first camera in model: " << width << " and " << height;
+  VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole =

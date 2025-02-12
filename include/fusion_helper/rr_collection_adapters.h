@@ -1,6 +1,6 @@
 /**
- * @file rerun_eigen_adapter.h
- * @author kraxel
+ * @file collection_adapter.h
+ * @author written by rerun
  * @brief conversions from c++ Eigen types to rerun io types. Taken from official rerun repo (link below)
  * @ref https://github.com/rerun-io/cpp-example-opencv-eigen/blob/main/src/collection_adapters.hpp
  * @version 0.1

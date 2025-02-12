@@ -29,6 +29,12 @@ void LogCamPose(std::shared_ptr<rerun::RecordingStream>& rec,
                 const colmap::Image& img,
                 const colmap::image_t& id);
 
-void LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec, const colmap::Rigid3d& T_ij, const colmap::Image& img_i);
+void LogRelPoseFactor(std::shared_ptr<rerun::RecordingStream>& rec,
+                      std::shared_ptr<rerun::Pinhole>& rrpinhole,
+                      const colmap::Rigid3d& T_ij,
+                      const colmap::Image& img_i,
+                      const colmap::image_t& id_i,
+                      const colmap::Image& img_j,
+                      const colmap::image_t& id_j);
 
 }  // namespace rrfuse

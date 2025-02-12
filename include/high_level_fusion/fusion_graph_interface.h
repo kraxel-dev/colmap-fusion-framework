@@ -17,7 +17,6 @@
 
 #include <cstdlib>
 
-#include "high_level_fusion/collection_adapters.h"
 #include <ceres/problem.h>
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/exe/sfm.h>
@@ -44,8 +43,8 @@ class FusionGraphInterface {
   std::shared_ptr<colmap::Reconstruction> GetReconstruction() const { return this->reconstruction; }
 
  private:
-  bool log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
-  std::shared_ptr<rerun::RecordingStream> rec = nullptr;  // rerun logger and viewer object
+  bool is_log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
+  std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger and viewer object
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;  // rerun pinhole model representing the camera used in colmap model
 
   std::shared_ptr<ceres::Problem> ceres_graph;             // ceres problem that acts as factor graph
