@@ -36,8 +36,7 @@ void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
 void LogPoint3D(const std::shared_ptr<rerun::RecordingStream>& rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz);
 
 void LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
-                      const std::shared_ptr<rerun::Pinhole>& rrpinhole,
-                      const colmap::Rigid3d& T_ij,
+                      const colmap::Rigid3d& T_ij_odom,
                       const colmap::Image& img_i,
                       const colmap::Image& img_j);
 

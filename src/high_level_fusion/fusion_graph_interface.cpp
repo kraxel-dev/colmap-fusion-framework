@@ -110,7 +110,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
   if (this->is_log_to_rerun) {
-    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole_pred, T_ij_rigid, img_i, img_j);
+    rrfuse::LogRelPoseFactor(this->rr_rec, T_ij_rigid, img_i, img_j);
   }
 
   VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
@@ -142,7 +142,7 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->rr_rec->spawn().exit_on_failure();
 
-  this->rr_rec->log_static("world", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
+  this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
 
   // TODO: make generic for all registered cameras (currently we assume that the same pinhole model was used)
   // obtain camera params from first image in colmap model

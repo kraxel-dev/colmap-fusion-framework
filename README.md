@@ -59,3 +59,7 @@ pip3 install --upgrade pip  # upgrade pip to find rerun python sdk for ubuntu 20
 source ~/.bashrc  # source your bash after upgrading pip
 pip3 install rerun-sdk==0.21.0  # rerun viewer is bundled in the python rerun-sdk
 ```
+
+# Open Issues
+- Validated filtering of 3d points with reconstruction bounding box 
+- Update rerun predicted pose and line strip after optimization

@@ -1,5 +1,6 @@
 #include "high_level_fusion/rerun_interface.h"
 
+
 #include "fusion_helper/rr_collection_adapters.h"
 #include "fusion_helper/rr_utils.h"
 #include <Eigen/Core>
@@ -18,7 +19,13 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
   rec->log(cam_name, rerun::Transform3D(T.first, T.second));
 
   // establish camera for logged pose under same name as pose
-  rec->log(cam_name, *rrpinhole);
+  /* NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
+  Log pinhole as child entity of actual pose as workaround for now.
+   */
+  rec->log(cam_name + "/pinhole", *rrpinhole);
+  rec->log(cam_name + "/pinhole", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
+  rec->log(cam_name + "/point_label", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
+  rec->log(cam_name + "/point_label", rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text(cam_name)));
 }
 
 void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
@@ -43,35 +50,39 @@ void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream>& rec, cons
 }
 
 void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
-                              const std::shared_ptr<rerun::Pinhole>& rrpinhole,
-                              const colmap::Rigid3d& T_ij,
+                              const colmap::Rigid3d& T_ij_odom,
                               const colmap::Image& img_i,
                               const colmap::Image& img_j) {
-  // increment pose of source node i with relative odometry to obtain predicted pose of node j with respect to world
-  colmap::Rigid3d predicted_w_from_j = colmap::Inverse(img_i.CamFromWorld()) * T_ij;  // T_world_from_j = inverse(T_i_from_w) * T_i_from_j
+  // obtain relative pose of node j with respect to node i from current states in images (non measurements)
+  const colmap::Rigid3d T_ij = img_i.CamFromWorld() * colmap::Inverse(img_j.CamFromWorld());  // T_i_from_j = T_iw * T_wj
 
   // rerun naming stuff
   std::string source_cam_name = "world/cam" + std::to_string(img_i.ImageId());
-  std::string pred_cam_name = "world/cam" + std::to_string(img_i.ImageId()) + "_predicted";
+  std::string pred_cam_name = "world/cam" + std::to_string(img_i.ImageId()) + "/cam" + std::to_string(img_j.ImageId()) + "_predicted";
   std::string edge_origin_to_pred_pose = source_cam_name + std::to_string(img_j.ImageId()) + "_to_pred_pose";
-  std::string edge_pred_pose_to_dest = source_cam_name + "_pred_pose_to_" + std::to_string(img_j.ImageId());
+  std::string edges_i_pred_j = source_cam_name + "/edges_" + std::to_string(img_j.ImageId());
 
   // downcast to float to match rerun adapter type. Invert to obtain pose of cam with respect to world.
-  const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(img_i.CamFromWorld(), true).first;
-  const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(img_j.CamFromWorld(), true).first;
-  std::pair<rerun::Vec3D, rerun::Mat3x3> T_ij_pred = fuhe::rr_utils::ToRerunPose3D(predicted_w_from_j, false);
+  const rerun::Vec3D t_ij = fuhe::rr_utils::ToRerunPose3D(T_ij).first;
+  std::pair<rerun::Vec3D, rerun::Mat3x3> T_ij_pred = fuhe::rr_utils::ToRerunPose3D(T_ij_odom, false);
 
-  std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
-  line_segments.push_back(t_i);
-  line_segments.push_back(T_ij_pred.first);
-  line_segments.push_back(t_j);
+  std::vector<rerun::Vec3D> line_segments;   // vector containg xyz points of line semgents
+  line_segments.push_back(rerun::Vec3D());   // origin in zero (parent entity is i cam pose)
+  line_segments.push_back(T_ij_pred.first);  // pass predicted pose as control point
+  line_segments.push_back(t_ij);             // end line strip in image j pose
   rerun::LineStrip3D line_strip(line_segments);
 
   // log predicted camera pose to rerun.
-  rec->log(pred_cam_name, rerun::Transform3D(T_ij_pred.first, T_ij_pred.second).with_scale(rerun::components::Scale3D(3)));
-  // establish camera for logged pose under same name as pose
-  // rec->log(pred_cam_name, *rrpinhole); // TODO: think about better visual object for predicted pose
+  rec->log(pred_cam_name,
+           rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second)
+               .with_relation(rerun::components::TransformRelation::ParentFromChild)
+               .with_axis_length(rerun::components::AxisLength(0.4f)));
+  // draw ellipsoid around precited pose
+  rec->log(pred_cam_name + "/ellipse",
+           rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.3f, 0.1f, 0.4f}})
+               .with_colors({rerun::Rgba32(255, 255, 0)})
+               .with_labels(rerun::components::Text(pred_cam_name)));
 
   // log linestrips connecting the factors
-  rec->log(edge_pred_pose_to_dest, rerun::LineStrips3D(line_strip));
+  rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));
 }
