@@ -8,6 +8,7 @@
 #include "fusion_helper/io.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
+#include "high_level_fusion/rerun_interface.h"
 #include <Eigen/Core>
 #include <ceres/problem.h>
 #include <colmap/controllers/option_manager.h>
@@ -170,6 +171,20 @@ int main(int argc, char** argv) {
   ceres::Solve(solver_options, ceres_problem.get(), &summary);
 
   VLOG(1) << summary.FullReport();
+
+  // -------------------- Update image poses in rerun
+  fuhe::col_utils::CropFarAwayPoints(reconstruction);
+
+  // iterate over all images in model
+  for (const auto pair : imgs_by_stamp) {
+    curr_img_stamp = pair.first;
+    colmap::image_t curr_img_id = pair.second;
+
+    VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
+
+    rrfuse::LogCamPose(fusion_interface.GetRerunRec(), fusion_interface.GetRerunPinhole(), reconstruction->Image(curr_img_id), curr_img_id);
+    rrfuse::LogCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, reconstruction));
+  }
 
   // TODO: implement residual eval correctly
   // --------------------Metrics after optim

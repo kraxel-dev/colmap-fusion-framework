@@ -20,6 +20,13 @@ namespace col_utils {
 std::map<const double, colmap::image_t> ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
                                                         std::shared_ptr<colmap::Reconstruction> reconstruction);
 
+/// obtain all 3d points associated to given image
+const std::vector<colmap::Point3D> GetPoints3D(const colmap::image_t& image_id,
+                                               const std::shared_ptr<colmap::Reconstruction>& reconstruction);
+
+/// crop out far away 3d points from colmap model by computing bounding box of all points omitting the last percentile
+void CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction>& reconstruction);
+
 /**
     * @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required by ceres
     for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for

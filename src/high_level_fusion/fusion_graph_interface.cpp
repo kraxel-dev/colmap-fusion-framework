@@ -31,9 +31,10 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   fuhe::col_utils::GetPointersToPose(img, q_cw, t_cw);
   double* camera_params = cam.params.data();
 
-  // log camera pose to rerun
+  // log camera pose and 3d pts to rerun
   if (this->is_log_to_rerun) {
     rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img, img_id);
+    rrfuse::LogCamPoints3D(this->rr_rec, img, fuhe::col_utils::GetPoints3D(img_id, this->reconstruction));
   }
 
   // -------------------- Iterate over all 2d points associated to image
@@ -109,7 +110,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
   if (this->is_log_to_rerun) {
-    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole_pred, T_ij_rigid, img_i, img_id_i, img_j, img_id_j);
+    rrfuse::LogRelPoseFactor(this->rr_rec, this->rr_pinhole_pred, T_ij_rigid, img_i, img_j);
   }
 
   VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
