@@ -23,7 +23,8 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
   rec->log(cam_name + "/pinhole", *rrpinhole);
   rec->log(cam_name + "/pinhole", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
   rec->log(cam_name + "/point_label", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
-  rec->log(cam_name + "/point_label", rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
+  rec->log(cam_name + "/point_label",
+           rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
 }
 
 void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,

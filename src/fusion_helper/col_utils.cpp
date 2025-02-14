@@ -32,9 +32,9 @@ std::map<const double, colmap::image_t> fuhe::col_utils::ImageIdsByStamp(const s
   return ordered_image_stamps;
 }
 
-const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3D(const colmap::image_t& image_id,
-                                                                const std::shared_ptr<colmap::Reconstruction>& reconstruction) {
-  auto& img = reconstruction->Image(image_id);
+const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(
+    const colmap::image_t& image_id, const int min_track_len, const std::shared_ptr<colmap::Reconstruction>& reconstruction) {
+  const auto& img = reconstruction->Image(image_id);
   std::vector<colmap::Point3D> pts3D;
 
   // iterate over all 2d points associated to image
@@ -43,8 +43,14 @@ const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3D(const colmap::im
       continue;
     }
 
+    // skip points with less than 2 views.
+    const auto& point3D = reconstruction->Point3D(point2D.point3D_id);
+    if (point3D.track.Length() < min_track_len) {
+      continue;
+    }
+
     // recover associated 3d point and store in output vector
-    pts3D.push_back(reconstruction->Point3D(point2D.point3D_id));
+    pts3D.push_back(point3D);
   }
 
   return pts3D;

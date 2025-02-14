@@ -31,31 +31,31 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   fuhe::col_utils::GetPointersToPose(img, q_cw, t_cw);
   double* camera_params = cam.params.data();
 
-  // log camera pose and 3d pts to rerun
-  if (this->is_log_to_rerun) {
-    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
-    rrfuse::LogCamPoints3D(this->rr_rec, img, fuhe::col_utils::GetPoints3D(img_id, this->reconstruction));
-  }
-
-  // -------------------- Iterate over all 2d points associated to image
+  std::vector<colmap::Point3D> points3D_curr_img;  // store 3D points for rerun
   std::vector<ceres::ResidualBlockId>
       reproj_residual_ids_curr_img;  // ceres residual block ids of all reprojection factors for current image
+
   size_t num_observations = 0;
   std::unordered_map<colmap::point3D_t, size_t> point3D_num_observations;
-  VLOG(3) << "Starting to iterate over all 2d points of target image!";
+  const int min_track_len = 2;
 
-  // iterate over all 2d points associated to image
+  VLOG(3) << "Starting to iterate over all 2d points of target image!";
+  // -------------------- Iterate over all 2d points associated to image // NOTE: keep loop fixed to 2d instead of 3d points since its hard to recover 2d ids from 3d pts
   for (const colmap::Point2D& point2D : img.Points2D()) {
     if (!point2D.HasPoint3D()) {
       continue;
     }
 
-    num_observations += 1;
-    point3D_num_observations[point2D.point3D_id] += 1;
-
     // recover associated 3d point
     colmap::Point3D& point3D = reconstruction->Point3D(point2D.point3D_id);
+    if (point3D.track.Length() < min_track_len) {
+      continue;
+    }
     double* pt3Dxyz = point3D.xyz.data();
+
+    num_observations += 1;
+    point3D_num_observations[point2D.point3D_id] += 1;
+    points3D_curr_img.push_back(point3D);  // append for Rerun visualization
 
     // create reprojection error cost function for 3d point
     ceres::CostFunction* cost_function = colmap::CreateCameraCostFunction<colmap::ReprojErrorCostFunctor>(cam.model_id, point2D.xy);
@@ -76,6 +76,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
       VLOG(2) << "Set 3d point of id " << point2D.point3D_id << " to constant!";
     }
   }
+
   // if user doenst want camera poisiton to be optimized in ceres problem
   if (const_t) {
     //  force 3d point to consant position
@@ -88,6 +89,12 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
     //  force 3d point to consant position
     ceres_graph->SetParameterBlockConstant(q_cw);
     VLOG(2) << "Set cam orientation of id " << img_id << " to constant!";
+  }
+
+  // log camera pose and 3d pts to rerun
+  if (this->is_log_to_rerun) {
+    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
+    rrfuse::LogCamPoints3D(this->rr_rec, img, points3D_curr_img);
   }
   this->reproj_residual_ids.push_back(reproj_residual_ids_curr_img);
 }
@@ -143,6 +150,7 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
   int i = 0;
   colmap::image_t curr_img_id, prev_img_id = -1;
   double curr_img_stamp = -1, prev_stamp = -1;
+  const int min_track_length = 2;
 
   // iterate over all images in model
   for (const auto pair : imgs_by_stamp) {
@@ -152,10 +160,9 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
     if (i == 0) {
       // start only if synchronized meas from both sources are availalbe
       if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
-
         rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
         rrfuse::LogCamPoints3D(
-            this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, this->reconstruction));
+            this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
 
         // preparing next iteration
         prev_stamp = curr_img_stamp;
@@ -174,7 +181,7 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
 
     rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
     rrfuse::LogCamPoints3D(
-        this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, this->reconstruction));
+        this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
 
     // -------------------- Fetch relative pose
     // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
