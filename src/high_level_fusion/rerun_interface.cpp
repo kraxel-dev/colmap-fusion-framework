@@ -69,7 +69,7 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec
   std::vector<rerun::Vec3D> line_segments;   // vector containg xyz points of line semgents
   line_segments.push_back(rerun::Vec3D());   // origin in zero (parent entity is i cam pose)
   line_segments.push_back(T_ij_pred.first);  // pass predicted pose as control point
-  line_segments.push_back(t_ij);             // end line strip in image j pose
+  line_segments.push_back(t_ij);             // end line strip in pose of image j
   rerun::LineStrip3D line_strip(line_segments);
 
   // log predicted camera pose to rerun.

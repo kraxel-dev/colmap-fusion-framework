@@ -57,7 +57,7 @@ Then pip install the viewer through the rerun python sdk.
 ```
 pip3 install --upgrade pip  # upgrade pip to find rerun python sdk for ubuntu 20.04
 source ~/.bashrc  # source your bash after upgrading pip
-pip3 install rerun-sdk==0.21.0  # rerun viewer is bundled in the python rerun-sdk
+pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sdk
 ```
 
 # Open Issues
