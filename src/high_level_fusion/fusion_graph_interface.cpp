@@ -33,7 +33,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
   // log camera pose and 3d pts to rerun
   if (this->is_log_to_rerun) {
-    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img, img_id);
+    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
     rrfuse::LogCamPoints3D(this->rr_rec, img, fuhe::col_utils::GetPoints3D(img_id, this->reconstruction));
   }
 
@@ -134,6 +134,61 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   }
   if (!ceres_graph->GetParameterization(q_j)) {
     colmap::SetQuaternionManifold(ceres_graph.get(), q_j);
+  }
+}
+
+void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types::MapOfPosesSec& metric_poses) {
+  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(this->reconstruction->RegImageIds(), this->reconstruction);
+
+  int i = 0;
+  colmap::image_t curr_img_id, prev_img_id = -1;
+  double curr_img_stamp = -1, prev_stamp = -1;
+
+  // iterate over all images in model
+  for (const auto pair : imgs_by_stamp) {
+    curr_img_stamp = pair.first;
+    curr_img_id = pair.second;
+    // -------------------- First iteration init condition
+    if (i == 0) {
+      // start only if synchronized meas from both sources are availalbe
+      if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
+
+        rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
+        rrfuse::LogCamPoints3D(
+            this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, this->reconstruction));
+
+        // preparing next iteration
+        prev_stamp = curr_img_stamp;
+        i++;  // break init loop
+      }
+      continue;
+    }
+
+    VLOG(2) << "Searching matching tumpose:" << curr_img_id;
+
+    // check if external odom is available for current image
+    if (metric_poses.find(curr_img_stamp) == metric_poses.end()) {
+      i++;
+      continue;
+    }
+
+    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
+    rrfuse::LogCamPoints3D(
+        this->rr_rec, this->reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, this->reconstruction));
+
+    // -------------------- Fetch relative pose
+    // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
+    const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
+
+    // -------------------- Update rel pose factor in rerun
+    colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
+    rrfuse::LogRelPoseFactor(this->rr_rec,
+                             colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
+                             this->reconstruction->Image(prev_img_id),
+                             this->reconstruction->Image(curr_img_id));
+    // preparing next iteration
+    prev_stamp = curr_img_stamp;
+    i++;
   }
 }
 

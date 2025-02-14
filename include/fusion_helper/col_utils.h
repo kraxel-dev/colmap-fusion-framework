@@ -11,7 +11,7 @@ namespace col_utils {
 
 /**
  * @brief Return image ids of colmap model sorted and accessible by their timestamps [seconds] to have them in ascending order.
- This is requred to match images of colmap model to metric poses in tumfile.
+ Required to match images of colmap model to metric poses in tumfile.
  *
  * @param image_ids
  * @param reconstruction colmap model

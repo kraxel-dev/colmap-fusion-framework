@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include "fusion_helper/types.h"
 #include <colmap/scene/reconstruction.h>
 #include <rerun.hpp>
 
@@ -26,8 +27,7 @@ namespace rrfuse {  // rerun interface namespace
  */
 void LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
                 const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                const colmap::Image& img,
-                const colmap::image_t& id);
+                const colmap::Image& img);
 
 void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
                     const colmap::Image& img,

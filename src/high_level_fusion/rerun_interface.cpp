@@ -1,6 +1,5 @@
 #include "high_level_fusion/rerun_interface.h"
 
-
 #include "fusion_helper/rr_collection_adapters.h"
 #include "fusion_helper/rr_utils.h"
 #include <Eigen/Core>
@@ -8,9 +7,8 @@
 
 void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
                         const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                        const colmap::Image& img,
-                        const colmap::image_t& id) {
-  std::string cam_name = "world/cam" + std::to_string(id);
+                        const colmap::Image& img) {
+  std::string cam_name = "world/cam" + std::to_string(img.ImageId());
 
   // match rerun adapter type.
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
@@ -25,7 +23,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
   rec->log(cam_name + "/pinhole", *rrpinhole);
   rec->log(cam_name + "/pinhole", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
   rec->log(cam_name + "/point_label", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
-  rec->log(cam_name + "/point_label", rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text(cam_name)));
+  rec->log(cam_name + "/point_label", rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
 }
 
 void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
@@ -79,9 +77,9 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec
                .with_axis_length(rerun::components::AxisLength(0.4f)));
   // draw ellipsoid around precited pose
   rec->log(pred_cam_name + "/ellipse",
-           rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.3f, 0.1f, 0.4f}})
+           rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.03f, 0.01f, 0.04f}})
                .with_colors({rerun::Rgba32(255, 255, 0)})
-               .with_labels(rerun::components::Text(pred_cam_name)));
+               .with_labels(rerun::components::Text("cam" + std::to_string(img_j.ImageId()) + "_predicted")));
 
   // log linestrips connecting the factors
   rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));

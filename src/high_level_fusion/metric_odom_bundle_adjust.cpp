@@ -175,15 +175,8 @@ int main(int argc, char** argv) {
   // -------------------- Update image poses in rerun
   fuhe::col_utils::CropFarAwayPoints(reconstruction);
 
-  // iterate over all images in model
-  for (const auto pair : imgs_by_stamp) {
-    curr_img_stamp = pair.first;
-    colmap::image_t curr_img_id = pair.second;
-
-    VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
-
-    rrfuse::LogCamPose(fusion_interface.GetRerunRec(), fusion_interface.GetRerunPinhole(), reconstruction->Image(curr_img_id), curr_img_id);
-    rrfuse::LogCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Image(curr_img_id), fuhe::col_utils::GetPoints3D(curr_img_id, reconstruction));
+  if (fusion_interface.GetRerunRec()) {
+    fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
   }
 
   // TODO: implement residual eval correctly

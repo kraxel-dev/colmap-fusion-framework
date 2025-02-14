@@ -20,6 +20,7 @@
 #include <ceres/problem.h>
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/exe/sfm.h>
+#include <fusion_helper/types.h>
 #include <rerun.hpp>
 
 namespace hifuse {  // high-level fusion
@@ -40,6 +41,10 @@ class FusionGraphInterface {
                         const colmap::image_t img_id_j,
                         const Eigen::Isometry3d& i_from_j,
                         const Eigen::Matrix<double, 6, 6> cov_i_from_j);
+
+  // TODO: kick out once ceres callback is implemented with rerun
+  /// update registered reprojection and rel pose factors in rerun in one swoop
+  void UpdateRegisterdFactorsRerun(const fuhe::types::MapOfPosesSec& metric_poses);
 
   std::shared_ptr<ceres::Problem> GetCeresGraph() const { return this->ceres_graph; }
   std::shared_ptr<colmap::Reconstruction> GetReconstruction() const { return this->reconstruction; }
