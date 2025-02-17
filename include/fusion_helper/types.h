@@ -1,11 +1,16 @@
 #pragma once
 
+#include <map>
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <map>
+#include <colmap/scene/reconstruction.h>
 
 namespace fuhe {
 namespace types {
+
+/// to store colmap img ids sorted by stamp [sec]
+using MapOfImageIdsSec = std::map<const double, colmap::image_t>;
 
 /// key: [uint64 nanosecond timestamp], entry: pose3d
 using MapOfPosesNsec =

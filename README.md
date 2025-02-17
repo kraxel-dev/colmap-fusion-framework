@@ -63,3 +63,6 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 # Open Issues
 - Validated filtering of 3d points with reconstruction bounding box 
 - Update rerun predicted pose and line strip after optimization
+
+## OdomEdgesManager
+- Deal with disconnected poses in tum file or disconnected image ids
