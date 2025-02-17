@@ -5,10 +5,10 @@
 
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/cov_utils.h"
+#include "fusion_helper/fusion_iteration_callback.h"
 #include "fusion_helper/io.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
-#include "high_level_fusion/rerun_interface.h"
 #include <Eigen/Core>
 #include <ceres/problem.h>
 #include <colmap/controllers/option_manager.h>
@@ -155,8 +155,17 @@ int main(int argc, char** argv) {
 
   ceres::Solver::Options solver_options = col_options.bundle_adjustment->solver_options;
   solver_options.num_threads = std::thread::hardware_concurrency();
+  solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
-  solver_options.minimizer_progress_to_stdout = true;
+  // deploy own iteration callback that logs to rerun during optimization
+  fuhe::FusionIterationCallback callback(fusion_interface.GetRerunRec(),
+                                         fusion_interface.GetRerunPinhole(),
+                                         fusion_interface.GetReconstruction()->Images(),
+                                         fusion_interface.GetReconstruction()->Points3D());
+  solver_options.callbacks.push_back(&callback);
+
+  solver_options.minimizer_progress_to_stdout = false;
+  solver_options.update_state_every_iteration = true;
 
   // TODO: implement residual eval correctly
   // -------------------- Evaluate errors
@@ -175,8 +184,10 @@ int main(int argc, char** argv) {
   // -------------------- Update image poses in rerun
   fuhe::col_utils::CropFarAwayPoints(reconstruction);
 
+  // TODO: decide on how to rerun visualize for good
   if (fusion_interface.GetRerunRec()) {
-    fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
+    fusion_interface.UpdateWholeReconstroctionRerun();
+    // fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
   }
 
   // TODO: implement residual eval correctly
