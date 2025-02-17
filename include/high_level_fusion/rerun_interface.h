@@ -42,4 +42,14 @@ void LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
                       const colmap::Image& img_i,
                       const colmap::Image& img_j);
 
+/**
+ * @brief Log whole colmap reconstruction to rerun. Can be used in ceres iteration callback.
+ * @ref
+ * https://github.com/colmap/glomap/commit/5115de482dc0a72b5c6d01d39da3524b7a296608#diff-2139378b2a5608827fa60ae83cfc220b18a3c68e7972248aeb715da8b60594fc
+ */
+void LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& rec,
+                       const std::shared_ptr<rerun::Pinhole>& rrpinhole,
+                       const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                       const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D);
+
 }  // namespace rrfuse

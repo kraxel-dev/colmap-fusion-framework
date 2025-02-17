@@ -199,6 +199,10 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
   }
 }
 
+void hifuse::FusionGraphInterface::UpdateWholeReconstroctionRerun() {
+    rrfuse::LogReconstruction(this->rr_rec, this->rr_pinhole, this->reconstruction->Images(), this->reconstruction->Points3D());
+}
+
 void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");

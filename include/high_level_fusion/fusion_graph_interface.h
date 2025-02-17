@@ -45,9 +45,11 @@ class FusionGraphInterface {
   // TODO: kick out once ceres callback is implemented with rerun
   /// update registered reprojection and rel pose factors in rerun in one swoop
   void UpdateRegisterdFactorsRerun(const fuhe::types::MapOfPosesSec& metric_poses);
+  /// update colmap image poses and 3d points in rerun in one swoop
+  void UpdateWholeReconstroctionRerun();
 
-  std::shared_ptr<ceres::Problem> GetCeresGraph() const { return this->ceres_graph; }
-  std::shared_ptr<colmap::Reconstruction> GetReconstruction() const { return this->reconstruction; }
+  std::shared_ptr<ceres::Problem> GetCeresGraph() { return this->ceres_graph; }
+  std::shared_ptr<colmap::Reconstruction> GetReconstruction() { return this->reconstruction; }
 
   std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
   std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }

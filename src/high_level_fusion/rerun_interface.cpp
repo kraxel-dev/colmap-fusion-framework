@@ -10,18 +10,23 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
                         const colmap::Image& img) {
   std::string cam_name = "world/cam" + std::to_string(img.ImageId());
 
+  // clear 3D points associated to cam
+  rec->log("world/pts_" + std::to_string(img.ImageId()), rerun::Points3D::clear_fields());
+
   // match rerun adapter type.
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
 
   // log camera pose to rerun. data of t and R may go out of scope, but as rerun object they shall live on
   rec->log(cam_name, rerun::Transform3D(T.first, T.second));
 
-  // establish camera for logged pose under same name as pose
-  /* NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
+  /*
+  NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
   Log pinhole as child entity of actual pose as workaround for now.
    */
+  // establish camera for logged pose under same name as pose
   rec->log(cam_name + "/pinhole", *rrpinhole);
   rec->log(cam_name + "/pinhole", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
+  // add a point to slap a label to the image pose
   rec->log(cam_name + "/point_label", rerun::Transform3D().with_relation(rerun::components::TransformRelation::ParentFromChild));
   rec->log(cam_name + "/point_label",
            rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
@@ -84,4 +89,31 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec
 
   // log linestrips connecting the factors
   rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));
+}
+
+void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& rec,
+                               const std::shared_ptr<rerun::Pinhole>& rrpinhole,
+                               const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                               const std::unordered_map<colmap::point3D_t, colmap::Point3D>& Points3D) {
+  // clear rerun 3d points
+  rec->log("world/", rerun::Points3D::clear_fields());
+
+  // -------------------- Images
+  // log all registered images
+  for (auto& [_, image] : images) {
+    rrfuse::LogCamPose(rec, rrpinhole, image);
+  }
+
+  // -------------------- Tracks
+  std::vector<rerun::Position3D> points;
+  // log all 3d points
+  for (auto& [_, pt3D] : Points3D) {
+    // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
+    if (pt3D.track.Length() < 2) continue;
+
+    auto xyz = pt3D.xyz;
+    points.emplace_back(xyz.x(), xyz.y(), xyz.z());
+    // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
+  }
+  rec->log("world/pts_3D", rerun::Points3D(points));
 }
