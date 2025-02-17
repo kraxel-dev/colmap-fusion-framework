@@ -1,3 +1,13 @@
+/**
+ * @file rr_utils.cpp
+ * @author azuo
+ * @brief Helpers to do rerun related tasks, such as convenience functions for converting colmap data to rerun types
+ * @version 0.1
+ * @date 2025-02-17
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include "fusion_helper/rr_utils.h"
 
 #include "fusion_helper/rr_collection_adapters.h"

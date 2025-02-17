@@ -4,7 +4,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <colmap/scene/reconstruction.h>
+#include <colmap/scene/image.h>
 
 namespace fuhe {
 namespace types {
