@@ -24,12 +24,11 @@ class FusionIterationCallback : public ceres::IterationCallback {
   const std::unordered_map<colmap::camera_t, colmap::Image>& images;
   const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D;
 
-  FusionIterationCallback(const std::shared_ptr<rerun::RecordingStream>& rr_rec,
-                          const std::shared_ptr<rerun::Pinhole>& rrpinhole,
+  FusionIterationCallback(const std::shared_ptr<rerun::RecordingStream> rr_rec,
+                          const std::shared_ptr<rerun::Pinhole> rrpinhole,
                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                           const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D)
       : rr_rec{rr_rec}, rrpinhole{rrpinhole}, images{images}, points3D{points3D} {}
-  ~FusionIterationCallback() {}
 
   ceres::CallbackReturnType operator()(const ceres::IterationSummary& summary) {
     // -------------------- iteration summary logging

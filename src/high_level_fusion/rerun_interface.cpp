@@ -10,9 +10,6 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
                         const colmap::Image& img) {
   std::string cam_name = "world/cam" + std::to_string(img.ImageId());
 
-  // clear 3D points associated to cam
-  rec->log("world/pts_" + std::to_string(img.ImageId()), rerun::Points3D::clear_fields());
-
   // match rerun adapter type.
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
 
@@ -44,6 +41,14 @@ void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
   });
 
   rec->log("world/pts_" + std::to_string(img.ImageId()), rerun::Points3D(rr_pts3D));
+}
+
+void rrfuse::ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
+                                 const std::unordered_map<colmap::camera_t, colmap::Image>& images) {
+  for (auto& [_, img] : images) {
+    // clear 3D points associated to cam
+    rec->log("world/pts_" + std::to_string(img.ImageId()), rerun::Points3D::clear_fields());
+  }
 }
 
 void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream>& rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz) {
@@ -95,16 +100,17 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& re
                                const std::shared_ptr<rerun::Pinhole>& rrpinhole,
                                const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                                const std::unordered_map<colmap::point3D_t, colmap::Point3D>& Points3D) {
-  // clear rerun 3d points
-  rec->log("world/", rerun::Points3D::clear_fields());
-
   // -------------------- Images
+  const std::unordered_map<colmap::camera_t, colmap::Image> images_copy = images;
   // log all registered images
-  for (auto& [_, image] : images) {
-    rrfuse::LogCamPose(rec, rrpinhole, image);
+  for (auto& [_, img] : images_copy) {
+    rrfuse::LogCamPose(rec, rrpinhole, img);
   }
 
   // -------------------- Tracks
+  // clear rerun 3d points
+  rec->log("world/pts_3D", rerun::Points3D::clear_fields());
+
   std::vector<rerun::Position3D> points;
   // log all 3d points
   for (auto& [_, pt3D] : Points3D) {
@@ -116,4 +122,5 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& re
     // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
   }
   rec->log("world/pts_3D", rerun::Points3D(points));
+  // rec->log("world/pts_3D", rerun::Points3D().update_fields());
 }

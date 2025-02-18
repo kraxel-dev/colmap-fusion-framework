@@ -33,6 +33,9 @@ void LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
 void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
                     const colmap::Image& img,
                     const std::vector<colmap::Point3D>& pts3D);
+/// clear manually and incrementally registered 3D points that were logged per image
+void ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
+                         const std::unordered_map<colmap::camera_t, colmap::Image>& images);
 
 /// log a single 3D point to rerun
 void LogPoint3D(const std::shared_ptr<rerun::RecordingStream>& rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz);
