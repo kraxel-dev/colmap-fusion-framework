@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
   // TODO: double check where to place this
   // clear manually and incrementally registered 3D points that were logged per image
   if (fusion_interface.GetRerunRec()) {
-  rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
+    rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
   }
 
   // -------------------- Configure Bundle Adjustment for CERES and COLMAP
@@ -168,10 +168,10 @@ int main(int argc, char** argv) {
 
   // use rerun iteration callback during ceres optim
   if (fusion_interface.GetRerunRec()) {
-  // deploy own iteration callback that logs to rerun during optimization
+    // deploy own iteration callback that logs to rerun during optimization
     fuhe::FusionIterationCallbackSorted callback(fusion_interface.GetRerunRec(),
-                                                      fusion_interface.GetRerunPinhole(),
-                                                      fusion_interface.GetReconstruction()->Images(),
+                                                 fusion_interface.GetRerunPinhole(),
+                                                 fusion_interface.GetReconstruction()->Images(),
                                                  fusion_interface.GetReconstruction()->Points3D(),
                                                  imgs_by_stamp);
     solver_options.callbacks.push_back(&callback);
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
   // TODO: decide on how to rerun visualize for good
   // if (fusion_interface.GetRerunRec()) {
   //   fusion_interface.UpdateWholeReconstroctionRerun();
-    // fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
+  // fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
   // }
 
   // TODO: implement residual eval correctly
