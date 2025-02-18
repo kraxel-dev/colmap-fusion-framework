@@ -15,7 +15,7 @@ struct OdomImagesEdge {
                  const double time_diff,
                  const colmap::image_t i,
                  const colmap::image_t j,
-                 const std::shared_ptr<colmap::Rigid3d>& T_ij);
+                 const std::shared_ptr<colmap::Rigid3d> T_ij);
 
   double stamp_j = 0.0;                             // timestamp [secs] of image j
   double time_diff = 0.0;                           // time diff [secs] between node j and i

@@ -143,7 +143,9 @@ int main(int argc, char** argv) {
 
   // TODO: double check where to place this
   // clear manually and incrementally registered 3D points that were logged per image
+  if (fusion_interface.GetRerunRec()) {
   rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
+  }
 
   // -------------------- Configure Bundle Adjustment for CERES and COLMAP
   ceres::Problem::Options ceres_options;  // ceres options
@@ -164,14 +166,16 @@ int main(int argc, char** argv) {
   solver_options.num_threads = std::thread::hardware_concurrency();
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
+  // use rerun iteration callback during ceres optim
+  if (fusion_interface.GetRerunRec()) {
   // deploy own iteration callback that logs to rerun during optimization
-  std::shared_ptr<fuhe::FusionIterationCallback> callback =
-      std::make_shared<fuhe::FusionIterationCallback>(fusion_interface.GetRerunRec(),
+    fuhe::FusionIterationCallbackSorted callback(fusion_interface.GetRerunRec(),
                                                       fusion_interface.GetRerunPinhole(),
                                                       fusion_interface.GetReconstruction()->Images(),
-                                                      fusion_interface.GetReconstruction()->Points3D());
-  solver_options.callbacks.push_back(callback.get());
-
+                                                 fusion_interface.GetReconstruction()->Points3D(),
+                                                 imgs_by_stamp);
+    solver_options.callbacks.push_back(&callback);
+  }
   solver_options.minimizer_progress_to_stdout = false;
   solver_options.update_state_every_iteration = true;
 

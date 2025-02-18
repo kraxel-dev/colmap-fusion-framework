@@ -4,7 +4,7 @@
 #include <colmap/util/file.h>
 
 fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
-                                                                         std::shared_ptr<colmap::Reconstruction> reconstruction) {
+                                                               std::shared_ptr<colmap::Reconstruction> reconstruction) {
   fuhe::types::MapOfImageIdsSec ordered_image_stamps;  // output map -> image ids by timestamps [secs]
 
   // iterate over all ids to register them into a hashmap that takes care of the sorting automatically
@@ -32,8 +32,9 @@ fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<co
   return ordered_image_stamps;
 }
 
-const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(
-    const colmap::image_t& image_id, const int min_track_len, const std::shared_ptr<colmap::Reconstruction>& reconstruction) {
+const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(const colmap::image_t& image_id,
+                                                                        const int min_track_len,
+                                                                        const std::shared_ptr<colmap::Reconstruction> reconstruction) {
   const auto& img = reconstruction->Image(image_id);
   std::vector<colmap::Point3D> pts3D;
 
@@ -56,26 +57,27 @@ const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(
   return pts3D;
 }
 
-void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction>& reconstruction) {
-  VLOG(1) << "Cropping out far away 3d points from colmap model!";
+void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+  VLOG(2) << "Cropping out far away 3d points from colmap model!";
   auto bbox = reconstruction->ComputeBoundingBox(0.0, 0.9);
 
-  VLOG(2) << "Bounding Box Corenrs 1 are: " << bbox.first;
-  VLOG(2) << "Bounding Box Corenrs 2 are: " << bbox.second;
+  VLOG(3) << "Bounding Box Corenrs 1 are: " << bbox.first;
+  VLOG(3) << "Bounding Box Corenrs 2 are: " << bbox.second;
 
   std::vector<colmap::point3D_t> for_del;  // collect point ids for deletion
   for (const auto& point3D : reconstruction->Points3D()) {
     if (!((point3D.second.xyz.array() >= bbox.first.array()).all() && (point3D.second.xyz.array() <= bbox.second.array()).all())) {
-      VLOG(2) << "Bogus 3d point detected! Prepare deletion of id: " << point3D.first;
-      VLOG(2) << "Bogus 3d Position: \n" << point3D.second.xyz;
+      VLOG(4) << "Bogus 3d point detected! Prepare deletion of id: " << point3D.first;
+      VLOG(4) << "Bogus 3d Position: \n" << point3D.second.xyz;
       // NOTE: Do not delete point while iterating
       for_del.push_back(point3D.first);
     }
   }
+  VLOG(2) << "Number of 3d Points to delete: " << for_del.size();
 
   for (auto& id : for_del) {
     reconstruction->DeletePoint3D(id);
-    VLOG(2) << "Commence deletion of id: " << id;
+    VLOG(4) << "Commence deletion of id: " << id;
   }
 }
 

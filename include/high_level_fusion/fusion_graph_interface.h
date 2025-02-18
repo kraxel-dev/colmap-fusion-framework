@@ -27,9 +27,9 @@ namespace hifuse {  // high-level fusion
 
 class FusionGraphInterface {
  public:
-  FusionGraphInterface(std::shared_ptr<colmap::Reconstruction>& reconstruction,
-                       std::shared_ptr<ceres::Problem>& ceres_graph,
-                       bool log_to_rerun = true);
+  FusionGraphInterface(std::shared_ptr<colmap::Reconstruction> reconstruction,
+                       std::shared_ptr<ceres::Problem> ceres_graph,
+                       const bool log_to_rerun = true);
   ~FusionGraphInterface() = default;
 
   void AddReprojectionFactor(const colmap::image_t img_id,

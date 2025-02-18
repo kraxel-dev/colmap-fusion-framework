@@ -5,7 +5,7 @@
 #include <Eigen/Core>
 #include <colmap/geometry/rigid3.h>
 
-void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
+void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
                         const std::shared_ptr<rerun::Pinhole> rrpinhole,
                         const colmap::Image& img) {
   std::string cam_name = "world/cam" + std::to_string(img.ImageId());
@@ -29,7 +29,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream>& rec,
            rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
 }
 
-void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
+void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
                             const colmap::Image& img,
                             const std::vector<colmap::Point3D>& pts3D) {
   std::vector<rerun::Position3D> rr_pts3D;
@@ -43,7 +43,7 @@ void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
   rec->log("world/pts_" + std::to_string(img.ImageId()), rerun::Points3D(rr_pts3D));
 }
 
-void rrfuse::ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& rec,
+void rrfuse::ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
                                  const std::unordered_map<colmap::camera_t, colmap::Image>& images) {
   for (auto& [_, img] : images) {
     // clear 3D points associated to cam
@@ -51,14 +51,14 @@ void rrfuse::ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream>& 
   }
 }
 
-void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream>& rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz) {
+void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz) {
   std::string pt3d_name = "world/point3d/" + std::to_string(pt3d_id);
   rerun::Position3D pos(xyz.x(), xyz.y(), xyz.z());
 
   rec->log(pt3d_name, rerun::archetypes::Points3D(pos));
 }
 
-void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec,
+void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
                               const colmap::Rigid3d& T_ij_odom,
                               const colmap::Image& img_i,
                               const colmap::Image& img_j) {
@@ -96,10 +96,10 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream>& rec
   rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));
 }
 
-void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& rec,
-                               const std::shared_ptr<rerun::Pinhole>& rrpinhole,
+void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec,
+                               const std::shared_ptr<rerun::Pinhole> rrpinhole,
                                const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                               const std::unordered_map<colmap::point3D_t, colmap::Point3D>& Points3D) {
+                               const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D) {
   // -------------------- Images
   const std::unordered_map<colmap::camera_t, colmap::Image> images_copy = images;
   // log all registered images
@@ -113,7 +113,36 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream>& re
 
   std::vector<rerun::Position3D> points;
   // log all 3d points
-  for (auto& [_, pt3D] : Points3D) {
+  for (auto& [_, pt3D] : points3D) {
+    // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
+    if (pt3D.track.Length() < 2) continue;
+
+    const Eigen::Vector3f xyz = pt3D.xyz.cast<float>();
+    points.emplace_back(xyz.x(), xyz.y(), xyz.z());
+    // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
+  }
+  rec->log("world/pts_3D", rerun::Points3D(points));
+  // rec->log("world/pts_3D", rerun::Points3D().update_fields());
+}
+
+void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
+                                     const std::shared_ptr<rerun::Pinhole> rrpinhole,
+                                     const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                                     const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                                     const fuhe::types::MapOfImageIdsSec& ids_by_stamp) {
+  // -------------------- Images
+  // log all registered images
+  for (auto& [_, id] : ids_by_stamp) {
+    rrfuse::LogCamPose(rec, rrpinhole, images.at(id));
+  }
+
+  // -------------------- Tracks
+  // clear rerun 3d points
+  rec->log("world/pts_3D", rerun::Points3D::clear_fields());
+
+  std::vector<rerun::Position3D> points;
+  // log all 3d points
+  for (auto& [_, pt3D] : points3D) {
     // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
     if (pt3D.track.Length() < 2) continue;
 

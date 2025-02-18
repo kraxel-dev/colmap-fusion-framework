@@ -1,6 +1,6 @@
 #pragma once
 
-#include <colmap/scene/reconstruction.h>
+#include <colmap/geometry/rigid3.h>
 #include <rerun.hpp>
 
 namespace fuhe {

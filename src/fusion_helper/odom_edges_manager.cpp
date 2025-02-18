@@ -4,7 +4,7 @@ fuhe::OdomImagesEdge::OdomImagesEdge(const double stamp_j,
                                      const double time_diff,
                                      const colmap::image_t i,
                                      const colmap::image_t j,
-                                     const std::shared_ptr<colmap::Rigid3d>& T_ij)
+                                     const std::shared_ptr<colmap::Rigid3d> T_ij)
     : OdomImagesEdge() {}
 
 std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomEdgesBetweenImages(
