@@ -3,9 +3,9 @@
 #include "fusion_helper/io.h"
 #include <colmap/util/file.h>
 
-std::map<const double, colmap::image_t> fuhe::col_utils::ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
+fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
                                                                          std::shared_ptr<colmap::Reconstruction> reconstruction) {
-  std::map<const double, colmap::image_t> ordered_image_stamps;  // output map -> image ids by timestamps [secs]
+  fuhe::types::MapOfImageIdsSec ordered_image_stamps;  // output map -> image ids by timestamps [secs]
 
   // iterate over all ids to register them into a hashmap that takes care of the sorting automatically
   for (const colmap::image_t image_id : image_ids) {
