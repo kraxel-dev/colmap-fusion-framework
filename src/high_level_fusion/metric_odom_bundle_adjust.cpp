@@ -193,14 +193,14 @@ int main(int argc, char** argv) {
 
   VLOG(1) << summary.FullReport();
 
-  // -------------------- Update image poses in rerun
-  fuhe::col_utils::CropFarAwayPoints(reconstruction);
+  // // -------------------- Update image poses in rerun
+  // fuhe::col_utils::CropFarAwayPoints(reconstruction);
 
   // TODO: decide on how to rerun visualize for good
-  if (fusion_interface.GetRerunRec()) {
-    fusion_interface.UpdateWholeReconstroctionRerun();
+  // if (fusion_interface.GetRerunRec()) {
+  //   fusion_interface.UpdateWholeReconstroctionRerun();
     // fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
-  }
+  // }
 
   // TODO: implement residual eval correctly
   // --------------------Metrics after optim
