@@ -4,8 +4,8 @@ fuhe::OdomImagesEdge::OdomImagesEdge(const double stamp_j,
                                      const double time_diff,
                                      const colmap::image_t i,
                                      const colmap::image_t j,
-                                     const std::shared_ptr<colmap::Rigid3d> T_ij)
-    : stamp_j{stamp_j}, time_diff{time_diff}, i{i}, j{j}, T_ij{T_ij} {}
+                                     const std::shared_ptr<colmap::Rigid3d> ptr_T_ij)
+    : stamp_j{stamp_j}, time_diff{time_diff}, i{i}, j{j}, ptr_T_ij{ptr_T_ij} {}
 
 std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomEdgesBetweenImages(
     const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {

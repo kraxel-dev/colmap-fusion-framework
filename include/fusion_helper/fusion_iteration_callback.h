@@ -79,7 +79,11 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
     // this->UpdateIterationRerun(summary, imgs_sorted_by_stamp);
     rr_rec->set_time_sequence("step", summary.iteration);
     rrfuse::LogReconstructionSorted(this->rr_rec, this->rrpinhole, this->images, this->points3D, this->img_ids_by_stamp);
-    rrfuse::LogOdometryEdges(this->rr_rec, this->images, this->odom_edges);
+    // TODO: make parametrizable to choose between two
+    // rrfuse::LogOdometryEdges(this->rr_rec, this->images, this->odom_edges);
+    bool log_odom_trajectory_as_linestrip = (summary.iteration > 1) ? false : true;
+    rrfuse::LogOdometryEdgesAsTrajectory(this->rr_rec, this->images, this->odom_edges, log_odom_trajectory_as_linestrip);
+    
     return ceres::SOLVER_CONTINUE;
   }
 

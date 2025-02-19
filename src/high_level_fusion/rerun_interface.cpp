@@ -14,7 +14,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
 
   // log camera pose to rerun. data of t and R may go out of scope, but as rerun object they shall live on
-  rec->log(cam_name, rerun::Transform3D(T.first, T.second).with_axis_length(rerun::components::AxisLength(0.25f)));
+  rec->log(cam_name, rerun::Transform3D(T.first, T.second).with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
 
   /*
   NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
@@ -24,15 +24,15 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   rec->log(cam_name + "/pinhole",
            rerun::Transform3D()
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(0.25f)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
   rec->log(cam_name + "/pinhole", rerun::Pinhole(*rrpinhole));
   // add a point to slap a label to the image pose
-  rec->log(cam_name + "/tf_label",
-           rerun::Transform3D()
-               .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(0.25f)));
-  rec->log(cam_name + "/tf_label",
-           rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
+  // rec->log(cam_name + "/tf_label",
+  //          rerun::Transform3D()
+  //              .with_relation(rerun::components::TransformRelation::ParentFromChild)
+  //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  // rec->log(cam_name + "/tf_label",
+  //          rerun::Points3D({{0.05f, -0.1f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
 }
 
 void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -91,14 +91,16 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
   rec->log(pred_cam_name,
            rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second)
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(0.25f)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
   // add a point to slap a label to the image pose
-  rec->log(pred_cam_name + "/tf_label",
-           rerun::Transform3D()
-               .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(0.25f)));
-  rec->log(pred_cam_name + "/tf_label",
-           rerun::Points3D({{0.0f, 0.0f, 0.0f}}).with_labels(rerun::components::Text("/cam" + std::to_string(img_j.ImageId()) + "_predicted")));
+  // rec->log(pred_cam_name + "/tf_label",
+  //          rerun::Transform3D()
+  //              .with_relation(rerun::components::TransformRelation::ParentFromChild)
+  //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  // rec->log(
+  //     pred_cam_name + "/tf_label",
+  //     rerun::Points3D({{0.05f, 0.1f, 0.0f}}).with_labels(rerun::components::Text("/cam" + std::to_string(img_j.ImageId()) +
+  //     "_predicted")));
   // draw ellipsoid around precited pose
   // rec->log(pred_cam_name + "/ellipse",
   //          rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.03f, 0.01f, 0.04f}})
@@ -107,6 +109,51 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
 
   // log linestrips connecting the factors
   rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));
+}
+
+void rrfuse::LogOdomEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
+                                         const colmap::Rigid3d& T_w_from_odom,
+                                         const colmap::Image& img_i,
+                                         const colmap::Image& img_j) {
+  // rerun naming stuff
+  const std::string pred_cam_name = "world/cam" + std::to_string(img_j.ImageId()) + "_predicted";
+  const std::string edges_i_pred_j = "world/edge_" + std::to_string(img_i.ImageId()) + "_to_" + std::to_string(img_j.ImageId());
+
+  std::pair<rerun::Vec3D, rerun::Mat3x3> T_odom = fuhe::rr_utils::ToRerunPose3D(T_w_from_odom, false);
+  const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(img_i.CamFromWorld(), true).first;  // pos of i img in world
+  const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(img_j.CamFromWorld(), true).first;  // pos of j img in world
+
+  // line strip highlighting the edges between states and odometry pose
+  std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
+  line_segments.push_back(t_i);             // node i as origin
+  line_segments.push_back(T_odom.first);    // pass odom pose as control point
+  line_segments.push_back(t_j);             // end line strip in pose of image j
+  rerun::LineStrip3D line_strip(line_segments);
+
+  // log predicted camera pose to rerun.
+  rec->log(pred_cam_name,
+           rerun::Transform3D::from_translation_mat3x3(T_odom.first, T_odom.second)
+               .with_relation(rerun::components::TransformRelation::ParentFromChild)
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  // add a point to slap a label to the image pose
+  rec->log(pred_cam_name + "/tf_label",
+           rerun::Transform3D()
+               .with_relation(rerun::components::TransformRelation::ParentFromChild)
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  // rec->log(
+  //     pred_cam_name + "/tf_label",
+  //     rerun::Points3D({{0.05f, 0.1f, 0.0f}}).with_labels(rerun::components::Text("/cam" + std::to_string(img_j.ImageId()) +
+  //     "_predicted")));
+  // draw ellipsoid around precited pose
+  // rec->log(pred_cam_name + "/ellipse",
+  //          rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.03f, 0.01f, 0.04f}})
+  //              .with_colors({rerun::Rgba32(255, 255, 0)})
+  //              .with_labels(rerun::components::Text("cam" + std::to_string(img_j.ImageId()) + "_predicted")));
+
+  // log linestrips connecting the factors
+  rec->log(edges_i_pred_j,
+           rerun::LineStrips3D(line_strip)
+               .with_labels(rerun::components::Text("edge_" + std::to_string(img_i.ImageId()) + "_to_" + std::to_string(img_j.ImageId()))));
 }
 
 void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -170,19 +217,65 @@ void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStrea
 void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                               const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                               const std::map<const double, fuhe::OdomImagesEdge> edges) {
-  // -------------------- Images
+  // -------------------- Edges
   // log all registered images
   for (auto& [_, edge] : edges) {
     // skip source node
     if ((edge.i == edge.j)) {
       VLOG(4) << "Source node detected! Skip logging this one! ";
       continue;
-
-    } else if (edge.T_ij == nullptr) {
+    } else if (edge.ptr_T_ij == nullptr) {
       LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
     }
 
-    VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.T_ij;
-    rrfuse::LogRelPoseFactor(rec, *(edge.T_ij), images.at(edge.i), images.at(edge.j));
+    VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.ptr_T_ij;
+    rrfuse::LogRelPoseFactor(rec, *(edge.ptr_T_ij), images.at(edge.i), images.at(edge.j));
+  }
+}
+
+void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
+                                          const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                                          const std::map<const double, fuhe::OdomImagesEdge> edges,
+                                          const bool log_traj_as_linestrip) {
+  colmap::Rigid3d T_world_from_odom =
+      colmap::Rigid3d();  // absolute odometry pose, incremented per interation with each consecutive relpose
+
+  std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
+  // -------------------- Edges
+  // log all registered images
+  for (auto& [_, edge] : edges) {
+    // skip source node
+    if ((edge.i == edge.j)) {
+      VLOG(4) << "Source node detected!";
+      // Grabbing first colmap pose as origin of tum trajectory
+      T_world_from_odom = colmap::Inverse(images.at(edge.j).CamFromWorld());
+
+      if (log_traj_as_linestrip) {
+        const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
+        // line strip connecting odometry poses
+        line_segments.push_back(t_j);  // node i as origin
+      }
+
+      continue;
+
+    } else if (edge.ptr_T_ij == nullptr) {
+      LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
+    }
+
+    // increment rel pose to obtain absolute pose for current node
+    T_world_from_odom = T_world_from_odom * *(edge.ptr_T_ij);
+    VLOG(5) << "Rerun logging: " << T_world_from_odom;
+    rrfuse::LogOdomEdgeWithAbsolutePose(rec, T_world_from_odom, images.at(edge.i), images.at(edge.j));
+
+    if (log_traj_as_linestrip) {
+      const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
+      // line strip connecting odometry poses
+      line_segments.push_back(t_j);  // node i as origin
+    }
+  }
+
+  if (log_traj_as_linestrip) {
+    rerun::LineStrip3D line_strip(line_segments);
+    rec->log("world/odometry", rerun::LineStrips3D(line_strip).with_labels(rerun::components::Text("Odometry")));
   }
 }

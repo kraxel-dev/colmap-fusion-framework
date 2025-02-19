@@ -15,13 +15,13 @@ struct OdomImagesEdge {
                  const double time_diff,
                  const colmap::image_t i,
                  const colmap::image_t j,
-                 const std::shared_ptr<colmap::Rigid3d> T_ij);
+                 const std::shared_ptr<colmap::Rigid3d> ptr_T_ij);
 
   double stamp_j = 0.0;                             // timestamp [secs] of image j
   double time_diff = 0.0;                           // time diff [secs] between node j and i
   colmap::image_t i = -1;                           // image id of source node i
   colmap::image_t j = -1;                           // image id of dest node j
-  std::shared_ptr<colmap::Rigid3d> T_ij = nullptr;  // relative pose of j expressed in i measured by external odometry source.
+  std::shared_ptr<colmap::Rigid3d> ptr_T_ij = nullptr;  // relative pose of j expressed in i measured by external odometry source.
   std::shared_ptr<Eigen::Matrix<double, 6, 6>> cov_ij = nullptr;  // 6x6 covariance of external relative odometry. First 3 entries are rotation and last 3 translation.
 };
 
