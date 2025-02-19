@@ -59,7 +59,7 @@ const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(const co
 
 void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction) {
   VLOG(2) << "Cropping out far away 3d points from colmap model!";
-  auto bbox = reconstruction->ComputeBoundingBox(0.0, 0.9);
+  auto bbox = reconstruction->ComputeBoundingBox(0.0, 0.8);
 
   VLOG(3) << "Bounding Box Corenrs 1 are: " << bbox.first;
   VLOG(3) << "Bounding Box Corenrs 2 are: " << bbox.second;

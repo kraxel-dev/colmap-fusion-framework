@@ -32,9 +32,10 @@ struct OdomImagesEdge {
  */
 class OdomEdgesManager {
  public:
-  std::map<const double, OdomImagesEdge> CreateOdomEdgesBetweenImages(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
+  static std::map<const double, OdomImagesEdge> CreateOdomEdgesBetweenImages(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                                     const fuhe::types::MapOfPosesSec& odom_poses_by_stamp);
 
+ // TODO: remove class if obslote
  private:
   std::string tum_file = "";
   std::shared_ptr<fuhe::types::MapOfPosesSec> odom_poses_by_stamp =
