@@ -8,8 +8,14 @@
 
 hifuse::FusionGraphInterface::FusionGraphInterface(std::shared_ptr<colmap::Reconstruction> reconstruction,
                                                    std::shared_ptr<ceres::Problem> ceres_graph,
-                                                   const bool log_to_rerun)
-    : is_log_to_rerun(log_to_rerun), ceres_graph(ceres_graph), reconstruction(reconstruction) {
+                                                   const bool log_to_rerun,
+                                                   const bool save_rerun_recording,
+                                                   const std::string recording_path)
+    : is_log_to_rerun{log_to_rerun},
+      ceres_graph{ceres_graph},
+      reconstruction{reconstruction},
+      is_save_rerun_to_disk{save_rerun_recording},
+      recording_path{recording_path} {
   if (!log_to_rerun) {
     VLOG(2) << "Rerun logging and visualization turned off!";
     return;
@@ -207,12 +213,21 @@ void hifuse::FusionGraphInterface::UpdateWholeReconstroctionRerun() {
 }
 
 void hifuse::FusionGraphInterface::InitRerunViewer() {
+  // --------------------
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->rr_rec->spawn().exit_on_failure();
 
   this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
 
+  // -------------------- Save rerun recording to disk if specified
+  if (this->is_save_rerun_to_disk) {
+    VLOG(2) << "Saving rerun recording to rr file!";
+    this->rr_rec->save(std::string_view(this->recording_path + "/recording.rrd")).exit_on_failure();
+    VLOG(2) << "Path: " << std::string_view(this->recording_path + "/recording.rrd");
+  }
+
+  // --------------------
   // TODO: make generic for all registered cameras (currently we assume that the same pinhole model was used)
   // obtain camera params from first image in colmap model
   colmap::Camera cam = this->reconstruction->Camera(this->reconstruction->Images().begin()->second.CameraId());

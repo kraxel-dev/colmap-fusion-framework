@@ -29,7 +29,9 @@ class FusionGraphInterface {
  public:
   FusionGraphInterface(std::shared_ptr<colmap::Reconstruction> reconstruction,
                        std::shared_ptr<ceres::Problem> ceres_graph,
-                       const bool log_to_rerun = true);
+                       const bool log_to_rerun = true,
+                       const bool save_rerun_recording = false,
+                       const std::string recording_path = "");
   ~FusionGraphInterface() = default;
 
   void AddReprojectionFactor(const colmap::image_t img_id,
@@ -55,7 +57,9 @@ class FusionGraphInterface {
   std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
 
  private:
-  bool is_log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
+  bool is_log_to_rerun = true;         // flag to enable logging and visualization of graph construction and optimization to rerun
+  bool is_save_rerun_to_disk = false;  // enable saving rerun logged data to disk as rrd file
+  std::string recording_path = "";
   std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;   // rerun logger and viewer object
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;       // rerun pinhole model representing the camera used in colmap model
   std::shared_ptr<rerun::Pinhole> rr_pinhole_pred = nullptr;  // rerun pinhole model representing the predicted position through odometry

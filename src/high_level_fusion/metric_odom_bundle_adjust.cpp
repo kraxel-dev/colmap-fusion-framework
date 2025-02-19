@@ -25,6 +25,7 @@ int main(int argc, char** argv) {
   double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
   bool log_to_rerun = true;         // whether to log data to rerun viewer
+  bool save_rerun_rec = false;      // whether to save logged rerun data to rr file
 
   colmap::OptionManager col_options;
 
@@ -33,6 +34,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("cov", &cov);
   col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
   col_options.AddDefaultOption("rerun", &log_to_rerun);
+  col_options.AddDefaultOption("save_rrd", &save_rerun_rec);
   col_options.AddBundleAdjustmentOptions();
   col_options.Parse(argc, argv);
 
@@ -84,7 +86,7 @@ int main(int argc, char** argv) {
   std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
 
   // -------------------- Create fusion interface object
-  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun);
+  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun, save_rerun_rec, output_path);
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
   int i = 0;  // image iteration counter
@@ -175,11 +177,11 @@ int main(int argc, char** argv) {
   if (fusion_interface.GetRerunRec()) {
     // deploy own iteration callback that logs to rerun during optimization
     callback = std::make_shared<fuhe::FusionIterationCallback>(fusion_interface.GetRerunRec(),
-                                                                     fusion_interface.GetRerunPinhole(),
-                                                                     fusion_interface.GetReconstruction()->Images(),
-                                                                     fusion_interface.GetReconstruction()->Points3D(),
-                                                                     imgs_by_stamp,
-                                                                     edges);
+                                                               fusion_interface.GetRerunPinhole(),
+                                                               fusion_interface.GetReconstruction()->Images(),
+                                                               fusion_interface.GetReconstruction()->Points3D(),
+                                                               imgs_by_stamp,
+                                                               edges);
     solver_options.callbacks.push_back(callback.get());
   }
   solver_options.minimizer_progress_to_stdout = false;
