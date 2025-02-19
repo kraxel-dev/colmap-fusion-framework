@@ -12,3 +12,6 @@ set(FUSION_HELPER_SOURCES
 add_library(fusion_helper SHARED ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use
 target_include_directories(fusion_helper PUBLIC ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(fusion_helper PRIVATE ${CMAKE_PROJECT_NAME}) # add dependency found in toplevel cmake
+
+add_executable(sparsfiy_model colmap_model_manipulation/sparsify_model.cpp)
+target_link_libraries(sparsfiy_model ${CMAKE_PROJECT_NAME};fusion_helper)
