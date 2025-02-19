@@ -7,6 +7,7 @@
 #include "fusion_helper/cov_utils.h"
 #include "fusion_helper/fusion_iteration_callback.h"
 #include "fusion_helper/io.h"
+#include "fusion_helper/odom_edges_manager.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
 #include <Eigen/Core>
@@ -75,6 +76,9 @@ int main(int argc, char** argv) {
   const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();
   // get image ids in sorted order
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reg_image_ids, reconstruction);
+
+  // -------------------- Create directed odom edges between images in sorted order
+  auto edges = fuhe::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
 
   // -------------------- Create Ceres problem
   std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
@@ -167,14 +171,16 @@ int main(int argc, char** argv) {
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
   // use rerun iteration callback during ceres optim
+  std::shared_ptr<fuhe::FusionIterationCallback> callback = nullptr;
   if (fusion_interface.GetRerunRec()) {
     // deploy own iteration callback that logs to rerun during optimization
-    fuhe::FusionIterationCallbackSorted callback(fusion_interface.GetRerunRec(),
-                                                 fusion_interface.GetRerunPinhole(),
-                                                 fusion_interface.GetReconstruction()->Images(),
-                                                 fusion_interface.GetReconstruction()->Points3D(),
-                                                 imgs_by_stamp);
-    solver_options.callbacks.push_back(&callback);
+    callback = std::make_shared<fuhe::FusionIterationCallback>(fusion_interface.GetRerunRec(),
+                                                                     fusion_interface.GetRerunPinhole(),
+                                                                     fusion_interface.GetReconstruction()->Images(),
+                                                                     fusion_interface.GetReconstruction()->Points3D(),
+                                                                     imgs_by_stamp,
+                                                                     edges);
+    solver_options.callbacks.push_back(callback.get());
   }
   solver_options.minimizer_progress_to_stdout = false;
   solver_options.update_state_every_iteration = true;

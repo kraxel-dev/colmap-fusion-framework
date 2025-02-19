@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include "fusion_helper/odom_edges_manager.h"
 #include "fusion_helper/types.h"
 #include <colmap/scene/reconstruction.h>
 #include <rerun.hpp>
@@ -30,9 +31,7 @@ void LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
                 const colmap::Image& img);
 
 /// log only 3D points for a single image to rerun
-void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
-                    const colmap::Image& img,
-                    const std::vector<colmap::Point3D>& pts3D);
+void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::Image& img, const std::vector<colmap::Point3D>& pts3D);
 
 /// clear manually and incrementally registered 3D points that were logged per image
 void ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -62,4 +61,9 @@ void LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
                              const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                              const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                              const fuhe::types::MapOfImageIdsSec& ids_by_stamp);
+
+/// Log predicted poses from relative external odometry for all nodes i j
+void LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
+                      const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                      const std::map<const double, fuhe::OdomImagesEdge> edges);
 }  // namespace rrfuse

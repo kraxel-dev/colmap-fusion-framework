@@ -11,5 +11,5 @@ void fuhe::cov_utils::WeightPoseCovNonMotionDirection(Eigen::Matrix<double, 6, 6
   cov(2, 2) *= llambda;  // vehicle roll is local z axis in camera frame
   cov(3, 3) *= llambda;  // motion along vehicle lateral is x axis of local camera frame
   cov(4, 4) *= llambda;  // motion along vehicle height is -y axis of local camera frame
-  VLOG(3) << "Covariance matrix after downweighting: " << cov;
+  VLOG(4) << "Covariance matrix after downweighting: " << cov;
 }

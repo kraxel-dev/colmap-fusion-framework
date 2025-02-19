@@ -223,8 +223,8 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
-  this->rr_pinhole =
-      std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}));
+  this->rr_pinhole = std::make_shared<rerun::Pinhole>(
+      rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}).with_image_plane_distance(0.2));
   // create different looking pinhole object for pose predicted from wheel odom
   this->rr_pinhole_pred = std::make_shared<rerun::Pinhole>(
       rerun::Pinhole::from_focal_length_and_resolution({focal_length_y / 2, focal_length_x / 2}, {height / 2, width / 2}));
