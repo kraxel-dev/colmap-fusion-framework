@@ -26,6 +26,8 @@ int main(int argc, char** argv) {
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
   bool log_to_rerun = true;         // whether to log data to rerun viewer
   bool save_rerun_rec = false;      // whether to save logged rerun data to rr file
+  bool draw_rerun_odom_as_predicted_poses =
+      true;  // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
 
   colmap::OptionManager col_options;
 
@@ -35,6 +37,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
   col_options.AddDefaultOption("rerun", &log_to_rerun);
   col_options.AddDefaultOption("save_rrd", &save_rerun_rec);
+  col_options.AddDefaultOption("rerun_odom_as_pred", &draw_rerun_odom_as_predicted_poses);
   col_options.AddBundleAdjustmentOptions();
   col_options.Parse(argc, argv);
 
@@ -181,7 +184,8 @@ int main(int argc, char** argv) {
                                                                fusion_interface.GetReconstruction()->Images(),
                                                                fusion_interface.GetReconstruction()->Points3D(),
                                                                imgs_by_stamp,
-                                                               edges);
+                                                               edges,
+                                                               draw_rerun_odom_as_predicted_poses);
     solver_options.callbacks.push_back(callback.get());
   }
   solver_options.minimizer_progress_to_stdout = false;

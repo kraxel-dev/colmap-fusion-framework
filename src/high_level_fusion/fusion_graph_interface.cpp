@@ -198,7 +198,7 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
 
     // -------------------- Update rel pose factor in rerun
     colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
-    rrfuse::LogRelPoseFactor(this->rr_rec,
+    rrfuse::LogOdometryEdgeAsPredictedPose(this->rr_rec,
                              colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
                              this->reconstruction->Image(prev_img_id),
                              this->reconstruction->Image(curr_img_id));
@@ -215,7 +215,7 @@ void hifuse::FusionGraphInterface::UpdateWholeReconstroctionRerun() {
 void hifuse::FusionGraphInterface::InitRerunViewer() {
   // --------------------
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
-  this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared/nested");
+  this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->rr_rec->spawn().exit_on_failure();
 
   this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis

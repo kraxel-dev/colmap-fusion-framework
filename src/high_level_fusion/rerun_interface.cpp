@@ -14,7 +14,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
 
   // log camera pose to rerun. data of t and R may go out of scope, but as rerun object they shall live on
-  rec->log(cam_name, rerun::Transform3D(T.first, T.second).with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  rec->log(cam_name, rerun::Transform3D(T.first, T.second).with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_PINHOLE)));
 
   /*
   NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
@@ -24,7 +24,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   rec->log(cam_name + "/pinhole",
            rerun::Transform3D()
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_PINHOLE)));
   rec->log(cam_name + "/pinhole", rerun::Pinhole(*rrpinhole));
   // add a point to slap a label to the image pose
   // rec->log(cam_name + "/tf_label",
@@ -64,10 +64,66 @@ void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const
   rec->log(pt3d_name, rerun::archetypes::Points3D(pos));
 }
 
-void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
-                              const colmap::Rigid3d& T_ij_odom,
-                              const colmap::Image& img_i,
-                              const colmap::Image& img_j) {
+void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
+                             const colmap::Rigid3d& T_ij_odom,
+                             const colmap::Image& img_i,
+                             const colmap::Image& img_j,
+                             const bool is_odom_a_relpose) {
+  // rerun naming stuff
+  std::string pred_cam_name = fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_a_relpose).first;
+  std::string edge_i_pred_j_name = fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_a_relpose).second;
+
+  colmap::Rigid3d T_odom_w_j;  // absolute pose odom associated with node j with respect to world
+
+  if (is_odom_a_relpose) {
+    // if odom pose is provided as relative pose between i and j (typical case)
+    T_odom_w_j = colmap::Inverse(img_i.CamFromWorld()) * T_ij_odom;  // T_w_j_predicted = T_w_from_i * T_odometry_i_from_j
+  } else {
+    // if odom pose is provided as absolute pose (case only for logging)
+    T_odom_w_j = T_ij_odom;
+  }
+
+  // obtain absolute poses of colmap nodes
+  const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(colmap::Inverse(img_i.CamFromWorld())).first;
+  const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(colmap::Inverse(img_j.CamFromWorld())).first;
+  // convert odom pose to rerun type
+  std::pair<rerun::Vec3D, rerun::Mat3x3> T_ij_pred = fuhe::rr_utils::ToRerunPose3D(T_odom_w_j);
+
+  // line strip highlighting the edges between states and predicted pose
+  std::vector<rerun::Vec3D> line_segments;   // vector containg xyz points of line semgents
+  line_segments.push_back(t_i);              // origin in zero (parent entity is i cam pose)
+  line_segments.push_back(T_ij_pred.first);  // pass predicted pose as control point
+  line_segments.push_back(t_j);              // end line strip in pose of image j
+  rerun::LineStrip3D line_strip(line_segments);
+
+  // log predicted camera pose to rerun.
+  rec->log(pred_cam_name,
+           rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second)
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_ODOM)));
+  // add a point to slap a label to the image pose
+  // rec->log(pred_cam_name + "/tf_label",
+  //          rerun::Transform3D()
+  //              .with_relation(rerun::components::TransformRelation::ParentFromChild)
+  //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+  // rec->log(
+  //     pred_cam_name + "/tf_label",
+  //     rerun::Points3D({{0.05f, 0.1f, 0.0f}}).with_labels(rerun::components::Text("/cam" + std::to_string(img_j.ImageId()) +
+  //     "_predicted")));
+  // draw ellipsoid around precited pose
+  // rec->log(pred_cam_name + "/ellipse",
+  //          rerun::Ellipsoids3D::from_centers_and_half_sizes({{0.0f, 0.0f, 0.0f}}, {{0.03f, 0.01f, 0.04f}})
+  //              .with_colors({rerun::Rgba32(255, 255, 0)})
+  //              .with_labels(rerun::components::Text("cam" + std::to_string(img_j.ImageId()) + "_predicted")));
+
+  // log linestrips connecting the factors
+  rec->log(edge_i_pred_j_name,
+           rerun::LineStrips3D(line_strip).with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
+}
+
+void rrfuse::LogOdometryEdgeAsPredictedPose(const std::shared_ptr<rerun::RecordingStream> rec,
+                                            const colmap::Rigid3d& T_ij_odom,
+                                            const colmap::Image& img_i,
+                                            const colmap::Image& img_j) {
   // obtain relative pose of node j with respect to node i from current states in images (non measurements)
   const colmap::Rigid3d T_ij = img_i.CamFromWorld() * colmap::Inverse(img_j.CamFromWorld());  // T_i_from_j = T_iw * T_wj
 
@@ -91,7 +147,7 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
   rec->log(pred_cam_name,
            rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second)
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_ODOM)));
   // add a point to slap a label to the image pose
   // rec->log(pred_cam_name + "/tf_label",
   //          rerun::Transform3D()
@@ -111,10 +167,10 @@ void rrfuse::LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
   rec->log(edges_i_pred_j, rerun::LineStrips3D(line_strip));
 }
 
-void rrfuse::LogOdomEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
-                                         const colmap::Rigid3d& T_w_from_odom,
-                                         const colmap::Image& img_i,
-                                         const colmap::Image& img_j) {
+void rrfuse::LogOdometryEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
+                                             const colmap::Rigid3d& T_w_from_odom,
+                                             const colmap::Image& img_i,
+                                             const colmap::Image& img_j) {
   // rerun naming stuff
   const std::string pred_cam_name = "world/cam" + std::to_string(img_j.ImageId()) + "_predicted";
   const std::string edges_i_pred_j = "world/edge_" + std::to_string(img_i.ImageId()) + "_to_" + std::to_string(img_j.ImageId());
@@ -134,12 +190,12 @@ void rrfuse::LogOdomEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingS
   rec->log(pred_cam_name,
            rerun::Transform3D::from_translation_mat3x3(T_odom.first, T_odom.second)
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_ODOM)));
   // add a point to slap a label to the image pose
   rec->log(pred_cam_name + "/tf_label",
            rerun::Transform3D()
                .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
+               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_ODOM)));
   // rec->log(
   //     pred_cam_name + "/tf_label",
   //     rerun::Points3D({{0.05f, 0.1f, 0.0f}}).with_labels(rerun::components::Text("/cam" + std::to_string(img_j.ImageId()) +
@@ -217,6 +273,7 @@ void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStrea
 void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                               const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                               const std::map<const double, fuhe::OdomImagesEdge> edges) {
+  const bool log_odom_as_predicted_pose = true;  // do not log odometry measurement as absolute pose
   // -------------------- Edges
   // log all registered images
   for (auto& [_, edge] : edges) {
@@ -229,7 +286,7 @@ void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
     }
 
     VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.ptr_T_ij;
-    rrfuse::LogRelPoseFactor(rec, *(edge.ptr_T_ij), images.at(edge.i), images.at(edge.j));
+    rrfuse::LogOdometryEdge(rec, *(edge.ptr_T_ij), images.at(edge.i), images.at(edge.j), log_odom_as_predicted_pose);
   }
 }
 
@@ -237,6 +294,8 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
                                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                                           const std::map<const double, fuhe::OdomImagesEdge> edges,
                                           const bool log_traj_as_linestrip) {
+  const bool log_odom_as_absolute_pose = true;  // log odometry measurement as absolute pose
+
   colmap::Rigid3d T_world_from_odom =
       colmap::Rigid3d();  // absolute odometry pose, incremented per interation with each consecutive relpose
 
@@ -265,7 +324,7 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
     // increment rel pose to obtain absolute pose for current node
     T_world_from_odom = T_world_from_odom * *(edge.ptr_T_ij);
     VLOG(5) << "Rerun logging: " << T_world_from_odom;
-    rrfuse::LogOdomEdgeWithAbsolutePose(rec, T_world_from_odom, images.at(edge.i), images.at(edge.j));
+    rrfuse::LogOdometryEdge(rec, T_world_from_odom, images.at(edge.i), images.at(edge.j), !log_odom_as_absolute_pose);
 
     if (log_traj_as_linestrip) {
       const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world

@@ -18,7 +18,8 @@
 namespace rrfuse {  // rerun interface namespace
 
 // some constant params for shared entity size
-inline constexpr float AXIS_LENGTH = 0.15f;
+inline constexpr float AXIS_LENGTH_PINHOLE = 0.15f;
+inline constexpr float AXIS_LENGTH_ODOM = 0.6 * AXIS_LENGTH_PINHOLE;
 
 /**
  * @brief // TODO: write brief
@@ -43,12 +44,18 @@ void ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
 /// log a single 3D point to rerun
 void LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz);
 
+void LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
+                     const colmap::Rigid3d& T_ij_odom,
+                     const colmap::Image& img_i,
+                     const colmap::Image& img_j,
+                     const bool is_odom_a_relpose = true);
+
 /// Log relataive pose from external odom sensor as predicted pose seen from node i. Connect lindestrips between nodes i j and predicted
 /// pose to highlight them as factor graph edge
-void LogRelPoseFactor(const std::shared_ptr<rerun::RecordingStream> rec,
-                      const colmap::Rigid3d& T_ij_odom,
-                      const colmap::Image& img_i,
-                      const colmap::Image& img_j);
+void LogOdometryEdgeAsPredictedPose(const std::shared_ptr<rerun::RecordingStream> rec,
+                                    const colmap::Rigid3d& T_ij_odom,
+                                    const colmap::Image& img_i,
+                                    const colmap::Image& img_j);
 
 /**
  * @brief Log odometry edge constraining to colmap nodes i j but with the absolute pose of odometry reading with respect to colmap coords
@@ -59,10 +66,10 @@ system. User must provide the correct absolute pose.
  * @param img_i
  * @param img_j
  */
-void LogOdomEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
-                                 const colmap::Rigid3d& T_w_from_odom,
-                                 const colmap::Image& img_i,
-                                 const colmap::Image& img_j);
+void LogOdometryEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
+                                     const colmap::Rigid3d& T_w_from_odom,
+                                     const colmap::Image& img_i,
+                                     const colmap::Image& img_j);
 
 /**
  * @brief Log whole colmap reconstruction to rerun. Can be used in ceres iteration callback.
@@ -81,12 +88,12 @@ void LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
                              const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                              const fuhe::types::MapOfImageIdsSec& ids_by_stamp);
 
-/// Log all predicted poses of relative external odometry as seen from node i for all nodes i j
+/// Log all relative poses of external odometry as predicted poses as seen from node i for all nodes i j
 void LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                       const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                       const std::map<const double, fuhe::OdomImagesEdge> edges);
 
-/// Log absolute poses from external odometry source and visually constrain the absolute colmap image poses with them as edge.
+/// Draw all external odometry measurements as absolute poses and visually constrain the absolute colmap image poses with them as edge.
 void LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
                                   const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                                   const std::map<const double, fuhe::OdomImagesEdge> edges,
