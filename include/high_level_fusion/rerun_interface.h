@@ -73,11 +73,11 @@ void LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
 /// Log all relative poses of external odometry as predicted poses as seen from node i for all nodes i j
 void LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                       const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                      const std::map<const double, fuhe::OdomImagesEdge> edges);
+                      const std::map<const double, fuhe::edges::OdomEdge> edges);
 
 /// Draw all external odometry measurements as absolute poses and visually constrain the absolute colmap image poses with them as edge.
 void LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
                                   const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                                  const std::map<const double, fuhe::OdomImagesEdge> edges,
+                                  const std::map<const double, fuhe::edges::OdomEdge> edges,
                                   const bool log_traj_as_linestrip = false);
 }  // namespace rrfuse

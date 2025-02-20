@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reg_image_ids, reconstruction);
 
   // -------------------- Create directed odom edges between images in sorted order
-  auto edges = fuhe::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
+  auto edges = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
 
   // -------------------- Create Ceres problem
   std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
@@ -92,30 +92,26 @@ int main(int argc, char** argv) {
   hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun, save_rerun_rec, output_path);
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
-  int i = 0;  // image iteration counter
-
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
 
-  // iterate over all images in model
-  for (const auto pair : imgs_by_stamp) {
+  // iterate over all sequential image edges in model
+  for (const std::pair<const double, fuhe::edges::OdomEdge>& pair : edges) {
+    // data stuff
+    const fuhe::edges::OdomEdge edge = pair.second;
     curr_img_stamp = pair.first;
-    colmap::image_t curr_img_id = pair.second;
 
+    const colmap::image_t curr_img_id = edge.j;
+    const colmap::image_t prev_img_id = edge.i;
     VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
 
     // -------------------- First iteration init condition
-    if (i == 0) {
-      // start graph only if synchronized meas from both sources are availalbe
-      if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
-        VLOG(1) << "Found matching pose in tumfile! Kickoff factor graph construction";
+    if (edge.i == edge.j) {
+      VLOG(1) << "Origin image node detected! Kickoff factor graph construction";
+      // add image reference image to bundle adjustment and force constant position but variable 3d pts
+      fusion_interface.AddReprojectionFactor(curr_img_id, true, true, false);
 
-        // add image reference image to bundle adjustment and force constant position but variable 3d pts
-        fusion_interface.AddReprojectionFactor(curr_img_id, true, true, false);
-
-        // preparing next iteration
-        prev_stamp = curr_img_stamp;
-        i++;  // break init loop
-      }
+      // preparing next iteration
+      prev_stamp = curr_img_stamp;
       continue;
     }
 
@@ -124,17 +120,16 @@ int main(int argc, char** argv) {
     fusion_interface.AddReprojectionFactor(curr_img_id, false, false, false);
 
     // check if external odom is available for current image
-    if (metric_poses.find(curr_img_stamp) == metric_poses.end()) {
-      i++;
+    if (!edge.T_odom_ij_ptr) {
       continue;
     }
 
     // -------------------- Add relative odometry factor
     VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
 
-    // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
-    const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
-    VLOG(5) << "Relataive motion is: " << T_i_from_j;
+    // Get metric relative  pose of j (curr) expressed in i (prev)
+    const Eigen::Isometry3d T_i_from_j(edge.T_odom_ij_ptr->ToMatrix());
+    VLOG(4) << "Relataive motion is: " << T_i_from_j;
 
     // Define covariance of relative motion.
     Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * cov;
@@ -142,12 +137,10 @@ int main(int argc, char** argv) {
     fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
 
     // -------------------- Inlcude metric relative pose factor in BA
-    colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
     fusion_interface.AddBetweenFactor(prev_img_id, curr_img_id, T_i_from_j, covarince_i_from_j);
 
     // preparing next iteration
     prev_stamp = curr_img_stamp;
-    i++;
   }
 
   // TODO: double check where to place this

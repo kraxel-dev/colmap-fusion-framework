@@ -19,5 +19,6 @@ using MapOfPosesNsec =
 /// key: [dobule second stamp of pose], entry: pose3d
 using MapOfPosesSec =
     std::map<const double, Eigen::Isometry3d, std::less<double>, Eigen::aligned_allocator<std::pair<const double, Eigen::Isometry3d>>>;
+
 }  // namespace types
 }  // namespace fuhe

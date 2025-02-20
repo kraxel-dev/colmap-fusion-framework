@@ -58,7 +58,7 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                           const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                           const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
-                          const std::map<const double, fuhe::OdomImagesEdge>& odom_edges,
+                          const std::map<const double, fuhe::edges::OdomEdge>& odom_edges,
                           bool is_draw_odom_edges_as_pred_pose = true)
       : BundleAdjustmentIterationCallback(rr_rec, rrpinhole, images, points3D),
         img_ids_by_stamp{img_ids_by_stamp},
@@ -86,7 +86,7 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
 
  protected:
   const fuhe::types::MapOfImageIdsSec img_ids_by_stamp;
-  const std::map<const double, fuhe::OdomImagesEdge> odom_edges;
+  const std::map<const double, fuhe::edges::OdomEdge> odom_edges;
 
   bool is_draw_odom_edges_as_pred_pose = true;  // whether to draw all external odometry measurements as absolute poses or predictes pose
                                                 // increments, seen from each colmap pose

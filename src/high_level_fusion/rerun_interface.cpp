@@ -180,7 +180,7 @@ void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStrea
 
 void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                               const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                              const std::map<const double, fuhe::OdomImagesEdge> edges) {
+                              const std::map<const double, fuhe::edges::OdomEdge> edges) {
   const bool log_odom_as_predicted_pose = true;  // do not log odometry measurement as absolute pose
   // -------------------- Edges
   // log all registered images
@@ -189,18 +189,18 @@ void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
     if ((edge.i == edge.j)) {
       VLOG(4) << "Source node detected! Skip logging this one! ";
       continue;
-    } else if (edge.ptr_T_ij == nullptr) {
+    } else if (edge.T_odom_ij_ptr == nullptr) {
       LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
     }
 
-    VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.ptr_T_ij;
-    rrfuse::LogOdometryEdge(rec, *(edge.ptr_T_ij), images.at(edge.i), images.at(edge.j), log_odom_as_predicted_pose);
+    VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.T_odom_ij_ptr;
+    rrfuse::LogOdometryEdge(rec, *(edge.T_odom_ij_ptr), images.at(edge.i), images.at(edge.j), log_odom_as_predicted_pose);
   }
 }
 
 void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
                                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                                          const std::map<const double, fuhe::OdomImagesEdge> edges,
+                                          const std::map<const double, fuhe::edges::OdomEdge> edges,
                                           const bool log_traj_as_linestrip) {
   const bool log_odom_as_absolute_pose = true;  // log odometry measurement as absolute pose
 
@@ -225,12 +225,12 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
 
       continue;
 
-    } else if (edge.ptr_T_ij == nullptr) {
+    } else if (edge.T_odom_ij_ptr == nullptr) {
       LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
     }
 
     // increment rel pose to obtain absolute pose for current node
-    T_world_from_odom = T_world_from_odom * *(edge.ptr_T_ij);
+    T_world_from_odom = T_world_from_odom * *(edge.T_odom_ij_ptr);
     VLOG(5) << "Rerun logging: " << T_world_from_odom;
     rrfuse::LogOdometryEdge(rec, T_world_from_odom, images.at(edge.i), images.at(edge.j), !log_odom_as_absolute_pose);
 

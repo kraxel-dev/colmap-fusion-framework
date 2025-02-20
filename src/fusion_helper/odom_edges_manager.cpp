@@ -1,17 +1,17 @@
 #include "fusion_helper/odom_edges_manager.h"
 
-fuhe::OdomImagesEdge::OdomImagesEdge(const double stamp_j,
+fuhe::edges::OdomEdge::OdomEdge(const double stamp_j,
                                      const double time_diff,
                                      const colmap::image_t i,
                                      const colmap::image_t j,
-                                     const std::shared_ptr<colmap::Rigid3d> ptr_T_ij)
-    : stamp_j{stamp_j}, time_diff{time_diff}, i{i}, j{j}, ptr_T_ij{ptr_T_ij} {}
+                                     const std::shared_ptr<colmap::Rigid3d> T_odom_ij_ptr)
+    : stamp_j{stamp_j}, time_diff{time_diff}, i{i}, j{j}, T_odom_ij_ptr{T_odom_ij_ptr} {}
 
-std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomEdgesBetweenImages(
+std::map<const double, fuhe::edges::OdomEdge> fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(
     const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
   int i = 0;                               // image iteration counter
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
-  std::map<const double, fuhe::OdomImagesEdge> edges;
+  std::map<const double, fuhe::edges::OdomEdge> edges;
 
   VLOG(2) << "Begin to find tum odometry edges between colmap images!";
   for (const auto pair : img_ids_by_stamp) {
@@ -27,7 +27,7 @@ std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomE
         VLOG(2) << "Found matching pose in tumfile for image! Kickoff edges construction between image and odometry data!";
 
         // create source node which has has itself as source and destination
-        edges[curr_img_stamp] = fuhe::OdomImagesEdge(curr_img_stamp, 0.0, curr_img_id, curr_img_id, std::make_shared<colmap::Rigid3d>());
+        edges[curr_img_stamp] = fuhe::edges::OdomEdge(curr_img_stamp, 0.0, curr_img_id, curr_img_id, std::make_shared<colmap::Rigid3d>());
         VLOG(2) << "This image will be source node with edge to itself!";
 
         // preparing next iteration
@@ -38,10 +38,11 @@ std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomE
     }
 
     // -------------------- Sequential edge construction
+
     // if no matching odometry between image nodes were found
     if (odom_poses_by_stamp.find(curr_img_stamp) == odom_poses_by_stamp.end()) {
       LOG(WARNING) << "Image without odometry edge! Id: " << curr_img_id;
-      edges[curr_img_stamp] = OdomImagesEdge(curr_img_stamp, 0.0, curr_img_id, curr_img_id, nullptr);
+      edges[curr_img_stamp] = OdomEdge(curr_img_stamp, 0.0, -1, curr_img_id, nullptr);
       i++;
       continue;
     }
@@ -57,7 +58,7 @@ std::map<const double, fuhe::OdomImagesEdge> fuhe::OdomEdgesManager::CreateOdomE
 
     // append edge between images with valid relative pose from external sensor
     edges[curr_img_stamp] =
-        OdomImagesEdge(curr_img_stamp, (curr_img_stamp - prev_stamp), prev_img_id, curr_img_id, std::make_shared<colmap::Rigid3d>(T_ij));
+        OdomEdge(curr_img_stamp, (curr_img_stamp - prev_stamp), prev_img_id, curr_img_id, std::make_shared<colmap::Rigid3d>(T_ij));
 
     // preparing next iteration
     prev_stamp = curr_img_stamp;
