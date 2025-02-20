@@ -44,33 +44,15 @@ void ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
 /// log a single 3D point to rerun
 void LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz);
 
+/// Log odometry edge constraining to colmap nodes i j as linestrip and the pose of the odometry measruement to highlight them as factor
+/// graph edge. Pose can be drawn as relative increment (seen from source image i) or as absolute pose with respect to some coord frame.
+/// When choosing to draw odometry reading as absolute pose, user must provide the correct absolute pose himself. Linestrip drawing of edges
+/// works automatically for both cases.
 void LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
                      const colmap::Rigid3d& T_ij_odom,
                      const colmap::Image& img_i,
                      const colmap::Image& img_j,
                      const bool is_odom_a_relpose = true);
-
-/// Log relataive pose from external odom sensor as predicted pose seen from node i. Connect lindestrips between nodes i j and predicted
-/// pose to highlight them as factor graph edge
-void LogOdometryEdgeAsPredictedPose(const std::shared_ptr<rerun::RecordingStream> rec,
-                                    const colmap::Rigid3d& T_ij_odom,
-                                    const colmap::Image& img_i,
-                                    const colmap::Image& img_j);
-
-/**
- * @brief Log odometry edge constraining to colmap nodes i j but with the absolute pose of odometry reading with respect to colmap coords
-system. User must provide the correct absolute pose.
- *
- * @param rec
- * @param T_w_from_odom Absolute pose of odometry with respect to some world frame.
- * @param img_i
- * @param img_j
- */
-void LogOdometryEdgeWithAbsolutePose(const std::shared_ptr<rerun::RecordingStream> rec,
-                                     const colmap::Rigid3d& T_w_from_odom,
-                                     const colmap::Image& img_i,
-                                     const colmap::Image& img_j);
-
 /**
  * @brief Log whole colmap reconstruction to rerun. Can be used in ceres iteration callback.
  * @ref

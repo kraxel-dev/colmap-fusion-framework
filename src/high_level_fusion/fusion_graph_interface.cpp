@@ -198,10 +198,11 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
 
     // -------------------- Update rel pose factor in rerun
     colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
-    rrfuse::LogOdometryEdgeAsPredictedPose(this->rr_rec,
-                             colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
-                             this->reconstruction->Image(prev_img_id),
-                             this->reconstruction->Image(curr_img_id));
+    rrfuse::LogOdometryEdge(this->rr_rec,
+                            colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
+                            this->reconstruction->Image(prev_img_id),
+                            this->reconstruction->Image(curr_img_id),
+                            true);
     // preparing next iteration
     prev_stamp = curr_img_stamp;
     i++;
