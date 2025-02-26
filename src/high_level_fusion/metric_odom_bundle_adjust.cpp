@@ -173,6 +173,7 @@ int main(int argc, char** argv) {
   std::shared_ptr<fuhe::FusionIterationCallback> callback = nullptr;
   if (fusion_interface.GetRerunRec()) {
     // deploy own iteration callback that logs to rerun during optimization
+    VLOG(2) << "Deploying rerun iteration callback!";
     callback = std::make_shared<fuhe::FusionIterationCallback>(fusion_interface.GetRerunRec(),
                                                                fusion_interface.GetRerunPinhole(),
                                                                fusion_interface.GetReconstruction()->Images(),
@@ -190,7 +191,7 @@ int main(int argc, char** argv) {
   fuhe::ceres_eval_utils::CeresCostEvaluator cost_evaluator(
       fusion_interface.GetCeresGraph(), fusion_interface.GetReprojResidualIds(), fusion_interface.GetOdomResidualIds());
   if (VLOG_IS_ON(3)) {
-    VLOG(3) << "Starting to calc absolute odom error in graph before optimization!";
+    VLOG(3) << "Starting to calc absolute error in graph before optimization!";
     cost_evaluator.CalcTotalOdomCost();
     cost_evaluator.CalcTotalReprojectionCost();
   }
@@ -200,17 +201,17 @@ int main(int argc, char** argv) {
   ceres::Solver::Summary summary;
   ceres::Solve(solver_options, ceres_problem.get(), &summary);
 
-  VLOG(1) << summary.FullReport();
 
   // TODO: implement residual eval correctly
-  // --------------------Metrics after optim
+  // --------------------Metrics after optimization
   if (VLOG_IS_ON(3)) {
-    VLOG(3) << "Calc absolute odom error in graph after optimization!";
+    VLOG(3) << "Calc absolute error in graph after optimization!";
     cost_evaluator.CalcTotalOdomCost();
     cost_evaluator.CalcTotalReprojectionCost();
   }
 
   reconstruction->WriteText(output_path);
-
   reconstruction->TearDown();
+  
+  VLOG(1) << summary.FullReport();
 }
