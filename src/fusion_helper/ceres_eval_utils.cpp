@@ -27,5 +27,53 @@ void LogReprojFactorCost(ceres::CostFunction*& cost_func, double*& q_cw, double*
   LOG(INFO) << "x [px]: " << residuals[0] << " y [px]: " << residuals[1];
 }
 
+double CalcTotalFactorTypeCost(const std::shared_ptr<ceres::Problem> graph,
+                               const std::shared_ptr<std::vector<ceres::ResidualBlockId>> residual_ids) {
+  // TODO: implement residual evaluation
+  std::shared_ptr<std::vector<double>> residuals = nullptr;  // error per state variable
+
+  ceres::Problem::EvaluateOptions eval_options;
+  eval_options.residual_blocks = *residual_ids;
+
+  double total_error = 0;  // total cost of factor type
+  graph->Evaluate(eval_options, &total_error, residuals.get(), nullptr, nullptr);
+
+  return total_error;
+}
+
+CeresCostEvaluator::CeresCostEvaluator(const std::shared_ptr<ceres::Problem> fusion_graph,
+                                       const std::shared_ptr<std::vector<std::vector<ceres::ResidualBlockId>>> reproj_residual_ids,
+                                       const std::shared_ptr<std::vector<ceres::ResidualBlockId>> odom_residual_ids)
+    : fusion_graph(fusion_graph), reproj_residual_ids(reproj_residual_ids), odom_residual_ids(odom_residual_ids) {
+  // -------------------- Flatten reprojection residual ids
+  int num_reproj_residuals = 0;
+  for (const auto& img_residuals : *reproj_residual_ids) {
+    num_reproj_residuals += img_residuals.size();
+  }
+  this->reproj_residual_ids_flattened = std::make_shared<std::vector<ceres::ResidualBlockId>>(num_reproj_residuals);
+
+  for (const auto& img_residuals : *reproj_residual_ids) {
+    reproj_residual_ids_flattened->insert(reproj_residual_ids_flattened->end(), img_residuals.begin(), img_residuals.end());
+  }
+}
+
+double CeresCostEvaluator::CalcTotalOdomCost() const {
+  const double total_error = CalcTotalFactorTypeCost(this->fusion_graph, this->odom_residual_ids);
+
+  LOG(INFO) << "Total cost of odometry factors registered in ceres problem: " << total_error;
+  LOG(INFO) << "Total amount of odometry factors: " << this->odom_residual_ids->size();
+
+  return total_error;
+}
+
+double CeresCostEvaluator::CalcTotalReprojectionCost() const {
+  const double total_error = CalcTotalFactorTypeCost(this->fusion_graph, this->reproj_residual_ids_flattened);
+
+  LOG(INFO) << "Total cost of reprojection factors registered in ceres problem: " << total_error;
+  LOG(INFO) << "Total amount of reprojection factors: " << this->odom_residual_ids->size();
+
+  return total_error;
+}
+
 }  // namespace ceres_eval_utils
 }  // namespace fuhe

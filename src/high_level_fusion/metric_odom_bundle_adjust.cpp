@@ -3,6 +3,7 @@
 #include <ostream>
 #include <thread>
 
+#include "fusion_helper/ceres_eval_utils.h"
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/cov_utils.h"
 #include "fusion_helper/fusion_iteration_callback.h"
@@ -168,7 +169,7 @@ int main(int argc, char** argv) {
   solver_options.num_threads = std::thread::hardware_concurrency();
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
-  // use rerun iteration callback during ceres optim
+  // --------------------  rerun iteration callback during ceres optim
   std::shared_ptr<fuhe::FusionIterationCallback> callback = nullptr;
   if (fusion_interface.GetRerunRec()) {
     // deploy own iteration callback that logs to rerun during optimization
@@ -185,11 +186,14 @@ int main(int argc, char** argv) {
   solver_options.update_state_every_iteration = true;
 
   // TODO: implement residual eval correctly
-  // -------------------- Evaluate errors
-  //   VLOG(3) << "Starting to calc absolute odom error in graph before optimization!";
-  //   if (VLOG_IS_ON(3)) {
-  //     cetrahe::calcTotalOdomError(ceres_problem, odom_error_ids, "");
-  //   }
+  // -------------------- Evaluate errors before optimization
+  fuhe::ceres_eval_utils::CeresCostEvaluator cost_evaluator(
+      fusion_interface.GetCeresGraph(), fusion_interface.GetReprojResidualIds(), fusion_interface.GetOdomResidualIds());
+  if (VLOG_IS_ON(3)) {
+    VLOG(3) << "Starting to calc absolute odom error in graph before optimization!";
+    cost_evaluator.CalcTotalOdomCost();
+    cost_evaluator.CalcTotalReprojectionCost();
+  }
 
   // -------------------- Perform Bundle Adjustment
   VLOG(1) << "Starting to solve graph!";
@@ -198,21 +202,13 @@ int main(int argc, char** argv) {
 
   VLOG(1) << summary.FullReport();
 
-  // // -------------------- Update image poses in rerun
-  // fuhe::col_utils::CropFarAwayPoints(reconstruction);
-
-  // TODO: decide on how to rerun visualize for good
-  // if (fusion_interface.GetRerunRec()) {
-  //   fusion_interface.UpdateWholeReconstroctionRerun();
-  // fusion_interface.UpdateRegisterdFactorsRerun(metric_poses);
-  // }
-
   // TODO: implement residual eval correctly
   // --------------------Metrics after optim
-  //   VLOG(3) << "Starting to calc absolute odom error in graph after optimization!";
-  //   if (VLOG_IS_ON(3)) {
-  //     cetrahe::calcTotalOdomError(ceres_problem, odom_error_ids, "");
-  //   }
+  if (VLOG_IS_ON(3)) {
+    VLOG(3) << "Calc absolute odom error in graph after optimization!";
+    cost_evaluator.CalcTotalOdomCost();
+    cost_evaluator.CalcTotalReprojectionCost();
+  }
 
   reconstruction->WriteText(output_path);
 

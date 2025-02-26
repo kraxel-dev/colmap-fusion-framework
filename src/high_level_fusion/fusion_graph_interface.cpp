@@ -103,7 +103,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
     rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
     rrfuse::LogCamPoints3D(this->rr_rec, img, points3D_curr_img);
   }
-  this->reproj_residual_ids.push_back(reproj_residual_ids_curr_img);
+  this->reproj_residual_ids->push_back(reproj_residual_ids_curr_img);
 }
 
 void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id_i,
@@ -138,7 +138,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
 
   VLOG(3) << "Adding residual block to ceres graph!";
   // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j, t_j
-  this->odom_residual_ids.push_back(ceres_graph->AddResidualBlock(
+  this->odom_residual_ids->push_back(ceres_graph->AddResidualBlock(
       weighted_cost_function, nullptr, q_i, t_i, q_j, t_j));  // TODO: investiage loss function usage in this residual
 
   // -------------------- Double check if pose parameters are registered as manifold in optimizaion

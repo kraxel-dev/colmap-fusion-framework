@@ -56,6 +56,9 @@ class FusionGraphInterface {
   std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
   std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
 
+  std::shared_ptr<std::vector<std::vector<ceres::ResidualBlockId>>> GetReprojResidualIds() const { return reproj_residual_ids; }
+  std::shared_ptr<std::vector<ceres::ResidualBlockId>> GetOdomResidualIds() const { return odom_residual_ids; }
+
  private:
   bool is_log_to_rerun = true;         // flag to enable logging and visualization of graph construction and optimization to rerun
   bool is_save_rerun_to_disk = false;  // enable saving rerun logged data to disk as rrd file
@@ -67,10 +70,12 @@ class FusionGraphInterface {
   std::shared_ptr<ceres::Problem> ceres_graph;             // ceres problem that acts as factor graph
   std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction
 
-  std::vector<std::vector<ceres::ResidualBlockId>>
-      reproj_residual_ids;  // ceres ids for registerd reprojection factors for all images (each image has multiple residuals)
-  std::vector<ceres::ResidualBlockId>
-      odom_residual_ids;  // ceres ids for registerd odom factors such that we can perform residual evaluation
+  std::shared_ptr<std::vector<std::vector<ceres::ResidualBlockId>>> reproj_residual_ids =
+      std::make_shared<std::vector<std::vector<ceres::ResidualBlockId>>>();  // ceres ids for registerd reprojection factors for all images
+                                                                             // (each image has multiple residuals)
+  std::shared_ptr<std::vector<ceres::ResidualBlockId>> odom_residual_ids =
+      std::make_shared<std::vector<ceres::ResidualBlockId>>();  // ceres ids for registerd odom factors such that we can perform residual
+                                                                // evaluation
 
   void InitRerunViewer();
 };

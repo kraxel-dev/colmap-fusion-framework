@@ -20,5 +20,28 @@ void LogBetweenFactorCost(ceres::CostFunction*& cost_func, double*& q_i, double*
 
 void LogReprojFactorCost(ceres::CostFunction*& cost_func, double*& q_cw, double*& t_cw, double*& pt3Dxyz, double*& camera_params);
 
+/// Calculate total cost of all factors of specific type registered in ceres problem. User is responsible for grouping ids beforehand.
+double CalcTotalFactorTypeCost(const std::shared_ptr<ceres::Problem> graph,
+                               const std::shared_ptr<std::vector<ceres::ResidualBlockId>> residual_ids);
+
+class CeresCostEvaluator {
+ public:
+  CeresCostEvaluator(const std::shared_ptr<ceres::Problem> fusion_graph,
+                     const std::shared_ptr<std::vector<std::vector<ceres::ResidualBlockId>>> reproj_residual_ids,
+                     const std::shared_ptr<std::vector<ceres::ResidualBlockId>> odom_residual_ids);
+  double CalcTotalOdomCost() const;
+  double CalcTotalReprojectionCost() const;
+
+ protected:
+  std::shared_ptr<ceres::Problem> fusion_graph;  // ceres problem that acts as factor graph
+
+  std::shared_ptr<std::vector<std::vector<ceres::ResidualBlockId>>> reproj_residual_ids =
+      nullptr;  // ceres ids for registerd reprojection factors for all images (each image has multiple residuals)
+  std::shared_ptr<std::vector<ceres::ResidualBlockId>> reproj_residual_ids_flattened =
+      nullptr;  // flattened version of reprojection ids (poitns of all images in one single vector)
+  std::shared_ptr<std::vector<ceres::ResidualBlockId>> odom_residual_ids =
+      nullptr;  // ceres ids for registerd odom factors such that we can perform residual evaluation
+};
+
 }  // namespace ceres_eval_utils
 }  // namespace fuhe
