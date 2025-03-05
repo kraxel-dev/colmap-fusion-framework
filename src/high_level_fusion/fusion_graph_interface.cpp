@@ -2,6 +2,7 @@
 
 #include "fusion_helper/ceres_eval_utils.h"
 #include "fusion_helper/col_utils.h"
+#include "fusion_helper/cost_functions.h"
 #include "high_level_fusion/rerun_interface.h"
 #include <colmap/estimators/cost_functions.h>
 #include <colmap/estimators/manifold.h>
@@ -129,8 +130,18 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
 
   VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
   // create ceres relaitve pose factor weighted by its covariance
+  // ceres::CostFunction* weighted_cost_function =
+  //     colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+  // ceres::CostFunction* weighted_cost_function =
+  //     colmap::CovarianceWeightedCostFunctor<fuhe::cost_functions::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
   ceres::CostFunction* weighted_cost_function =
-      colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+      fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+
+  // TODO kick section below
+  // fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>* cost2 =
+  //     dynamic_cast<fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>*>(
+  //         weighted_cost_function);
+  // cost2->GetResiduals();
 
   if (VLOG_IS_ON(5)) {
     fuhe::ceres_eval_utils::LogBetweenFactorCost(weighted_cost_function, q_i, t_i, q_j, t_j);
