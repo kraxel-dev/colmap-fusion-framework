@@ -28,7 +28,7 @@ namespace hifuse {  // high-level fusion
 class FusionGraphInterface {
  public:
   FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
-                       const std::shared_ptr<ceres::Problem> ceres_graph,
+                       ceres::Problem& ceres_graph,
                        const bool log_to_rerun = true,
                        const bool save_rerun_recording = false,
                        const std::string recording_path = "");
@@ -50,7 +50,6 @@ class FusionGraphInterface {
   /// update colmap image poses and 3d points in rerun in one swoop
   void UpdateWholeReconstroctionRerun();
 
-  std::shared_ptr<ceres::Problem> GetCeresGraph() { return this->ceres_graph; }
   std::shared_ptr<colmap::Reconstruction> GetReconstruction() { return this->reconstruction; }
 
   std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
@@ -67,7 +66,8 @@ class FusionGraphInterface {
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;       // rerun pinhole model representing the camera used in colmap model
   std::shared_ptr<rerun::Pinhole> rr_pinhole_pred = nullptr;  // rerun pinhole model representing the predicted position through odometry
 
-  const std::shared_ptr<ceres::Problem> ceres_graph;             // ceres problem that acts as factor graph
+  // NOTE: acceppt ceres problem only as reference
+  ceres::Problem& ceres_graph;                                   // ceres problem that acts as factor graph
   const std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction
 
   std::vector<std::vector<ceres::ResidualBlockId>>

@@ -7,7 +7,7 @@
 #include <colmap/estimators/manifold.h>
 
 hifuse::FusionGraphInterface::FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
-                                                   const std::shared_ptr<ceres::Problem> ceres_graph,
+                                                   ceres::Problem& ceres_graph,
                                                    const bool log_to_rerun,
                                                    const bool save_rerun_recording,
                                                    const std::string recording_path)
@@ -46,8 +46,8 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   const int min_track_len = 2;
 
   VLOG(3) << "Starting to iterate over all 2d points of target image!";
-  // -------------------- Iterate over all 2d points associated to image // NOTE: keep loop fixed to 2d instead of 3d points since its hard
-  // to recover 2d ids from 3d pts
+  // -------------------- Iterate over all 2d points associated to image
+  // NOTE: keep loop fixed to 2d instead of 3d points since its hard to recover 2d ids from 3d pts
   for (const colmap::Point2D& point2D : img.Points2D()) {
     if (!point2D.HasPoint3D()) {
       continue;
@@ -69,7 +69,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
     // add cost function to ceres problem
     reproj_residual_ids_curr_img.push_back(
-        ceres_graph->AddResidualBlock(cost_function, new ceres::HuberLoss(1.5), q_cw, t_cw, point3D.xyz.data(), camera_params));
+        ceres_graph.AddResidualBlock(cost_function, new ceres::HuberLoss(1.5), q_cw, t_cw, point3D.xyz.data(), camera_params));
 
     // log reisudal error of current reprojecion factor
     if (VLOG_IS_ON(5)) {
@@ -79,7 +79,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
     // if user doenst want poisiton of 3d points to be optimized in ceres problem
     if (const_3d_pts) {
       //  force 3d point to consant position
-      ceres_graph->SetParameterBlockConstant(point3D.xyz.data());
+      ceres_graph.SetParameterBlockConstant(point3D.xyz.data());
       VLOG(2) << "Set 3d point of id " << point2D.point3D_id << " to constant!";
     }
   }
@@ -87,14 +87,14 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   // if user doenst want camera poisiton to be optimized in ceres problem
   if (const_t) {
     //  force 3d point to consant position
-    ceres_graph->SetParameterBlockConstant(t_cw);
+    ceres_graph.SetParameterBlockConstant(t_cw);
     VLOG(2) << "Set cam position of id " << img_id << " to constant!";
   }
 
   // if user doenst want camera poisiton to be optimized in ceres problem
   if (const_q) {
     //  force 3d point to consant position
-    ceres_graph->SetParameterBlockConstant(q_cw);
+    ceres_graph.SetParameterBlockConstant(q_cw);
     VLOG(2) << "Set cam orientation of id " << img_id << " to constant!";
   }
 
@@ -138,16 +138,16 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
 
   VLOG(3) << "Adding residual block to ceres graph!";
   // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j, t_j
-  this->odom_residual_ids.push_back(ceres_graph->AddResidualBlock(
+  this->odom_residual_ids.push_back(ceres_graph.AddResidualBlock(
       weighted_cost_function, nullptr, q_i, t_i, q_j, t_j));  // TODO: investiage loss function usage in this residual
 
   // -------------------- Double check if pose parameters are registered as manifold in optimizaion
   // Set Lie algebra for pose on manifold optimization in case it was not set already
-  if (!ceres_graph->GetParameterization(q_i)) {
-    colmap::SetQuaternionManifold(ceres_graph.get(), q_i);
+  if (!ceres_graph.GetParameterization(q_i)) {
+    colmap::SetQuaternionManifold(&ceres_graph, q_i);
   }
-  if (!ceres_graph->GetParameterization(q_j)) {
-    colmap::SetQuaternionManifold(ceres_graph.get(), q_j);
+  if (!ceres_graph.GetParameterization(q_j)) {
+    colmap::SetQuaternionManifold(&ceres_graph, q_j);
   }
 }
 

@@ -87,7 +87,8 @@ int main(int argc, char** argv) {
   auto edges = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
 
   // -------------------- Create Ceres problem
-  std::shared_ptr<ceres::Problem> ceres_problem = std::make_shared<ceres::Problem>();
+  // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues 
+  ceres::Problem ceres_problem;
 
   // -------------------- Create fusion interface object
   hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun, save_rerun_rec, output_path);
@@ -166,7 +167,8 @@ int main(int argc, char** argv) {
 
   ceres::Solver::Options solver_options = col_options.bundle_adjustment->solver_options;
   solver_options.linear_solver_type = ceres::SPARSE_SCHUR;
-  solver_options.num_threads = std::thread::hardware_concurrency();
+  // solver_options.num_threads = std::thread::hardware_concurrency();  // TODO: implement colmap thread strategy
+  solver_options.num_threads = 1;
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
   // --------------------  rerun iteration callback during ceres optim
@@ -189,7 +191,7 @@ int main(int argc, char** argv) {
   // TODO: implement residual eval correctly
   // -------------------- Evaluate errors before optimization
   fuhe::ceres_eval_utils::CeresCostEvaluator cost_evaluator(
-      fusion_interface.GetCeresGraph(), fusion_interface.GetReprojResidualIds(), fusion_interface.GetOdomResidualIds());
+      ceres_problem, fusion_interface.GetReprojResidualIds(), fusion_interface.GetOdomResidualIds());
   if (VLOG_IS_ON(3)) {
     VLOG(3) << "Starting to calc absolute error in graph before optimization!";
     cost_evaluator.CalcTotalOdomCost();
@@ -199,8 +201,7 @@ int main(int argc, char** argv) {
   // -------------------- Perform Bundle Adjustment
   VLOG(1) << "Starting to solve graph!";
   ceres::Solver::Summary summary;
-  ceres::Solve(solver_options, ceres_problem.get(), &summary);
-
+  ceres::Solve(solver_options, &ceres_problem, &summary);
 
   // TODO: implement residual eval correctly
   // --------------------Metrics after optimization
