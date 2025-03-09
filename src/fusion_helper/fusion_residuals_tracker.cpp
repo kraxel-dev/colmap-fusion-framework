@@ -29,4 +29,16 @@ const std::map<std::string, std::shared_ptr<ResidualStalker<6>>>& FusionResidual
 const std::map<std::string, std::shared_ptr<ResidualStalker<2>>>& FusionResidualsTracker::StalkedReprojectionResiduals() const {
   return stalked_reprojection_residuals;
 }
+
+const double FusionResidualsTracker::GetTotalOdomCost() const {
+  Eigen::Matrix<double, 6, 1> summed_residuals = Eigen::Matrix<double, 6, 1>::Zero();  // summed total residuals
+  double total_cost = 0;                                                               // 1/2 * squared total cost
+
+  for (auto& [id, stalker] : this->StalkedOdomResiduals()) {
+    summed_residuals += stalker->GetTrackedResidual();
+    total_cost += 0.5 * stalker->GetTrackedResidual().dot(stalker->GetTrackedResidual());  // add square product
+  };
+
+  return total_cost;
+}
 }  // namespace fuhe

@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("output_path", &output_path);
   col_options.AddDefaultOption("cov", &cov);
   col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
-  col_options.AddDefaultOption("track_residuals", &log_to_rerun);
+  col_options.AddDefaultOption("track_residuals", &track_residuals);
   col_options.AddDefaultOption("rerun", &log_to_rerun);
   col_options.AddDefaultOption("save_rrd", &save_rerun_rec);
   col_options.AddDefaultOption("rerun_odom_as_pred", &draw_rerun_odom_as_predicted_poses);

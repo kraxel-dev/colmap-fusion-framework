@@ -52,8 +52,8 @@ make -j4
 
 This should build the main library. Links to 3rd party dependencies are resolved automatically, no need to adjust any paths unless you want to point to your own custom build comlmap version.
 
-Finally, apt-get the rerun_viewer apt dependencies listed here: https://rerun.io/docs/getting-started/troubleshooting#running-on-linux and https://rerun.io/docs/getting-started/troubleshooting#wsl2 for a wsl2 setup.
-Then pip install the viewer through the rerun python sdk.
+Finally, apt-get the rerun_viewer apt dependencies listed here: <https://rerun.io/docs/getting-started/troubleshooting#running-on-linux> and <https://rerun.io/docs/getting-started/troubleshooting#wsl2> for a wsl2 setup. Then pip install the viewer through the rerun python sdk.
+
 ```
 pip3 install --upgrade pip  # upgrade pip to find rerun python sdk for ubuntu 20.04
 source ~/.bashrc  # source your bash after upgrading pip
@@ -61,10 +61,21 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 ```
 
 # Open Issues
+
+## Reconstruction preproccessing
+
+- Validated filtering of 3d points with reconstruction bounding box
+
 ## Rerun
-- Validated filtering of 3d points with reconstruction bounding box 
+
 - Update rerun predicted pose and line strip after optimization
 - move rerun_interface to fusion helper to avoid circular dependencies with iteration callback
 
+## Cost logging
+
+1. Find a way to wrap loss function around cost in ResidualCostTracker
+2. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
+
 ## OdomEdgesManager
-- Deal with disconnected poses in tum file or disconnected image ids
+
+3. Deal with disconnected poses in tum file or disconnected image ids

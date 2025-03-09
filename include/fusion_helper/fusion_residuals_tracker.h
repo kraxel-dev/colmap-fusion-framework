@@ -116,7 +116,7 @@ class ResidualStalker {
     }
   }
 
-  Eigen::Matrix<double, ResidualVecSize, 1> GetTrackedResidual() const { return stalked_residual; }
+  inline const Eigen::Matrix<double, ResidualVecSize, 1> GetTrackedResidual() const { return stalked_residual; }
 
  private:
   /// Only under supervision is a stalker eglible for obtaining residual vectors from cost functors. Supervision status is granted once the
@@ -154,6 +154,9 @@ class FusionResidualsTracker {
   const std::map<std::string, std::shared_ptr<ResidualStalker<6>>>& StalkedOdomResiduals() const;
   /// Get all registered stalker for reprojection residuals as reference to underlying map
   const std::map<std::string, std::shared_ptr<ResidualStalker<2>>>& StalkedReprojectionResiduals() const;
+
+  /// For current iteration, get squared cost of all registered odometry residuals from stalkers
+  const double GetTotalOdomCost() const;
 
  protected:
   std::map<std::string, std::shared_ptr<ResidualStalker<6>>> stalked_odom_residuals;

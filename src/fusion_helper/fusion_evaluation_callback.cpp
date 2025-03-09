@@ -14,11 +14,16 @@ FusionEvaluationCallback::FusionEvaluationCallback(const std::shared_ptr<FusionR
 
 void FusionEvaluationCallback::PrepareForEvaluation(bool evaluate_jacobians, bool new_evaluation_point) {
   // iterate over all residual stalkers
-  auto stalked_odom_residuals = residuals_tracker->StalkedOdomResiduals();
+  auto stalked_odom_residuals = this->residuals_tracker->StalkedOdomResiduals();
   for (auto& [_, stalker] : stalked_odom_residuals) {
-    // notify stalker that upcoming eval iteration is or is not a jacobian eval step, allowing the stalker to kidnap (copy) its residuals
+    // notify stalker whether upcoming eval iteration is a jacobian eval step or not, allowing the stalker to kidnap (copy) its residuals
     // if it IS NOT a jacobian eval step
     fusion_evaluation_callback::SetIsJacobianIter(evaluate_jacobians, *stalker);
+  }
+
+  // if current step is jacobian eval, we can safely assume that residuals have been calculated and stalked by previous step.
+  if (evaluate_jacobians) {
+    VLOG(2) << "Total odometry cost for current iter: " << this->residuals_tracker->GetTotalOdomCost();
   }
 }
 }  // namespace fuhe
