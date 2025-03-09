@@ -38,7 +38,7 @@ class CeresCostEvaluator {
   std::vector<std::vector<ceres::ResidualBlockId>>
       reproj_residual_ids;  // ceres ids for registerd reprojection factors for all images (each image has multiple residuals)
   std::vector<ceres::ResidualBlockId>
-      reproj_residual_ids_flattened;  // flattened version of reprojection ids (poitns of all images in one single vector)
+      reproj_residual_ids_flattened;  // flattened version of reprojection ids (points of all images in one single vector)
   std::vector<ceres::ResidualBlockId>
       odom_residual_ids;  // ceres ids for registerd odom factors such that we can perform residual evaluation
 };

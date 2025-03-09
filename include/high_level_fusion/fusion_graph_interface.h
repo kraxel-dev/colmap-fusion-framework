@@ -20,6 +20,7 @@
 #include <ceres/problem.h>
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/exe/sfm.h>
+#include <fusion_helper/fusion_residuals_tracker.h>
 #include <fusion_helper/types.h>
 #include <rerun.hpp>
 
@@ -29,6 +30,7 @@ class FusionGraphInterface {
  public:
   FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
                        ceres::Problem& ceres_graph,
+                       const bool track_residuals,
                        const bool log_to_rerun = true,
                        const bool save_rerun_recording = false,
                        const std::string recording_path = "");
@@ -50,13 +52,15 @@ class FusionGraphInterface {
   /// update colmap image poses and 3d points in rerun in one swoop
   void UpdateWholeReconstroctionRerun();
 
-  std::shared_ptr<colmap::Reconstruction> GetReconstruction() { return this->reconstruction; }
+  inline const std::shared_ptr<colmap::Reconstruction> GetReconstruction() { return this->reconstruction; }
 
-  std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
-  std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
+  inline std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
+  inline std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
 
-  std::vector<std::vector<ceres::ResidualBlockId>> GetReprojResidualIds() const { return this->reproj_residual_ids; }
-  std::vector<ceres::ResidualBlockId> GetOdomResidualIds() const { return this->odom_residual_ids; }
+  inline std::vector<std::vector<ceres::ResidualBlockId>> GetReprojResidualIds() const { return this->reproj_residual_ids; }
+  inline std::vector<ceres::ResidualBlockId> GetOdomResidualIds() const { return this->odom_residual_ids; }
+
+  inline const std::shared_ptr<fuhe::FusionResidualsTracker> GetResidualsTracker() const { return residuals_tracker; }
 
  private:
   bool is_log_to_rerun = true;         // flag to enable logging and visualization of graph construction and optimization to rerun
@@ -70,6 +74,9 @@ class FusionGraphInterface {
   ceres::Problem& ceres_graph;                                   // ceres problem that acts as factor graph
   const std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction
 
+  bool is_track_residuals = false;  // whether to track cost function residual for each ceres iteration
+  std::shared_ptr<fuhe::FusionResidualsTracker> residuals_tracker =
+      nullptr;  // for storing and tracking residuals of each registered ceres cost function
   std::vector<std::vector<ceres::ResidualBlockId>>
       reproj_residual_ids;  // ceres ids for registerd reprojection factors for all images (each image has multiple residuals)
   std::vector<ceres::ResidualBlockId>

@@ -11,8 +11,8 @@
 namespace fuhe {
 
 /**
- * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap reconstruction to rerun.
- This is works with a vanilla colmap model.
+ * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap reconstruction to rerun. This
+ * is works with a vanilla colmap model.
  * @ref 1. https://github.com/rerun-io/glomap/blob/main/glomap/estimators/global_positioning.cc#L26
  *      2. http://ceres-solver.org/nnls_solving.html#_CPPv4N5ceres17IterationCallbackE
  *
@@ -45,8 +45,8 @@ class BundleAdjustmentIterationCallback : public ceres::IterationCallback {
 };
 
 /**
- * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap fusion factor graph
- to rerun. Logs colmap images in sorted order.
+ * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap fusion factor graph to rerun.
+ * Logs colmap images in sorted order.
  * @ref 1. https://github.com/rerun-io/glomap/blob/main/glomap/estimators/global_positioning.cc#L26
  *      2. http://ceres-solver.org/nnls_solving.html#_CPPv4N5ceres17IterationCallbackE
  *

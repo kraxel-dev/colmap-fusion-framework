@@ -9,19 +9,27 @@
 
 hifuse::FusionGraphInterface::FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
                                                    ceres::Problem& ceres_graph,
+                                                   const bool track_residuals,
                                                    const bool log_to_rerun,
                                                    const bool save_rerun_recording,
                                                    const std::string recording_path)
-    : is_log_to_rerun{log_to_rerun},
-      ceres_graph{ceres_graph},
+    : ceres_graph{ceres_graph},
       reconstruction{reconstruction},
+      is_track_residuals{track_residuals},
+      is_log_to_rerun{log_to_rerun},
       is_save_rerun_to_disk{save_rerun_recording},
       recording_path{recording_path} {
-  if (!log_to_rerun) {
-    VLOG(2) << "Rerun logging and visualization turned off!";
-    return;
+  // init (or not) sensor factor residual tracking during optimization. 
+  if (this->is_track_residuals) {
+    VLOG(2) << "Residuals tracking during iterations triggered by users!";
+    this->residuals_tracker = fuhe::FusionResidualsTracker::Create();
   }
-  InitRerunViewer();
+
+  // init (or not) logging fusion data to rerun
+  if (log_to_rerun) {
+    VLOG(2) << "Rerun logging and visualization triggered by user!";
+    InitRerunViewer();
+  }
 }
 
 void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t img_id,
@@ -128,20 +136,25 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   //   rrfuse::LogRelPoseFactor(this->rr_rec, T_ij_rigid, img_i, img_j);
   // }
 
-  VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
-  // create ceres relaitve pose factor weighted by its covariance
-  // ceres::CostFunction* weighted_cost_function =
-  //     colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
-  // ceres::CostFunction* weighted_cost_function =
-  //     colmap::CovarianceWeightedCostFunctor<fuhe::cost_functions::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
-  ceres::CostFunction* weighted_cost_function =
-      fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+  // create ceres relative pose factor weighted by its covariance
+  ceres::CostFunction* weighted_cost_function = nullptr;
+  if (this->is_track_residuals) {
+    // create residual stalker that will obtain residuals from the cost functor during optimization
+    const std::shared_ptr<fuhe::ResidualStalker<6>> stalker = fuhe::ResidualStalker<6>::Create();
 
-  // TODO kick section below
-  // fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>* cost2 =
-  //     dynamic_cast<fuhe::cost_functions::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>*>(
-  //         weighted_cost_function);
-  // cost2->GetResiduals();
+    // attach stalker to BOTH cost function AND datacontainer to access its tracked values later on during optimization
+    this->residuals_tracker->RegisterStalkedOdomResidual(stalker, std::to_string(img_id_j));
+
+    VLOG(3) << "Creating metric relative odom cost function with exposed residuals from img id: " << img_id_i << " to id: " << img_id_j;
+    // create ceres relative pose factor weighted by its covariance with an attached stalker for residual logging during iterations
+    weighted_cost_function =
+        fuhe::cost::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>::Create(stalker, cov_i_from_j, T_ij_rigid);
+
+  } else {
+    VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
+    // create ceres relative pose factor weighted by its covariance with vanilla colmap functor
+    weighted_cost_function = colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+  }
 
   if (VLOG_IS_ON(5)) {
     fuhe::ceres_eval_utils::LogBetweenFactorCost(weighted_cost_function, q_i, t_i, q_j, t_j);

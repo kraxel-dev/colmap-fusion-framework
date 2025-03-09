@@ -6,6 +6,8 @@ set(FUSION_HELPER_SOURCES
     col_utils.cpp
     cov_utils.cpp
     ceres_eval_utils.cpp
+    fusion_residuals_tracker.cpp
+    fusion_evaluation_callback.cpp
     rr_utils.cpp
     odom_edges_manager.cpp
 )

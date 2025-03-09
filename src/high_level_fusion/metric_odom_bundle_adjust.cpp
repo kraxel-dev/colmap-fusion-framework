@@ -6,6 +6,7 @@
 #include "fusion_helper/ceres_eval_utils.h"
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/cov_utils.h"
+#include "fusion_helper/fusion_evaluation_callback.h"
 #include "fusion_helper/fusion_iteration_callback.h"
 #include "fusion_helper/io.h"
 #include "fusion_helper/odom_edges_manager.h"
@@ -25,6 +26,7 @@ int main(int argc, char** argv) {
   int max_consecutive_nonmonotonic_steps = 0;
   double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
+  bool track_residuals = false;     // whether to track residuals of each factor during ceres optimization
   bool log_to_rerun = true;         // whether to log data to rerun viewer
   bool save_rerun_rec = false;      // whether to save logged rerun data to rr file
   bool draw_rerun_odom_as_predicted_poses =
@@ -36,6 +38,7 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("output_path", &output_path);
   col_options.AddDefaultOption("cov", &cov);
   col_options.AddDefaultOption("non_motion_weighting", &non_motion_weighting);
+  col_options.AddDefaultOption("track_residuals", &log_to_rerun);
   col_options.AddDefaultOption("rerun", &log_to_rerun);
   col_options.AddDefaultOption("save_rrd", &save_rerun_rec);
   col_options.AddDefaultOption("rerun_odom_as_pred", &draw_rerun_odom_as_predicted_poses);
@@ -87,11 +90,11 @@ int main(int argc, char** argv) {
   auto edges = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
 
   // -------------------- Create Ceres problem
-  // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues 
+  // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues
   ceres::Problem ceres_problem;
 
   // -------------------- Create fusion interface object
-  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, log_to_rerun, save_rerun_rec, output_path);
+  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, track_residuals, log_to_rerun, save_rerun_rec, output_path);
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
@@ -171,7 +174,7 @@ int main(int argc, char** argv) {
   solver_options.num_threads = 1;
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
 
-  // --------------------  rerun iteration callback during ceres optim
+  // -------------------- rerun iteration callback during ceres optim
   std::shared_ptr<fuhe::FusionIterationCallback> callback = nullptr;
   if (fusion_interface.GetRerunRec()) {
     // deploy own iteration callback that logs to rerun during optimization
@@ -185,6 +188,15 @@ int main(int argc, char** argv) {
                                                                draw_rerun_odom_as_predicted_poses);
     solver_options.callbacks.push_back(callback.get());
   }
+
+  // -------------------- residual tracking during optimization
+  std::shared_ptr<fuhe::FusionEvaluationCallback> fusion_eval_callback = nullptr;
+  if (fusion_interface.GetResidualsTracker()) {
+    VLOG(2) << "Deploying residual tracking evaluation callback!";
+    fusion_eval_callback = std::make_shared<fuhe::FusionEvaluationCallback>(fusion_interface.GetResidualsTracker());
+    solver_options.evaluation_callback = fusion_eval_callback.get();
+  }
+
   solver_options.minimizer_progress_to_stdout = false;
   solver_options.update_state_every_iteration = true;
 
@@ -213,6 +225,6 @@ int main(int argc, char** argv) {
 
   reconstruction->WriteText(output_path);
   reconstruction->TearDown();
-  
+
   VLOG(1) << summary.FullReport();
 }
