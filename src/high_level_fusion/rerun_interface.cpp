@@ -120,6 +120,13 @@ void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
            rerun::LineStrips3D(line_strip).with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
 }
 
+void rrfuse::LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> rec,
+                                const std::string& factor_type,
+                                const double total_cost) {
+  std::string cost_name = "total_" + factor_type + "_cost";
+  rec->log(cost_name, rerun::Scalar(total_cost));
+}
+
 void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec,
                                const std::shared_ptr<rerun::Pinhole> rrpinhole,
                                const std::unordered_map<colmap::camera_t, colmap::Image>& images,

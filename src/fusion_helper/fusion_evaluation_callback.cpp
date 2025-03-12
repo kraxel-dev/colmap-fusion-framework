@@ -4,26 +4,35 @@ namespace fuhe {
 
 FusionEvaluationCallback::FusionEvaluationCallback(const std::shared_ptr<FusionResidualsTracker> residuals_tracker)
     : residuals_tracker{residuals_tracker} {
-  // iterate over all residual stalkers
-  auto stalked_odom_residuals = this->residuals_tracker->StalkedOdomResiduals();
-  for (auto& [_, stalker] : stalked_odom_residuals) {
+  // iterate over all odom residual stalkers
+  // auto stalked_odom_residuals = this->residuals_tracker->StalkedOdomResiduals();
+  for (auto& [_, stalker] : this->residuals_tracker->StalkedOdomResiduals()) {
     // notify stalker that it is supervised by this evaluation callback
-    fusion_evaluation_callback::SetIsSupervisedByEvaluationCallback(true, *stalker);
+    fusion_evaluation_callback::SetIsSupervisedByEvaluationCallback(true, stalker);
+  }
+
+  // iterate over all reproj residual stalkers
+  // auto stalked_reproj_residuals = this->residuals_tracker->StalkedReprojectionResiduals();
+  for (auto& [_, stalker] : this->residuals_tracker->StalkedReprojectionResiduals()) {
+    // notify stalker that it is supervised by this evaluation callback
+    fusion_evaluation_callback::SetIsSupervisedByEvaluationCallback(true, stalker);
   }
 };
 
 void FusionEvaluationCallback::PrepareForEvaluation(bool evaluate_jacobians, bool new_evaluation_point) {
   // iterate over all residual stalkers
-  auto stalked_odom_residuals = this->residuals_tracker->StalkedOdomResiduals();
-  for (auto& [_, stalker] : stalked_odom_residuals) {
+  // auto stalked_odom_residuals = this->residuals_tracker->StalkedOdomResiduals();
+  for (auto& [_, stalker] : this->residuals_tracker->StalkedOdomResiduals()) {
     // notify stalker whether upcoming eval iteration is a jacobian eval step or not, allowing the stalker to kidnap (copy) its residuals
     // if it IS NOT a jacobian eval step
-    fusion_evaluation_callback::SetIsJacobianIter(evaluate_jacobians, *stalker);
+    fusion_evaluation_callback::SetIsJacobianIter(evaluate_jacobians, stalker);
   }
 
-  // if current step is jacobian eval, we can safely assume that residuals have been calculated and stalked by previous step.
-  if (evaluate_jacobians) {
-    VLOG(2) << "Total odometry cost for current iter: " << this->residuals_tracker->GetTotalOdomCost();
+  // auto stalked_reproj_residuals = this->residuals_tracker->StalkedReprojectionResiduals();
+  for (auto& [_, stalker] : this->residuals_tracker->StalkedReprojectionResiduals()) {
+    // notify stalker whether upcoming eval iteration is a jacobian eval step or not, allowing the stalker to kidnap (copy) its residuals
+    // if it IS NOT a jacobian eval step
+    fusion_evaluation_callback::SetIsJacobianIter(evaluate_jacobians, stalker);
   }
 }
 }  // namespace fuhe

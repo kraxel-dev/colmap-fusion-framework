@@ -54,13 +54,14 @@ class ResidualStalker {
   /// for obtaining residual vectors from cost functor in general. This function should ONLY be called by the supervising
   /// FusionEvaluationCallback.
   template <int kNumResiduals>
-  friend void fusion_evaluation_callback::SetIsSupervisedByEvaluationCallback(const bool is_supervised,
-                                                                              ResidualStalker<kNumResiduals>& stalker);
+  friend void fusion_evaluation_callback::SetIsSupervisedByEvaluationCallback(
+      const bool is_supervised, const std::shared_ptr<ResidualStalker<kNumResiduals>> stalker);
   /// (Friends only access) Notify stalker whether upcoming ceres evaluation step is a jacobian evaluation step. If not, stalker is allowed
   /// to obtain residuals from ceres cost functor for that iteration. This function should ONLY be called by the supervising
   /// FusionEvaluationCallback.
   template <int kNumResiduals>
-  friend void fusion_evaluation_callback::SetIsJacobianIter(const bool is_jacobian_iter, ResidualStalker<kNumResiduals>& stalker);
+  friend void fusion_evaluation_callback::SetIsJacobianIter(const bool is_jacobian_iter,
+                                                            const std::shared_ptr<ResidualStalker<kNumResiduals>> stalker);
 
   /// Safety check whether stalker object is actively supervised by a fusion evaluation callback. Only under supervision is stalker eglible
   /// to obtain residual vectors from cost functor in general.
@@ -117,6 +118,8 @@ class ResidualStalker {
   }
 
   inline const Eigen::Matrix<double, ResidualVecSize, 1> GetTrackedResidual() const { return stalked_residual; }
+  inline const std::string GetId() const { return this->id; }
+  inline void SetId(const std::string& id) { this->id = id; }
 
  private:
   /// Only under supervision is a stalker eglible for obtaining residual vectors from cost functors. Supervision status is granted once the
@@ -130,7 +133,9 @@ class ResidualStalker {
   bool is_jacobian_iter = true;
   int iter_count = 0;
 
+  /// Tracked residual vector for current ceres iter
   Eigen::Matrix<double, ResidualVecSize, 1> stalked_residual = Eigen::Matrix<double, ResidualVecSize, 1>::Zero();
+  std::string id = "";
 };
 
 /**
@@ -148,7 +153,9 @@ class FusionResidualsTracker {
   void RegisterStalkedOdomResidual(const std::shared_ptr<ResidualStalker<6>> odom_residual_stalker, const std::string& edge_id);
 
   /// Register a stalker for a residual of a ceres reprojection factor
-  void RegisterStalkedReprojectionResidual(const std::shared_ptr<ResidualStalker<2>> reproj_residual_stalker, const std::string& img_id);
+  void RegisterStalkedReprojectionResidual(const std::shared_ptr<ResidualStalker<2>> reproj_residual_stalker,
+                                           const std::string& img_id,
+                                           const std::string& pt3D_id);
 
   /// Get all registered stalker for odometry residuals as reference to underlying map
   const std::map<std::string, std::shared_ptr<ResidualStalker<6>>>& StalkedOdomResiduals() const;
@@ -157,6 +164,8 @@ class FusionResidualsTracker {
 
   /// For current iteration, get squared cost of all registered odometry residuals from stalkers
   const double GetTotalOdomCost() const;
+  /// For current iteration, get squared cost of all registered reprojection residuals from stalkers
+  const double GetTotalReprojCost() const;
 
  protected:
   std::map<std::string, std::shared_ptr<ResidualStalker<6>>> stalked_odom_residuals;

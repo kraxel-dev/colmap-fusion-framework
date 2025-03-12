@@ -60,6 +60,7 @@ class FusionGraphInterface {
   inline std::vector<std::vector<ceres::ResidualBlockId>> GetReprojResidualIds() const { return this->reproj_residual_ids; }
   inline std::vector<ceres::ResidualBlockId> GetOdomResidualIds() const { return this->odom_residual_ids; }
 
+  /// nullptr if residual tracking is deactivated by user
   inline const std::shared_ptr<fuhe::FusionResidualsTracker> GetResidualsTracker() const { return residuals_tracker; }
 
  private:

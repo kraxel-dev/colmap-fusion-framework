@@ -26,9 +26,10 @@ int main(int argc, char** argv) {
   int max_consecutive_nonmonotonic_steps = 0;
   double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
-  bool track_residuals = false;     // whether to track residuals of each factor during ceres optimization
-  bool log_to_rerun = true;         // whether to log data to rerun viewer
-  bool save_rerun_rec = false;      // whether to save logged rerun data to rr file
+  bool track_residuals =
+      false;                 // whether to track residuals of each factor during ceres optimization. Only in conjunction with rerun logging
+  bool log_to_rerun = true;  // whether to log data to rerun viewer
+  bool save_rerun_rec = false;  // whether to save logged rerun data to rr file
   bool draw_rerun_odom_as_predicted_poses =
       true;  // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
 
@@ -185,11 +186,12 @@ int main(int argc, char** argv) {
                                                                fusion_interface.GetReconstruction()->Points3D(),
                                                                imgs_by_stamp,
                                                                edges,
-                                                               draw_rerun_odom_as_predicted_poses);
+                                                               draw_rerun_odom_as_predicted_poses,
+                                                               fusion_interface.GetResidualsTracker());
     solver_options.callbacks.push_back(callback.get());
   }
 
-  // -------------------- residual tracking during optimization
+  // -------------------- residuals tracking during ceres optim
   std::shared_ptr<fuhe::FusionEvaluationCallback> fusion_eval_callback = nullptr;
   if (fusion_interface.GetResidualsTracker()) {
     VLOG(2) << "Deploying residual tracking evaluation callback!";

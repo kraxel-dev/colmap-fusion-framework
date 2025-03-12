@@ -16,8 +16,8 @@ namespace fusion_evaluation_callback {
  * @param stalker Residual stalker object to be notified
  */
 template <int kNumResiduals>
-void SetIsJacobianIter(const bool is_jacobian_iter, ResidualStalker<kNumResiduals>& stalker) {
-  stalker.is_jacobian_iter = is_jacobian_iter;
+void SetIsJacobianIter(const bool is_jacobian_iter, const std::shared_ptr<ResidualStalker<kNumResiduals>> stalker) {
+  stalker->is_jacobian_iter = is_jacobian_iter;
 }
 
 /**
@@ -30,17 +30,18 @@ void SetIsJacobianIter(const bool is_jacobian_iter, ResidualStalker<kNumResidual
  * @param stalker Residual stalker object toggled as supervised
  */
 template <int kNumResiduals>
-void SetIsSupervisedByEvaluationCallback(const bool is_supervised, ResidualStalker<kNumResiduals>& stalker) {
-  stalker.is_supervised_by_evaluation_callback = is_supervised;
+void SetIsSupervisedByEvaluationCallback(const bool is_supervised, const std::shared_ptr<ResidualStalker<kNumResiduals>> stalker) {
+  stalker->is_supervised_by_evaluation_callback = is_supervised;
 };
 
 }  // namespace fusion_evaluation_callback
 
 /**
  * @brief Ceres EvaluatonCallback, called before every optimization/evaluation iteration of ceres. Derived to supervise external data
- * stalkers that track calculated residual vectors from each cost-functor duing optimization. Only through supervision of this callback,
- * are cost-factor residuals allowed to be tracked during optimization. See docs of the derived PrepareForEvaluation() override for more
- * details.
+ * stalkers that track calculated residual vectors from each cost-functor duing optimization. If you want to add tracking for additional
+ * factor types (e.g odom vs reproj), you need to add 2 things: 1. set supervision of the stalkers in this constructor. 2. set
+ * jacboian iter status for each stalkers in "Prepare" callback. Only through supervision of this callback, are cost-factor residuals
+ * allowed to be tracked during optimization. See docs of the derived PrepareForEvaluation() override for more details.
  *
  */
 class FusionEvaluationCallback : public ceres::EvaluationCallback {

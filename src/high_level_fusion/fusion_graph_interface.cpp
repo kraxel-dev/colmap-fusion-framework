@@ -19,7 +19,7 @@ hifuse::FusionGraphInterface::FusionGraphInterface(const std::shared_ptr<colmap:
       is_log_to_rerun{log_to_rerun},
       is_save_rerun_to_disk{save_rerun_recording},
       recording_path{recording_path} {
-  // init (or not) sensor factor residual tracking during optimization. 
+  // init (or not) sensor factor residual tracking during optimization.
   if (this->is_track_residuals) {
     VLOG(2) << "Residuals tracking during iterations triggered by users!";
     this->residuals_tracker = fuhe::FusionResidualsTracker::Create();
@@ -52,7 +52,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
   size_t num_observations = 0;
   std::unordered_map<colmap::point3D_t, size_t> point3D_num_observations;
-  const int min_track_len = 2;
+  const int min_track_len = 2;  // HACK: make parametrizable
 
   VLOG(3) << "Starting to iterate over all 2d points of target image!";
   // -------------------- Iterate over all 2d points associated to image
@@ -73,8 +73,23 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
     point3D_num_observations[point2D.point3D_id] += 1;
     points3D_curr_img.push_back(point3D);  // append for Rerun visualization
 
-    // create reprojection error cost function for 3d point
-    ceres::CostFunction* cost_function = colmap::CreateCameraCostFunction<colmap::ReprojErrorCostFunctor>(cam.model_id, point2D.xy);
+    // create ceres reprojection factor weighted by its covariance
+    ceres::CostFunction* cost_function = nullptr;
+    if (this->is_track_residuals && !(const_3d_pts || const_q || const_t)) {
+      // create residual stalker that will obtain residuals from the cost functor during optimization
+      const std::shared_ptr<fuhe::ResidualStalker<2>> stalker = fuhe::ResidualStalker<2>::Create();
+
+      // attach stalker to BOTH cost function AND datacontainer to access its tracked values later on during optimization
+      this->residuals_tracker->RegisterStalkedReprojectionResidual(stalker, std::to_string(img_id), std::to_string(point2D.point3D_id));
+
+      // create reproj factor for 3d point (weighted by its covariance) with an attached stalker for residual logging during iterations
+      cost_function = fuhe::cost::CreateWeightedCamCostExposedResiduals<colmap::ReprojErrorCostFunctor>(
+          stalker, Eigen::Matrix<double, 2, 2>::Identity(), cam.model_id, point2D.xy);  // TODO: covariance for reprojection error
+
+    } else {
+      // create reprojection error cost function for 3d point with native colmap creation method and without covariance weighting
+      cost_function = colmap::CreateCameraCostFunction<colmap::ReprojErrorCostFunctor>(cam.model_id, point2D.xy);
+    }
 
     // add cost function to ceres problem
     reproj_residual_ids_curr_img.push_back(

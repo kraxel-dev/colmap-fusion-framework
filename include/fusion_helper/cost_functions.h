@@ -70,6 +70,8 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
     // -------------------- Safety checks
     // no stalker = no stalking
     if (!this->residual_stalker) {
+      LOG(ERROR) << "Trying to pass down ceres residuals to stalker without him being supervised by evaluation callback! Refer to stalker "
+                    "object docs to understand how to setup ceres residuals stalking during optimization.";
       return true;
     }
 
@@ -110,6 +112,38 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
   // stalker object for this cost-functor, which allows tracking of calculated residuals during ceres optimization
   const ResidualStalkerPtr residual_stalker = nullptr;  // NOTE: residuals here are locked to double data type
 };
+
+/**
+ * @brief Sloppy way to create a covariance weighted camera cost function with exposed residuals during optimization for stalker objects to
+ * copy. NOTE: Adapted colmaps macro expansion to generalize cost-functor to any colmap camera model, since this is still missing for
+ * colmaps native covariance-weighted cost creation. In the future, colmap might deliver a CovarianceWeighted cost creation for any camera
+ * type but this is the best we have at the moment.
+ *
+ * @tparam CostFunctor
+ * @tparam Args
+ * @param stalker attachable residual stalker ptr object which copies calculated residual vectors during iteration
+ * @param CovMat
+ * @param camera_model_id
+ * @param args
+ * @return ceres::CostFunction*
+ */
+template <template <typename> class CostFunctor, typename... Args>
+ceres::CostFunction* CreateWeightedCamCostExposedResiduals(const std::shared_ptr<fuhe::ResidualStalker<2>> stalker,
+                                                           const Eigen::Matrix<double, 2, 2>& CovMat,
+                                                           const colmap::CameraModelId camera_model_id,
+                                                           Args&&... args) {
+  switch (camera_model_id) {
+    using namespace colmap;
+#define CAMERA_MODEL_CASE(CameraModel)                                                                                               \
+  case CameraModel::model_id:                                                                                                        \
+    return fuhe::cost::WeightedCostExposedResiduals<CostFunctor<CameraModel>>::Create(stalker, CovMat, std::forward<Args>(args)...); \
+    break;
+
+    CAMERA_MODEL_SWITCH_CASES  // macro expansion
+
+#undef CAMERA_MODEL_CASE
+  }
+}
 
 }  // namespace cost
 }  // namespace fuhe

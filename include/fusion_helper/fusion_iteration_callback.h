@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fusion_helper/fusion_residuals_tracker.h"
 #include "fusion_helper/rr_utils.h"
 #include "high_level_fusion/rerun_interface.h"  // TODO: move rerun_interface to fusion helper
 #include <ceres/ceres.h>
@@ -59,18 +60,22 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
                           const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                           const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                           const std::map<const double, fuhe::edges::OdomEdge>& odom_edges,
-                          bool is_draw_odom_edges_as_pred_pose = true)
+                          bool is_draw_odom_edges_as_pred_pose = true,
+                          const std::shared_ptr<fuhe::FusionResidualsTracker> res_tracker = nullptr)
       : BundleAdjustmentIterationCallback(rr_rec, rrpinhole, images, points3D),
         img_ids_by_stamp{img_ids_by_stamp},
         odom_edges{odom_edges},
-        is_draw_odom_edges_as_pred_pose{is_draw_odom_edges_as_pred_pose} {}
+        is_draw_odom_edges_as_pred_pose{is_draw_odom_edges_as_pred_pose},
+        tracked_residuals{res_tracker} {}
 
   ceres::CallbackReturnType operator()(const ceres::IterationSummary& summary) {
-    std::unordered_map<colmap::camera_t, colmap::Image> imgs_sorted_by_stamp;
-
     rr_rec->set_time_sequence("step", summary.iteration);
+
+    // --------------------  visualize full reconstruction for this iteration
+    std::unordered_map<colmap::camera_t, colmap::Image> imgs_sorted_by_stamp;
     rrfuse::LogReconstructionSorted(this->rr_rec, this->rrpinhole, this->images, this->points3D, this->img_ids_by_stamp);
 
+    // -------------------- visualize odometry edges for this iteraten
     if (is_draw_odom_edges_as_pred_pose) {
       // draw external odometry as predicted poses with respect to source camera
       rrfuse::LogOdometryEdges(this->rr_rec, this->images, this->odom_edges);
@@ -81,6 +86,13 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
       rrfuse::LogOdometryEdgesAsTrajectory(this->rr_rec, this->images, this->odom_edges, log_odom_trajectory_as_linestrip);
     }
 
+    // -------------------- track total factor costs in rerun plots if toggled on
+    // if (this->tracked_residuals && summary.iteration > 1) {
+    if (this->tracked_residuals) {
+      rrfuse::LogTotalFactorCost(this->rr_rec, "odom", this->tracked_residuals->GetTotalOdomCost());
+      rrfuse::LogTotalFactorCost(this->rr_rec, "reproj", this->tracked_residuals->GetTotalReprojCost());
+      rrfuse::LogTotalFactorCost(this->rr_rec, "graph", summary.cost);
+    }
     return ceres::SOLVER_CONTINUE;
   }
 
@@ -90,6 +102,9 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
 
   bool is_draw_odom_edges_as_pred_pose = true;  // whether to draw all external odometry measurements as absolute poses or predictes pose
                                                 // increments, seen from each colmap pose
+
+  std::shared_ptr<fuhe::FusionResidualsTracker> tracked_residuals =
+      nullptr;  // residuals_tracker exposing sensor factor residuals during optimization. Will be ingroned if received as nullptr
 };
 
 }  // namespace fuhe

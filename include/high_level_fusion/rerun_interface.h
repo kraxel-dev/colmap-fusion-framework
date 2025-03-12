@@ -53,6 +53,9 @@ void LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
                      const colmap::Image& img_i,
                      const colmap::Image& img_j,
                      const bool is_odom_a_relpose = true);
+
+void LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> rec, const std::string& factor_type, const double total_cost);
+
 /**
  * @brief Log whole colmap reconstruction to rerun. Can be used in ceres iteration callback.
  * @ref
