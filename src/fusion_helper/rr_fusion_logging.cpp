@@ -160,11 +160,11 @@ void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStrea
                                      const std::shared_ptr<rerun::Pinhole> rrpinhole,
                                      const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                                      const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
-                                     const fuhe::types::MapOfImageIdsSec& ids_by_stamp) {
+                                     const fuhe::edges::MapOfOdomEdges& odom_edges) {
   // -------------------- Images
   // log all registered images
-  for (auto& [_, id] : ids_by_stamp) {
-    rrfuse::LogCamPose(rec, rrpinhole, images.at(id));
+  for (auto& [_, edge] : odom_edges) {
+    rrfuse::LogCamPose(rec, rrpinhole, images.at(edge.j));
   }
 
   // -------------------- Tracks

@@ -77,7 +77,8 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 ## Cost logging
 
 1. Find a way to wrap loss function around cost in ResidualCostTracker
-2. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
+2. Add residual tracking to tcf
+3. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
 
 ## OdomEdgesManager
 

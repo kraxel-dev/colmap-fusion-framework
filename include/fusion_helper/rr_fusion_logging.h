@@ -72,7 +72,7 @@ void LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
                              const std::shared_ptr<rerun::Pinhole> rrpinhole,
                              const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                              const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
-                             const fuhe::types::MapOfImageIdsSec& ids_by_stamp);
+                             const fuhe::edges::MapOfOdomEdges& odom_edges);
 
 /// Log all relative poses of external odometry as predicted poses as seen from node i for all nodes i j
 void LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,

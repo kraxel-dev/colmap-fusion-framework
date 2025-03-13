@@ -61,17 +61,21 @@ int main(int argc, char** argv) {
   VLOG(1) << "Selecting colmap images for ceres optimization!";
   colmap::BundleAdjustmentConfig ba_cfg;  // cfg deciding which images to considere for ceres optim
 
-  // FIXME: currently all reg images are considered for optim while internally the graph drops images that preceed odometry edges
+  // FIXME: here, all reg images are considered for optim while internally the graph drops images that preceed odometry edges
   int i = 0;
   for (const auto& [stamp, img_id] : imgs_by_stamp) {
     ba_cfg.AddImage(img_id);                  // notify ceres to inlcude this img for optimization
     ba_cfg.SetConstantCamIntrinsics(img_id);  // no intrinsics optimization for now
+    
     // NOTE: no 3d point adding to ba_config required
 
-    if (i == 0) {
-      // fix gauge freedom on first image-pose in model
-      ba_cfg.SetConstantCamPose(img_id);
-    }
+    
+    // FIXME: analyze weird behavior with fixed pose in more detail
+    // if (i == 0) {
+    //   VLOG(2) << "Fixing position of image: " << img_id;
+    //   // fix gauge freedom on first image-pose in model
+    //   ba_cfg.SetConstantCamPose(img_id);
+    // }
 
     i++;
   }
@@ -89,6 +93,8 @@ int main(int argc, char** argv) {
 
   VLOG(1) << summary.FullReport();
   VLOG(1) << "Done solving odometry fusion BA!";
+
+  reconstruction->WriteText(output_path);
 
   return 0;
 }

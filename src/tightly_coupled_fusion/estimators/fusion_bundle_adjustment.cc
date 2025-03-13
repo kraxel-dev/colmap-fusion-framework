@@ -141,7 +141,7 @@ void tcf::FusionGraphBundleAdjuster::AddOdomToProblem(const colmap::image_t img_
   VLOG(3) << "Adding residual block to ceres graph!";
   // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j, t_j
 
-  default_bundle_adjuster_->Problem()->AddResidualBlock(cost_func, nullptr, q_i, t_i, q_j, t_j);
+  this->Problem()->AddResidualBlock(cost_func, nullptr, q_i, t_i, q_j, t_j);
 
   // -------------------- Double check if pose parameters are registered as manifold in optimizaion
   // Set Lie algebra for pose on manifold optimization in case it was not set already
@@ -165,6 +165,7 @@ ceres::Solver::Summary tcf::FusionGraphBundleAdjuster::Solve() {
   ceres::Solver::Options solver_options = options_.CreateSolverOptions(config_, *problem);
 
   if (rr_rec_->GetRerunRec()) {
+    VLOG(2) << "Attaching fusion iteration callback to log data to rerun during optimization!";
     // attach iteration callback for rerun visualization of iterations if toggled
     this->AddFusionIterationCallback(solver_options);
   }
@@ -185,9 +186,10 @@ void tcf::FusionGraphBundleAdjuster::AddFusionIterationCallback(ceres::Solver::O
                                                                    rr_rec_->GetRerunPinhole(),
                                                                    reconstruction_.Images(),
                                                                    reconstruction_.Points3D(),
-                                                                   *imgs_by_stamp_,
                                                                    *fusion_graph_data_edges_,
-                                                                   rr_options_.draw_rerun_odom_as_predicted_poses,
-                                                                   nullptr);
+                                                                   rr_options_.draw_rerun_odom_as_predicted_poses);
+  // only with real value updates can rerun log during the optimization process
+  solver_options.update_state_every_iteration = true;
+
   solver_options.callbacks.push_back(iter_callback_.get());
 }

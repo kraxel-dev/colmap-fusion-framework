@@ -185,7 +185,6 @@ int main(int argc, char** argv) {
                                                                fusion_interface.GetRerunPinhole(),
                                                                fusion_interface.GetReconstruction()->Images(),
                                                                fusion_interface.GetReconstruction()->Points3D(),
-                                                               imgs_by_stamp,
                                                                edges,
                                                                draw_rerun_odom_as_predicted_poses,
                                                                fusion_interface.GetResidualsTracker());
@@ -201,6 +200,7 @@ int main(int argc, char** argv) {
   }
 
   solver_options.minimizer_progress_to_stdout = false;
+  // update colmap poses for every iteration such that rerun can log them during iteration callbacks
   solver_options.update_state_every_iteration = true;
 
   // TODO: implement residual eval correctly

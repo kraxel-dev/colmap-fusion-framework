@@ -25,10 +25,12 @@ namespace tcf {  // tightly coupled fusion
 
 /// Options for tightly coupled colmap fusion with odometry data TODO: other modalities
 struct FusionGraphBundleAdjustmentOptions {
-  // FIXME: make parametrizable
+  // FIXME: expose to user
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
 
-  const double cov = 0.01;  // odom covariance all entries
+  // FIXME: expose to user
+  const double cov = 0.085;  // odom covariance all entries
+
 
   // FIXME: Kick section below if not needed
   //   // Whether to use a robust loss on prior locations.

@@ -58,12 +58,10 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
                           const std::shared_ptr<rerun::Pinhole> rrpinhole,
                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                           const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
-                          const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                           const std::map<const double, fuhe::edges::OdomEdge>& odom_edges,
                           bool is_draw_odom_edges_as_pred_pose = true,
                           const std::shared_ptr<fuhe::FusionResidualsTracker> res_tracker = nullptr)
       : BundleAdjustmentIterationCallback(rr_rec, rrpinhole, images, points3D),
-        img_ids_by_stamp{img_ids_by_stamp},
         odom_edges{odom_edges},
         is_draw_odom_edges_as_pred_pose{is_draw_odom_edges_as_pred_pose},
         tracked_residuals{res_tracker} {}
@@ -73,7 +71,7 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
 
     // --------------------  visualize full reconstruction for this iteration
     std::unordered_map<colmap::camera_t, colmap::Image> imgs_sorted_by_stamp;
-    rrfuse::LogReconstructionSorted(this->rr_rec, this->rrpinhole, this->images, this->points3D, this->img_ids_by_stamp);
+    rrfuse::LogReconstructionSorted(this->rr_rec, this->rrpinhole, this->images, this->points3D, this->odom_edges);
 
     // -------------------- visualize odometry edges for this iteraten
     if (is_draw_odom_edges_as_pred_pose) {
@@ -97,7 +95,6 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
   }
 
  protected:
-  const fuhe::types::MapOfImageIdsSec img_ids_by_stamp;
   const std::map<const double, fuhe::edges::OdomEdge> odom_edges;
 
   bool is_draw_odom_edges_as_pred_pose = true;  // whether to draw all external odometry measurements as absolute poses or predictes pose
