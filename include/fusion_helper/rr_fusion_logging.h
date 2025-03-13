@@ -1,7 +1,8 @@
 /**
- * @file rerun_interface.h
+ * @file rerun_fusion_logging.h
  * @author kraxel
- * @brief TODO: write brief
+ * @brief TODO: Convencience functions to stream classic colmap data (imgs, 3d points or whole reconstruction) and fusion graph data to
+ * rerun viewer. Most exciting when used during active ceres optimization step in conjunction with the FusionIterationCallback class.
  * @version 0.1
  * @date 2025-02-03
  *

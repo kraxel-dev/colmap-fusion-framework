@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.16)
 # define this high level fusion subdirectory as library
 set(HIGH_LVL_FUSION_SOURCES
     fusion_graph_interface.cpp
-    rerun_interface.cpp
 )
 add_library(high_level_fusion SHARED ${HIGH_LVL_FUSION_SOURCES})
 target_include_directories(high_level_fusion PUBLIC ${PROJECT_SOURCE_DIR}/include)

@@ -73,7 +73,6 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 ## Rerun
 
 - add rerun graph view
-- move rerun_interface to fusion helper to avoid circular dependencies with iteration callback
 
 ## Cost logging
 

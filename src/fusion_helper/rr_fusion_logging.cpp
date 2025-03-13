@@ -1,4 +1,4 @@
-#include "high_level_fusion/rerun_interface.h"
+#include "fusion_helper/rr_fusion_logging.h"
 
 #include "fusion_helper/rr_collection_adapters.h"
 #include "fusion_helper/rr_utils.h"

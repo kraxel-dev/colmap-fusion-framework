@@ -2,7 +2,7 @@
 
 #include "fusion_helper/fusion_residuals_tracker.h"
 #include "fusion_helper/rr_utils.h"
-#include "high_level_fusion/rerun_interface.h"  // TODO: move rerun_interface to fusion helper
+#include "fusion_helper/rr_fusion_logging.h"
 #include <ceres/ceres.h>
 #include <ceres/iteration_callback.h>
 #include <colmap/scene/image.h>
