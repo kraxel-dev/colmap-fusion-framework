@@ -62,13 +62,17 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 # Open Issues
 
+## Scale and cost factors
+
+1. between factor with scale as optimization param from glomap
+
 ## Reconstruction preproccessing
 
-- Validated filtering of 3d points with reconstruction bounding box
+1. Validated filtering of 3d points with reconstruction bounding box
 
 ## Rerun
 
-- Update rerun predicted pose and line strip after optimization
+- add rerun graph view
 - move rerun_interface to fusion helper to avoid circular dependencies with iteration callback
 
 ## Cost logging
@@ -78,4 +82,6 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## OdomEdgesManager
 
-3. Deal with disconnected poses in tum file or disconnected image ids
+1. Deal with multiple tums simultaneously
+2. Deal with disconnected poses in tum file or disconnected image ids
+3. Find better name

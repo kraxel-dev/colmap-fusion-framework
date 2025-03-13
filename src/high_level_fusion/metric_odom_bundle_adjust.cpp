@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
   std::string input_path;
   std::string output_path;
+  // TODO: rework following very ugly argument options handling
   int max_consecutive_nonmonotonic_steps = 0;
   double cov = 1;                   // certainty for relative odometry. The smaller the stronger relative odometry is considered
   double non_motion_weighting = 1;  // weight for non-motion directions in relative odometry covariance
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   // -------------------- Read TUM file
-  // HACK: make parametrizable
+  // FIXME: make parametrizable
   std::string tumFile =
       "/home/azuo/transfer/eval/backwards/"
       "vehicle_wo_as_campose_training_matched_stamps.tum";

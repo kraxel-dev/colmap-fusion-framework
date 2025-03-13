@@ -9,6 +9,7 @@ set(FUSION_HELPER_SOURCES
     fusion_residuals_tracker.cpp
     fusion_evaluation_callback.cpp
     rr_utils.cpp
+    rr_fusion_recorder.cpp
     odom_edges_manager.cpp
 )
 add_library(fusion_helper SHARED ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use

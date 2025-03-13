@@ -1,17 +1,17 @@
 #include "fusion_helper/odom_edges_manager.h"
 
 fuhe::edges::OdomEdge::OdomEdge(const double stamp_j,
-                                     const double time_diff,
-                                     const colmap::image_t i,
-                                     const colmap::image_t j,
-                                     const std::shared_ptr<colmap::Rigid3d> T_odom_ij_ptr)
+                                const double time_diff,
+                                const colmap::image_t i,
+                                const colmap::image_t j,
+                                const std::shared_ptr<colmap::Rigid3d> T_odom_ij_ptr)
     : stamp_j{stamp_j}, time_diff{time_diff}, i{i}, j{j}, T_odom_ij_ptr{T_odom_ij_ptr} {}
 
-std::map<const double, fuhe::edges::OdomEdge> fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(
+fuhe::edges::MapOfOdomEdges fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(
     const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
   int i = 0;                               // image iteration counter
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
-  std::map<const double, fuhe::edges::OdomEdge> edges;
+  fuhe::edges::MapOfOdomEdges edges;
 
   VLOG(2) << "Begin to find tum odometry edges between colmap images!";
   for (const auto pair : img_ids_by_stamp) {
@@ -68,4 +68,10 @@ std::map<const double, fuhe::edges::OdomEdge> fuhe::edges::OdomEdgesManager::Cre
   VLOG(2) << "Created nr of edges: " << edges.size();
 
   return edges;
+}
+
+const std::shared_ptr<fuhe::edges::MapOfOdomEdges> fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImagesPtr(
+    const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
+  return std::make_shared<fuhe::edges::MapOfOdomEdges>(
+      fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(img_ids_by_stamp, odom_poses_by_stamp));
 }

@@ -52,3 +52,4 @@ target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;rerun_sdk;${glog_
 # NOTE: Respect order of adding the subdirectories, as they might depend on each other
 add_subdirectory(src/fusion_helper)
 add_subdirectory(src/high_level_fusion)
+add_subdirectory(src/tightly_coupled_fusion)

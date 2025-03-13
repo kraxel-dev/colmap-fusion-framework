@@ -1,5 +1,5 @@
 /**
- * @file collection_adapter.h
+ * @file collection_adapter.h  FIXME: file name rr to rerun
  * @author written by rerun
  * @brief conversions from c++ Eigen types to rerun io types. Taken from official rerun repo (link below)
  * @ref https://github.com/rerun-io/cpp-example-opencv-eigen/blob/main/src/collection_adapters.hpp

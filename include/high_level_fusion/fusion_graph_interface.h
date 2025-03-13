@@ -83,7 +83,7 @@ class FusionGraphInterface {
   std::vector<ceres::ResidualBlockId>
       odom_residual_ids;  // ceres ids for registerd odom factors such that we can perform residual evaluation
 
-  void InitRerunViewer();
+  void InitRerunViewer(); // FIXME: swap out with new fusion logger class
 };
 
 }  // namespace hifuse
