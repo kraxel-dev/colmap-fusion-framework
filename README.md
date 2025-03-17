@@ -72,7 +72,8 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## Rerun
 
-- add rerun graph view
+1. debug pose shift when setting campose as const ceresparam
+2. add rerun graph view
 
 ## Cost logging
 
