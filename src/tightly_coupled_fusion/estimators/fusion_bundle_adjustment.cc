@@ -53,7 +53,7 @@ tcf::FusionGraphBundleAdjuster::FusionGraphBundleAdjuster(colmap::BundleAdjustme
   fusion_graph_data_edges_ = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImagesPtr(*imgs_by_stamp_, metric_poses);
 
   // -------------------- Iterate over fusion graph edges to build factor graph problem
-  VLOG(1) << "Iterating over all odometry edges to add between factor to fusion graph!";
+  VLOG(2) << "Iterating over all odometry edges to add between factor to fusion graph!";
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
 
   // iterate over all sequential image-odometry edges in model
@@ -64,11 +64,11 @@ tcf::FusionGraphBundleAdjuster::FusionGraphBundleAdjuster(colmap::BundleAdjustme
 
     const colmap::image_t curr_img_id = edge.j;
     const colmap::image_t prev_img_id = edge.i;
-    VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
+    VLOG(3) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
 
     // -------------------- First iteration init condition
     if (edge.i == edge.j) {
-      VLOG(1) << "Origin image node detected! Kickoff fusion graph construction";
+      VLOG(2) << "Origin image node detected! Kickoff fusion graph construction";
 
       // preparing next iteration
       prev_stamp = curr_img_stamp;
@@ -79,7 +79,7 @@ tcf::FusionGraphBundleAdjuster::FusionGraphBundleAdjuster(colmap::BundleAdjustme
       continue;
     }
     //   // -------------------- Add relative odometry factor
-    VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
+    VLOG(3) << "Found matching tumposes to use as realtive pose factor!";
 
     // Get metric relative  pose of j (curr) expressed in i (prev)
     const Eigen::Isometry3d T_i_from_j(edge.T_odom_ij_ptr->ToMatrix());

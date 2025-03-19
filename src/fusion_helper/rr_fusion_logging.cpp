@@ -116,8 +116,8 @@ void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
   //              .with_labels(rerun::components::Text("cam" + std::to_string(img_j.ImageId()) + "_predicted")));
 
   // log linestrips connecting the factors
-  rec->log(edge_i_pred_j_name,
-           rerun::LineStrips3D(line_strip).with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
+  rec->log(edge_i_pred_j_name, rerun::LineStrips3D(line_strip));
+  //  rerun::LineStrips3D(line_strip).with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
 }
 
 void rrfuse::LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -252,4 +252,8 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
     rerun::LineStrip3D line_strip(line_segments);
     rec->log("world/odometry", rerun::LineStrips3D(line_strip).with_labels(rerun::components::Text("Odometry")));
   }
+}
+
+void rrfuse::ClearAllOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec) {
+  rec->log("/", rerun::LineStrips3D::clear_fields());
 }

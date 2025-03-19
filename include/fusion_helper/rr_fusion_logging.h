@@ -84,4 +84,6 @@ void LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> 
                                   const std::unordered_map<colmap::camera_t, colmap::Image>& images,
                                   const std::map<const double, fuhe::edges::OdomEdge> edges,
                                   const bool log_traj_as_linestrip = false);
+
+void ClearAllOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec);
 }  // namespace rrfuse

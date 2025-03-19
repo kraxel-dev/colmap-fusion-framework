@@ -74,6 +74,7 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
     rrfuse::LogReconstructionSorted(this->rr_rec, this->rrpinhole, this->images, this->points3D, this->odom_edges);
 
     // -------------------- visualize odometry edges for this iteraten
+    rrfuse::ClearAllOdometryEdges(this->rr_rec);
     if (is_draw_odom_edges_as_pred_pose) {
       // draw external odometry as predicted poses with respect to source camera
       rrfuse::LogOdometryEdges(this->rr_rec, this->images, this->odom_edges);
