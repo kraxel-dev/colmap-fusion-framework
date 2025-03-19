@@ -29,8 +29,9 @@ struct FusionGraphBundleAdjustmentOptions {
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
 
   // FIXME: expose to user
-  const double cov = 0.085;  // odom covariance all entries
+  const double cov = 0.015;  // odom covariance all entries
 
+  bool fix_first_campose = true;  // set pose of first camera (time sorted) as constant param in ceres optimizaton
 
   // FIXME: Kick section below if not needed
   //   // Whether to use a robust loss on prior locations.
@@ -68,7 +69,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   std::shared_ptr<fuhe::FusionIterationCallback> iter_callback_ = nullptr;  // custom iteration callback to log data to rerun if toggled
 
   const std::unordered_map<colmap::image_t, colmap::PosePrior> rel_poses_;  // FIXME: kick if not needed
-  colmap::Sim3d normalized_from_metric_;                                    // TODO: kick is not needed
+  colmap::Sim3d normalized_from_metric_;                                    // TODO: kick if not needed
 
   std::shared_ptr<fuhe::types::MapOfImageIdsSec> imgs_by_stamp_ =
       nullptr;  // registered colmap image ids sorted by their timestamp (ascending)

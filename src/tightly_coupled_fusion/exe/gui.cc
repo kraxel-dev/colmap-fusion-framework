@@ -57,7 +57,9 @@ int RunGraphicalUserInterface(int argc, char** argv) {
 
   QApplication app(argc, argv);
 
-  colmap::MainWindow main_window(options);
+  VLOG(1) << "Loading customized main window for fusion!";
+
+  tcf::MainWindow main_window(options);
   main_window.show();
 
   if (!import_path.empty()) {

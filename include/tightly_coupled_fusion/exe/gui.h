@@ -32,7 +32,9 @@
 #if defined(COLMAP_GUI_ENABLED)
 #include <QApplication>
 
-#include <colmap/ui/main_window.h>
+// #include <colmap/ui/main_window.h>
+#include "tightly_coupled_fusion/ui/main_window.h"
+
 #else
 // Dummy QApplication class when GUI is disabled
 class QApplication {
@@ -52,7 +54,7 @@ const bool kUseOpenGL = true;
 }  // namespace colmap
 
 namespace tcf {
-  
+
 int RunGraphicalUserInterface(int argc, char** argv);
 int RunProjectGenerator(int argc, char** argv);
 

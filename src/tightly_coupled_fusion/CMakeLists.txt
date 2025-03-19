@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.16)
 set(TIGHTLY_COUPLED_FUSION_SOURCES
     estimators/bundle_adjustment_original.cc
     estimators/fusion_bundle_adjustment.cc
+    sfm/incremental_mapper.cc
+    controllers/incremental_fusion_pipeline.cc
+    ui/main_window.cc
     exe/gui.cc
 )
 add_library(tightly_coupled_fusion SHARED ${TIGHTLY_COUPLED_FUSION_SOURCES})
