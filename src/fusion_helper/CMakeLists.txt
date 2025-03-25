@@ -13,9 +13,9 @@ set(FUSION_HELPER_SOURCES
     rr_fusion_logging.cpp
     odom_edges_manager.cpp
 )
-add_library(fusion_helper SHARED ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use
+add_library(fusion_helper ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use
 target_include_directories(fusion_helper PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(fusion_helper PRIVATE ${CMAKE_PROJECT_NAME}) # add dependency found in toplevel cmake
+target_link_libraries(fusion_helper PUBLIC  ${PROJECT_DEPENDENCIES}) # add dependency found in toplevel cmake
 
 add_executable(sparsfiy_model colmap_model_manipulation/sparsify_model.cpp)
-target_link_libraries(sparsfiy_model ${CMAKE_PROJECT_NAME};fusion_helper)
+target_link_libraries(sparsfiy_model fusion_helper)

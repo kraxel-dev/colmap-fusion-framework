@@ -1,6 +1,11 @@
 include(FetchContent)
+
+if(BUILD_SHARED_LIBS)
+    set(RERUN_ARROW_LINK_SHARED ON)
+endif()
+
 message(STATUS "Fetching rerun sdk for C++ as third party module!")
-# https://github.com/rerun-io/rerun/releases/tag/0.21.0
+# https://github.com/rerun-io/rerun/releases/tag/0.22.0
 FetchContent_Declare(
     rerun_sdk URL https://github.com/rerun-io/rerun/releases/download/0.22.0/rerun_cpp_sdk.zip
 )

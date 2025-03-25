@@ -10,14 +10,12 @@
  */
 #pragma once
 
-#include <string>
 
 #include "fusion_helper/tum_benchmark/tum_benchmark.hpp"
 #include "fusion_helper/types.h"
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <colmap/geometry/rigid3.h>
-#include <stdlib.h>
 
 typedef tum_benchmark::FileReader<tum_benchmark::Trajectory> TumPoseReader;
 

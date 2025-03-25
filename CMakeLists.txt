@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_COLOR_MAKEFILE ON)
 
 project(colmap_fusion_framework)
@@ -43,10 +44,8 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(${CERES_INCLUDE_DIRS})
 include_directories(colmap::colmap)
 
-# make dependencies from above available as library to all submodules
-add_library(${PROJECT_NAME} INTERFACE)
-# link external colmap to our custom library
-target_link_libraries(${PROJECT_NAME} INTERFACE colmap::colmap;rerun_sdk;${glog_LIBRARIES})
+# make dependencies from above available to all submodules by calling this variable
+set(PROJECT_DEPENDENCIES colmap::colmap;rerun_sdk;${glog_LIBRARIES})
 
 # add submodules which contain the actual code
 # NOTE: Respect order of adding the subdirectories, as they might depend on each other

@@ -14,7 +14,7 @@ using MapOfImageIdsSec = std::map<const double, colmap::image_t>;
 
 /// key: [uint64 nanosecond timestamp], entry: pose3d
 using MapOfPosesNsec =
-    std::map<uint64_t, Eigen::Isometry3d, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Isometry3d>>>;
+    std::map<const uint64_t, Eigen::Isometry3d, std::less<uint64_t>, Eigen::aligned_allocator<std::pair<const uint64_t, Eigen::Isometry3d>>>;
 
 /// key: [dobule second stamp of pose], entry: pose3d
 using MapOfPosesSec =

@@ -18,6 +18,9 @@ set(COLMAP_PROJECT_NAME colmap)
 set(COLMAP_VERSION 3.11.1)
 set(PROJECT_NAME_AND_VERSION ${COLMAP_PROJECT_NAME}_${COLMAP_VERSION})
 
+# workaround to check for static vs shared library setting
+message(STATUS "Build shared libs is: " ${BUILD_SHARED_LIBS})
+
 # Fetch and install colmap 3.11.1 locally
 ExternalProject_Add(
     ${PROJECT_NAME_AND_VERSION}
@@ -27,9 +30,10 @@ ExternalProject_Add(
     SOURCE_DIR ${PREFIX_3RD_PARTY}/${PROJECT_NAME_AND_VERSION} # where repo will be cloned to
     BINARY_DIR ${PREFIX_3RD_PARTY}/${PROJECT_NAME_AND_VERSION}_build # build files for 3rd party colmap
     INSTALL_DIR ${INSTALL_PREFIX} # local install space
-    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX};-DCMAKE_EXPORT_COMPILE_COMMANDS=ON;-DBUILD_SHARED_LIBS=ON"
-    BUILD_ALWAYS OFF  # prevent rebuilding unless necessary
-    UPDATE_COMMAND ""  # also prevents rebuilding unless necessary
+    LOG_CONFIG ON
+    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX};-DCMAKE_EXPORT_COMPILE_COMMANDS=ON;-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD};-DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}" # pass on build options
+    BUILD_ALWAYS OFF # prevent rebuilding unless necessary
+    UPDATE_COMMAND "" # also prevents rebuilding unless necessary
 
     DOWNLOAD_DIR ${PREFIX_3RD_PARTY_MISC}/download # not really used in git clone
     STAMP_DIR ${PREFIX_3RD_PARTY_MISC}/stamps

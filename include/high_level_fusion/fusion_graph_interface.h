@@ -15,8 +15,6 @@
 
 #pragma once
 
-#include <cstdlib>
-
 #include <ceres/problem.h>
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/exe/sfm.h>

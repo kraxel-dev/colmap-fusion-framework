@@ -1,9 +1,6 @@
 // TODO: docstring
 #pragma once
 
-#include <map>
-#include <set>
-
 #include "fusion_helper/types.h"
 #include <colmap/scene/reconstruction.h>
 

@@ -9,8 +9,8 @@ Platform for colmap with multi-modal sensor fusion. Structure-from-Motion revisi
 Build process is only tested on Ubuntu 20.04.
 
 - colmap 3.11.1
-- rerun_sdk 0.21.0 (c++)
-- rerun_viewer 0.21.0 (pip or rust)
+- rerun_sdk 0.22.0 (c++)
+- rerun_viewer 0.22.0 (pip or rust)
 
 Except for the rerun_viewer, cloning and building these 3rd party packages are handled automatically by the main library cmake configuration.
 
@@ -68,6 +68,7 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## Reconstruction preproccessing
 
+1. Test different quality presets for OptionsManager
 1. Validated filtering of 3d points with reconstruction bounding box
 
 ## Rerun
