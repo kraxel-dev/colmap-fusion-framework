@@ -54,8 +54,7 @@ int main(int argc, char** argv) {
   // TODO: decide for better generic strategy on kicking bad points
   fuhe::col_utils::CropFarAwayPoints(reconstruction);
 
-  const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();        // obtain all images from model
-  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reg_image_ids, reconstruction);  // get image-ids in time sorted order
+  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());  // get image-ids in time sorted order
 
   // -------------------- Tune BA config to decide which img to consider and/or  are constant in problem
   VLOG(1) << "Selecting colmap images for ceres optimization!";

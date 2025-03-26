@@ -1,4 +1,13 @@
-// TODO: docstring
+/**
+ * @file col_utils.h
+ * @author kraxel
+ * @brief utilitiy functions to help with colmap model handling
+ * @version 0.1
+ * @date 2025-03-26
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #pragma once
 
 #include "fusion_helper/types.h"
@@ -8,18 +17,13 @@ namespace fuhe {
 namespace col_utils {
 
 /**
- * @brief Return image ids of colmap model sorted and accessible by their timestamps [seconds] to have them in ascending order.
- Required to match images of colmap model to metric poses in tumfile.
+ * @brief Return image ids of colmap model sorted and accessible by their timestamps [seconds] to have them in ascending order. Required to
+ * match images of colmap model to metric poses in tumfile.
  *
- * @param image_ids
- * @param reconstruction colmap model
- * @return std::map<double, colmap::image_t>
+ * @param model_images map of colmap images in a reconstruction, accessible by their ids
+ * @return fuhe::types::MapOfImageIdsSec
  */
-fuhe::types::MapOfImageIdsSec ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
-                                              std::shared_ptr<colmap::Reconstruction> reconstruction);
-
-/// convenience overload
-fuhe::types::MapOfImageIdsSec ImageIdsByStamp(const std::set<colmap::image_t>& image_ids, const colmap::Reconstruction& reconstruction);
+fuhe::types::MapOfImageIdsSec ImageIdsByStamp(const std::unordered_map<colmap::image_t, colmap::Image>& images_by_id);
 
 /// obtain all 3d points associated to given image. filter out points with not enough track length
 const std::vector<colmap::Point3D> GetPoints3DForImage(const colmap::image_t& image_id,

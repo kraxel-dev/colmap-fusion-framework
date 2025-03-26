@@ -47,7 +47,7 @@ tcf::FusionGraphBundleAdjuster::FusionGraphBundleAdjuster(colmap::BundleAdjustme
   // obtain all images from model
   const std::set<colmap::image_t>& reg_image_ids = reconstruction_.RegImageIds();
   // get image ids in sorted order
-  imgs_by_stamp_ = std::make_shared<fuhe::types::MapOfImageIdsSec>(fuhe::col_utils::ImageIdsByStamp(reg_image_ids, reconstruction_));
+  imgs_by_stamp_ = std::make_shared<fuhe::types::MapOfImageIdsSec>(fuhe::col_utils::ImageIdsByStamp(reconstruction_.Images()));
 
   // data structure holding odometry rel poses between associated images
   fusion_graph_data_edges_ = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImagesPtr(*imgs_by_stamp_, metric_poses);

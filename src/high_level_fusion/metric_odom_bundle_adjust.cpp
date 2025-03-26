@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
   // obtain all images from model
   const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();
   // get image ids in sorted order
-  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reg_image_ids, reconstruction);
+  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
 
   // -------------------- Create directed odom edges between images in sorted order
   auto edges = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);

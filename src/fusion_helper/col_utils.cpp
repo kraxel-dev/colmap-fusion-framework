@@ -3,19 +3,12 @@
 #include "fusion_helper/io.h"
 #include <colmap/util/file.h>
 
-fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
-                                                               std::shared_ptr<colmap::Reconstruction> reconstruction) {
-  return ImageIdsByStamp(image_ids, *reconstruction.get());
-}
-
-fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<colmap::image_t>& image_ids,
-                                                               const colmap::Reconstruction& reconstruction) {
+fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::unordered_map<colmap::image_t, colmap::Image>& images_by_id) {
+  // hashmap that takes care of the sorting automatically
   fuhe::types::MapOfImageIdsSec ordered_image_stamps;  // output map -> image ids by timestamps [secs]
 
-  // iterate over all ids to register them into a hashmap that takes care of the sorting automatically
-  for (const colmap::image_t image_id : image_ids) {
-    const colmap::Image img = reconstruction.Image(image_id);
-
+  // iterate over all ids to register them into a hashmap
+  for (const auto [id, img] : images_by_id) {
     // get filename (represents [nsec] time stamp)
     std::string stamp_string, end;
     colmap::SplitFileExtension(img.Name(), &stamp_string, &end);
@@ -32,7 +25,7 @@ fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::set<co
     if (ordered_image_stamps.find(trunc_stamp_sec) != ordered_image_stamps.end()) {
       LOG(WARNING) << "Bad news, duplicate timestamps in colmap model found for image stamps: " << trunc_stamp_sec;
     }
-    ordered_image_stamps[trunc_stamp_sec] = image_id;
+    ordered_image_stamps[trunc_stamp_sec] = id;
   }
   return ordered_image_stamps;
 }

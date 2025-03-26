@@ -191,7 +191,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
 }
 
 void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types::MapOfPosesSec& metric_poses) {
-  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(this->reconstruction->RegImageIds(), this->reconstruction);
+  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(this->reconstruction->Images());
 
   int i = 0;
   colmap::image_t curr_img_id, prev_img_id = -1;
