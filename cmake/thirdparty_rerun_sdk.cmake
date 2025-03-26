@@ -1,3 +1,8 @@
+# --------------------------------------------------------
+# Cmake submodule to fetch and locally install the rerun SDK locally into this repo. 
+# Makes rerun SDK available as package for the main project.
+# --------------------------------------------------------
+
 include(FetchContent)
 
 if(BUILD_SHARED_LIBS)

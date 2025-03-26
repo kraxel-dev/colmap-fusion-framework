@@ -16,8 +16,8 @@ target_link_libraries(tightly_coupled_fusion PUBLIC ${PROJECT_DEPENDENCIES};fusi
 # add executable for tightly_coupled_fusion
 add_executable(fusion_graph_ba_sanity_check samples/fusion_graph_ba_sanity_check.cpp)
 target_link_libraries(fusion_graph_ba_sanity_check tightly_coupled_fusion)
-
-
+add_executable(incremental_mapper_sanity_check samples/incremental_mapper_sanity_check.cpp)
+target_link_libraries(incremental_mapper_sanity_check tightly_coupled_fusion)
 
 # add modified exe from original colmap to call gui with custom code of this repo
 add_executable(colfu exe/colmap.cc)
