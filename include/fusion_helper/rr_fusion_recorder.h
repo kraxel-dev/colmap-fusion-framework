@@ -28,7 +28,6 @@ struct RerunFusionVisOptions {
   bool draw_rerun_odom_as_predicted_poses = true;
 };
 
-
 // FIXME: file name rr to rerun
 /// TODO: write brief
 class RerunFusionRecorder {
@@ -39,10 +38,17 @@ class RerunFusionRecorder {
   inline const std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
   inline const std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
 
+  /// increment time sequence for rerun recording stream. can be called in every ceres iteration or before registering a new image
+  void UpdateRerunTimeStep();
+
+  inline int TimeStep() const { return time_step; }
+  inline void SetTimeStep(int time_step) { time_step = time_step; }
+
  private:
   const RerunFusionVisOptions options;
   std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger and viewer object
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;      // rerun pinhole model representing the camera used in colmap model
+  int time_step = 0;
 };
 
 }  // namespace rrfuse

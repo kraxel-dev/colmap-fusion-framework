@@ -9,7 +9,8 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->rr_rec->spawn().exit_on_failure();
 
-  this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
+  // this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
+  this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Y_DOWN);  // Set an up-axis
 
   // -------------------- Save rerun recording to disk if specified
   if (this->options.is_save_rerun_to_disk) {
@@ -31,6 +32,12 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole = std::make_shared<rerun::Pinhole>(
       rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}).with_image_plane_distance(0.1));
+}
+
+/// increase time sequence of rerun logger by one
+void RerunFusionRecorder::UpdateRerunTimeStep() {
+  this->time_step++;
+  rr_rec->set_time_sequence("step", this->time_step);
 }
 
 }  // namespace rrfuse

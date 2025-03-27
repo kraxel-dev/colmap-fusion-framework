@@ -4,9 +4,9 @@
  * @brief utilitiy functions to help with colmap model handling
  * @version 0.1
  * @date 2025-03-26
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
@@ -25,6 +25,16 @@ namespace col_utils {
  */
 fuhe::types::MapOfImageIdsSec ImageIdsByStamp(const std::unordered_map<colmap::image_t, colmap::Image>& images_by_id);
 
+/**
+ * @brief Return a map of registerd images in colmap model, accessed by their ids. Convencience function to not only have the ids as set
+ * from native model getter. Be careful when returning directly into functions that accept (non cost) references, since they'll reference a
+ * map that directly goes out of scope.
+ *
+ * @param reconstruction
+ * @return const std::unordered_map<colmap::image_t, colmap::Image>
+ */
+std::unordered_map<colmap::image_t, colmap::Image> RegisteredImages(const std::shared_ptr<colmap::Reconstruction> reconstruction);
+
 /// obtain all 3d points associated to given image. filter out points with not enough track length
 const std::vector<colmap::Point3D> GetPoints3DForImage(const colmap::image_t& image_id,
                                                        const int min_track_len,
@@ -34,14 +44,22 @@ const std::vector<colmap::Point3D> GetPoints3DForImage(const colmap::image_t& im
 void CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction);
 
 /**
-    * @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required by ceres
-    for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for
-    convenience.
+* @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required by ceres
+for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for
+convenience.
 
-    * @param img Reference to colmap image whose pose we want retrieve as paramter for optimization.
-    * @param q_c_from_w pointer to first quaternion value (double) in memory
-    * @param t_c_from_w pointer to first translation value (double) in memory
-    */
+* @param img Reference to colmap image whose pose we want retrieve as paramter for optimization.
+* @param q_c_from_w pointer to first quaternion value (double) in memory
+* @param t_c_from_w pointer to first translation value (double) in memory
+*/
 void GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_from_w);
+
+/**
+ * @brief Print statistics of two view geometry that matter to intialization criterias of reconstruction initial pairs.
+ *
+ * @param tvg
+ */
+void PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg);
+
 }  // namespace col_utils
 }  // namespace fuhe

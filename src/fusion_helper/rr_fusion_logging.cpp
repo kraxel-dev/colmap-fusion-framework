@@ -140,7 +140,7 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec
 
   // -------------------- Tracks
   // clear rerun 3d points
-  rec->log("world/pts_3D", rerun::Points3D::clear_fields());
+  rec->log("world/pts_3D", rerun::Points3D::clear_fields());  // FIXME: decide if clearing all points neccessary to kill old ones
 
   std::vector<rerun::Position3D> points;
   // log all 3d points

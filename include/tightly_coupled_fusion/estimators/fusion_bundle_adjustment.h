@@ -33,6 +33,8 @@ struct FusionGraphBundleAdjustmentOptions {
 
   bool fix_first_campose = true;  // set pose of first camera (time sorted) as constant param in ceres optimizaton
 
+  double time_diff_local_ba = 1.0;  // [secs] passed time between reg images to allow new round of local BA during mapping
+
   // FIXME: Kick section below if not needed
   //   // Whether to use a robust loss on prior locations.
   //   bool use_robust_loss_on_prior_position = false;

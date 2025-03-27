@@ -30,6 +30,21 @@ fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::unorde
   return ordered_image_stamps;
 }
 
+std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredImages(
+    const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+  // output map
+  std::unordered_map<colmap::image_t, colmap::Image> registered_images;
+
+  // iterate over all existing images (containing no registered)
+  for (const auto& img : reconstruction->Images()) {
+    if (reconstruction->IsImageRegistered(img.first)) {
+      registered_images[img.first] = img.second;
+    }
+  }
+  
+  return registered_images;
+}
+
 const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(const colmap::image_t& image_id,
                                                                         const int min_track_len,
                                                                         const std::shared_ptr<colmap::Reconstruction> reconstruction) {
@@ -90,4 +105,11 @@ void fuhe::col_utils::GetPointersToPose(colmap::Image& img, double*& q_c_from_w,
                                                              // represents ceres parameter pointer to position part of image pose.
   t_c_from_w = img.CamFromWorld().translation.data();        // pointer to translation part of image pose.
                                                              // represents ceres parameter pointer to position part of image pose.
+}
+
+void fuhe::col_utils::PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg) {
+  VLOG(1) << "Two View Geometry Statistics:";
+  VLOG(1) << "Inlier matches: " << tvg.inlier_matches.size();
+  VLOG(1) << "Z forward motion: " << tvg.cam2_from_cam1.translation.z();
+  VLOG(1) << "Triangulation angle: " << tvg.tri_angle;
 }
