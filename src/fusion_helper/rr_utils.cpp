@@ -23,6 +23,13 @@ std::pair<rerun::Vec3D, rerun::Mat3x3> fuhe::rr_utils::ToRerunPose3D(const colma
   return std::pair<rerun::Vec3D, rerun::Mat3x3>(rerun::Vec3D(t.data()), rerun::Mat3x3(R.data()));
 }
 
+const std::string fuhe::rr_utils::GetCamPosesName(const colmap::image_t img_id) { return "world/cams/cam" + std::to_string(img_id); }
+
+const std::string fuhe::rr_utils::GetPoints3DName(const bool is_subset) {
+  const std::string pts3d_name = (is_subset) ? "world/pts_3D_local_bundle" : "world/pts_3D";
+  return pts3d_name;
+}
+
 std::string fuhe::rr_utils::GetLabelNameEdge(const colmap::image_t img_id_i, const colmap::image_t img_id_j) {
   return std::string("edge_" + std::to_string(img_id_i) + "_to_" + std::to_string(img_id_j));
 }

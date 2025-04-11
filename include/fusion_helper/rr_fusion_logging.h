@@ -13,14 +13,17 @@
 
 #include "fusion_helper/odom_edges_manager.h"
 #include "fusion_helper/types.h"
+#include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/scene/reconstruction.h>
 #include <rerun.hpp>
-
+namespace fuhe {
 namespace rrfuse {  // rerun interface namespace
 
 // some constant params for shared entity size
-inline constexpr float AXIS_LENGTH_PINHOLE = 0.15f;
-inline constexpr float AXIS_LENGTH_ODOM = 0.6 * AXIS_LENGTH_PINHOLE;
+// FIXME: we have 2 sources of img plane dist at the moment (fusion opts). kill this one eventually
+inline constexpr float IMG_PLANE_DIST = 0.3f;  // controls size of pinhole in rerun viewer
+inline constexpr float AXIS_LENGTH_PINHOLE = 0.1f * IMG_PLANE_DIST;
+inline constexpr float AXIS_LENGTH_ODOM = 2.9f * AXIS_LENGTH_PINHOLE;
 
 /**
  * @brief // TODO: write brief
@@ -29,11 +32,12 @@ inline constexpr float AXIS_LENGTH_ODOM = 0.6 * AXIS_LENGTH_PINHOLE;
  * @param rrpinhole Correctly configured rerun pinhole object corresponding to camera model used in colmap reconstruction (focal and
  * resolution must be set)
  * @param img
- * @param id
+ * @param highlight draw bouning box around pinhole to highlight this image
  */
 void LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
                 const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                const colmap::Image& img);
+                const colmap::Image& img,
+                const bool highlight = false);
 
 /// log only 3D points for a single image to rerun
 void LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::Image& img, const std::vector<colmap::Point3D>& pts3D);
@@ -58,32 +62,50 @@ void LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
 void LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> rec, const std::string& factor_type, const double total_cost);
 
 /**
- * @brief Log whole colmap reconstruction to rerun. Can be used in ceres iteration callback.
+ * @brief Log full colmap reconstruction to rerun. Can be used in ceres iteration callback. Should be straightforward to use on any colmap
+ * model. Can be used to log a subset of a full model (e.g. only images and points3D that are part of the current BA problem). In that case
+ * an upstream helper function should help with subsetting the data.
  * @ref
  * https://github.com/colmap/glomap/commit/5115de482dc0a72b5c6d01d39da3524b7a296608#diff-2139378b2a5608827fa60ae83cfc220b18a3c68e7972248aeb715da8b60594fc
+ *
+ * @param rec
+ * @param rrpinhole
+ * @param images
+ * @param points3D
+ * @param is_subset
  */
 void LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec,
                        const std::shared_ptr<rerun::Pinhole> rrpinhole,
                        const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                       const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D);
+                       const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                       const bool is_subset = false);
 
-/// Log whole colmap reconstruction to rerun with image sorted by their time stamps. Can be used in ceres iteration callback.
-void LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
-                             const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                             const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                             const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
-                             const fuhe::edges::MapOfOdomEdges& odom_edges);
+/// Given full range of imgs and 3d points, log only active points and images in an ongoing Bundle Adjustment (local and global) to rerun.
+/// Active subset of imgs and points are obtained through a populated ba_config (make sure its populated correctly which is normally done by
+/// colmap itself). Almost as LogReconstruction but with different colors for this subset. Can be used in ceres iteration callback.
+void LogActivBundle(const std::shared_ptr<rerun::RecordingStream> rec,
+                    const std::shared_ptr<rerun::Pinhole> rrpinhole,
+                    const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                    const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                    const colmap::BundleAdjustmentConfig* ba_config,
+                    const bool highlight_cams = true);
+
+/// Use in destructors of ceres marathon iteration callbacks to clear all temporary visualizations of an active bundle adjustment
+/// process in rerun.
+void ClearActiveBundle(const std::shared_ptr<rerun::RecordingStream> rec, const std::unordered_set<colmap::camera_t>& cam_ids);
 
 /// Log all relative poses of external odometry as predicted poses as seen from node i for all nodes i j
 void LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                       const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                      const std::map<const double, fuhe::edges::OdomEdge> edges);
+                      const edges::MapOfImageEdges graph_data_edges);
 
 /// Draw all external odometry measurements as absolute poses and visually constrain the absolute colmap image poses with them as edge.
 void LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
                                   const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                                  const std::map<const double, fuhe::edges::OdomEdge> edges,
+                                  const edges::MapOfImageEdges graph_data_edges,
                                   const bool log_traj_as_linestrip = false);
 
 void ClearAllOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec);
+
 }  // namespace rrfuse
+}  // namespace fuhe

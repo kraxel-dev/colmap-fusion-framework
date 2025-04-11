@@ -30,6 +30,36 @@ fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::unorde
   return ordered_image_stamps;
 }
 
+const std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::SubsetOfImages(
+    const std::unordered_set<colmap::image_t>& target_ids, const std::unordered_map<colmap::image_t, colmap::Image>& images) {
+  // output map
+  std::unordered_map<colmap::image_t, colmap::Image> subset;
+
+  // iterate over all target ids
+  for (const auto& id : target_ids) {
+    // if target is in full image set, add to subset
+    if (images.find(id) != images.end()) {
+      subset[id] = images.at(id);
+    }
+  }
+  return subset;
+}
+
+const std::unordered_map<colmap::point3D_t, colmap::Point3D> fuhe::col_utils::SubsetOfPoints3D(
+    const std::unordered_set<colmap::point3D_t>& target_ids, const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D) {
+  // output map
+  std::unordered_map<colmap::point3D_t, colmap::Point3D> subset;
+
+  // iterate over all target ids
+  for (const auto& id : target_ids) {
+    // if target is in full 3D points set, add to subset
+    if (points3D.find(id) != points3D.end()) {
+      subset[id] = points3D.at(id);
+    }
+  }
+  return subset;
+}
+
 std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredImages(
     const std::shared_ptr<colmap::Reconstruction> reconstruction) {
   // output map
@@ -41,7 +71,7 @@ std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredIm
       registered_images[img.first] = img.second;
     }
   }
-  
+
   return registered_images;
 }
 
@@ -68,6 +98,55 @@ const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(const co
   }
 
   return pts3D;
+}
+
+bool fuhe::col_utils::ImagesAndPointsInActiveBA(const colmap::BundleAdjustmentConfig& ba_config,
+                                                const std::unordered_map<colmap::image_t, colmap::Image>& images,
+                                                const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                                                std::unordered_map<colmap::image_t, colmap::Image>& active_images,
+                                                std::unordered_map<colmap::point3D_t, colmap::Point3D>& active_points3D) {
+  if (ba_config.Images().empty()) {
+    LOG(WARNING) << "No images registered in bundle adjustment config! Problem construction was most probably faulty!";
+    return false;
+  }
+
+  // -------------------- Subset imgaes
+  active_images = fuhe::col_utils::SubsetOfImages(ba_config.Images(), images);
+
+  // -------------------- Subset 3d points
+  // use same strategy for adding rerun 3d points as colmaps bundle adjuster does for adding points to the problem. ba_config does not
+  // entail all active 3d points per se as they are pulled from the images themselved.
+
+  // iterate over all active images
+  for (auto& img_id : ba_config.Images()) {
+    // iterate over all 2d points associated to image
+    for (const colmap::Point2D& point2D : images.at(img_id).Points2D()) {
+      if (!point2D.HasPoint3D()) {
+        continue;
+      }
+
+      // skip points with less than 2 views.
+      const auto& point3D = points3D.at(point2D.point3D_id);
+      if (point3D.track.Length() < 2) {
+        continue;
+      }
+
+      // recover associated 3d point and store in output map
+      if (active_points3D.find(point2D.point3D_id) == active_points3D.end()) {
+        active_points3D[point2D.point3D_id] = point3D;
+      }
+    }
+  }
+
+  // finally, add variable points that are contained by ba_config
+  for (auto& pt3d_id : ba_config.VariablePoints()) {
+    // recover associated 3d point and store in output map
+    if (active_points3D.find(pt3d_id) == active_points3D.end()) {
+      active_points3D[pt3d_id] = points3D.at(pt3d_id);
+    }
+  }
+
+  return true;
 }
 
 void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction) {

@@ -23,12 +23,17 @@ struct RerunFusionVisOptions {
   bool is_log_to_rerun = true;         // enable logging and visualization of graph construction and optimization to rerun
   bool is_save_rerun_to_disk = false;  // enable saving rerun logged data to disk as rrd file
   std::string recording_path = "";
+  float img_plane_dist = 0.5f;  // controls size of cam pinhole in rerun viewer
 
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   bool draw_rerun_odom_as_predicted_poses = true;
+
+  // whether to highlight active images of BA in rerun with bounding boxes. Deactivate for use cases of BA for full model where view can get
+  // cluttered.
+  bool is_highlight_active_cams = true;
 };
 
-// FIXME: file name rr to rerun
+// FIXME: rename to RerunLoggingManager or RerunRecordingManager
 /// TODO: write brief
 class RerunFusionRecorder {
  public:
@@ -41,7 +46,7 @@ class RerunFusionRecorder {
   /// increment time sequence for rerun recording stream. can be called in every ceres iteration or before registering a new image
   void UpdateRerunTimeStep();
 
-  inline int TimeStep() const { return time_step; }
+  inline int& TimeStep() { return time_step; }
   inline void SetTimeStep(int time_step) { time_step = time_step; }
 
  private:
