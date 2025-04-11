@@ -1,9 +1,12 @@
 #include "fusion_helper/rr_fusion_recorder.h"
 
+#include "fusion_helper/rr_fusion_logging.h"
+
 namespace fuhe {
 namespace rrfuse {
 
-RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, const colmap::Reconstruction& reconstruction) : options(rr_opts) {
+RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, const colmap::Reconstruction& reconstruction)
+    : options(rr_opts) {
   // -------------------- Set rerun context
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
@@ -30,8 +33,9 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
-  this->rr_pinhole = std::make_shared<rerun::Pinhole>(
-      rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}).with_image_plane_distance(0.1));
+  this->rr_pinhole =
+      std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
+                                           .with_image_plane_distance(rr_opts.img_plane_dist));
 }
 
 /// increase time sequence of rerun logger by one

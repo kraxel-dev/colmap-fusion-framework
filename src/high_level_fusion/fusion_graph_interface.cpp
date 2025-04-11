@@ -1,11 +1,11 @@
 #include "high_level_fusion/fusion_graph_interface.h"
 
+#include <colmap/estimators/cost_functions.h>
+#include <colmap/estimators/manifold.h>
 #include <fusion_helper/ceres_eval_utils.h>
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/cost_functions.h>
 #include <fusion_helper/rr_fusion_logging.h>
-#include <colmap/estimators/cost_functions.h>
-#include <colmap/estimators/manifold.h>
 
 hifuse::FusionGraphInterface::FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
                                                    ceres::Problem& ceres_graph,
@@ -124,8 +124,8 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
   // log camera pose and 3d pts to rerun
   if (this->is_log_to_rerun) {
-    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
-    rrfuse::LogCamPoints3D(this->rr_rec, img, points3D_curr_img);
+    fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
+    fuhe::rrfuse::LogCamPoints3D(this->rr_rec, img, points3D_curr_img);
   }
   this->reproj_residual_ids.push_back(reproj_residual_ids_curr_img);
 }
@@ -148,7 +148,7 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
   // if (this->is_log_to_rerun) {
-  //   rrfuse::LogRelPoseFactor(this->rr_rec, T_ij_rigid, img_i, img_j);
+  //   fuhe::rrfuse::LogRelPoseFactor(this->rr_rec, T_ij_rigid, img_i, img_j);
   // }
 
   // create ceres relative pose factor weighted by its covariance
@@ -206,10 +206,10 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
     if (i == 0) {
       // start only if synchronized meas from both sources are availalbe
       if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
-        rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
-        rrfuse::LogCamPoints3D(this->rr_rec,
-                               this->reconstruction->Image(curr_img_id),
-                               fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
+        fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
+        fuhe::rrfuse::LogCamPoints3D(this->rr_rec,
+                                     this->reconstruction->Image(curr_img_id),
+                                     fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
 
         // preparing next iteration
         prev_stamp = curr_img_stamp;
@@ -226,10 +226,10 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
       continue;
     }
 
-    rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
-    rrfuse::LogCamPoints3D(this->rr_rec,
-                           this->reconstruction->Image(curr_img_id),
-                           fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
+    fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
+    fuhe::rrfuse::LogCamPoints3D(this->rr_rec,
+                                 this->reconstruction->Image(curr_img_id),
+                                 fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
 
     // -------------------- Fetch relative pose
     // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
@@ -237,11 +237,11 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
 
     // -------------------- Update rel pose factor in rerun
     colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
-    rrfuse::LogOdometryEdge(this->rr_rec,
-                            colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
-                            this->reconstruction->Image(prev_img_id),
-                            this->reconstruction->Image(curr_img_id),
-                            true);
+    fuhe::rrfuse::LogOdometryEdge(this->rr_rec,
+                                  colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
+                                  this->reconstruction->Image(prev_img_id),
+                                  this->reconstruction->Image(curr_img_id),
+                                  true);
     // preparing next iteration
     prev_stamp = curr_img_stamp;
     i++;
@@ -249,7 +249,7 @@ void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types
 }
 
 void hifuse::FusionGraphInterface::UpdateWholeReconstroctionRerun() {
-  rrfuse::LogReconstruction(this->rr_rec, this->rr_pinhole, this->reconstruction->Images(), this->reconstruction->Points3D());
+  fuhe::rrfuse::LogReconstruction(this->rr_rec, this->rr_pinhole, this->reconstruction->Images(), this->reconstruction->Points3D());
 }
 
 void hifuse::FusionGraphInterface::InitRerunViewer() {
@@ -278,8 +278,9 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
-  this->rr_pinhole = std::make_shared<rerun::Pinhole>(
-      rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height}).with_image_plane_distance(0.1));
+  this->rr_pinhole =
+      std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
+                                           .with_image_plane_distance(fuhe::rrfuse::IMG_PLANE_DIST));
   // create different looking pinhole object for pose predicted from wheel odom
   this->rr_pinhole_pred = std::make_shared<rerun::Pinhole>(
       rerun::Pinhole::from_focal_length_and_resolution({focal_length_y / 2, focal_length_x / 2}, {height / 2, width / 2}));

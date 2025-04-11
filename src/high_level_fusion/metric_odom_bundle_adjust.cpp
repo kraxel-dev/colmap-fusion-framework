@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
 
   // -------------------- Create directed odom edges between images in sorted order
-  auto edges = fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetweenImages(imgs_by_stamp, metric_poses);
+  auto data_graph_edges = fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses);
 
   // -------------------- Create Ceres problem
   // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues
@@ -102,17 +102,17 @@ int main(int argc, char** argv) {
   double curr_img_stamp, prev_stamp = -1;  // stamps for successfully utilized external odoms
 
   // iterate over all sequential image edges in model
-  for (const std::pair<const double, fuhe::edges::OdomEdge>& pair : edges) {
+  for (const std::pair<const double, fuhe::edges::SequentialImageEdge>& pair : data_graph_edges) {
     // data stuff
-    const fuhe::edges::OdomEdge edge = pair.second;
+    const fuhe::edges::SequentialImageEdge image_edge = pair.second;
     curr_img_stamp = pair.first;
 
-    const colmap::image_t curr_img_id = edge.j;
-    const colmap::image_t prev_img_id = edge.i;
+    const colmap::image_t curr_img_id = image_edge.CurrId();
+    const colmap::image_t prev_img_id = image_edge.PrevId();
     VLOG(2) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
 
     // -------------------- First iteration init condition
-    if (edge.i == edge.j) {
+    if (image_edge.IsSourceNode()) {
       VLOG(1) << "Origin image node detected! Kickoff factor graph construction";
       // add image reference image to bundle adjustment and force constant position but variable 3d pts
       fusion_interface.AddReprojectionFactor(curr_img_id, true, true, false);
@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
     fusion_interface.AddReprojectionFactor(curr_img_id, false, false, false);
 
     // check if external odom is available for current image
-    if (!edge.T_odom_ij_ptr) {
+    if (!image_edge.OdomEdge()) {
       continue;
     }
 
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     VLOG(2) << "Found matching tumposes to use as realtive pose factor!";
 
     // Get metric relative  pose of j (curr) expressed in i (prev)
-    const Eigen::Isometry3d T_i_from_j(edge.T_odom_ij_ptr->ToMatrix());
+    const Eigen::Isometry3d T_i_from_j(image_edge.OdomEdge()->T_i_from_j());
     VLOG(4) << "Relataive motion is: " << T_i_from_j;
 
     // Define covariance of relative motion.
@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
     fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
 
     // -------------------- Inlcude metric relative pose factor in BA
-    fusion_interface.AddBetweenFactor(prev_img_id, curr_img_id, T_i_from_j, covarince_i_from_j);
+    fusion_interface.AddBetweenFactor(image_edge.OdomEdge()->PrevId(), curr_img_id, T_i_from_j, covarince_i_from_j);
 
     // preparing next iteration
     prev_stamp = curr_img_stamp;
@@ -153,7 +153,7 @@ int main(int argc, char** argv) {
   // TODO: double check where to place this
   // clear manually and incrementally registered 3D points that were logged per image
   if (fusion_interface.GetRerunRec()) {
-    rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
+    fuhe::rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
   }
 
   // -------------------- Configure Bundle Adjustment for CERES and COLMAP
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
                                                                fusion_interface.GetRerunPinhole(),
                                                                fusion_interface.GetReconstruction()->Images(),
                                                                fusion_interface.GetReconstruction()->Points3D(),
-                                                               edges,
+                                                               data_graph_edges,
                                                                draw_rerun_odom_as_predicted_poses,
                                                                fusion_interface.GetResidualsTracker());
     solver_options.callbacks.push_back(callback.get());

@@ -1,14 +1,18 @@
 #include "fusion_helper/rr_fusion_logging.h"
 
+#include "fusion_helper/col_utils.h"
 #include "fusion_helper/rr_collection_adapters.h"
 #include "fusion_helper/rr_utils.h"
 #include <Eigen/Core>
 #include <colmap/geometry/rigid3.h>
 
+namespace fuhe {
+
 void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
                         const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                        const colmap::Image& img) {
-  std::string cam_name = "world/cam" + std::to_string(img.ImageId());
+                        const colmap::Image& img,
+                        const bool highlight) {
+  std::string cam_name = rr_utils::GetCamPosesName(img.ImageId());
 
   // match rerun adapter type.
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
@@ -20,12 +24,12 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
   Log pinhole as child entity of actual pose as workaround for now.
    */
-  // establish camera for logged pose under same name as pose
-  rec->log(cam_name + "/pinhole",
-           rerun::Transform3D()
-               .with_relation(rerun::components::TransformRelation::ParentFromChild)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_PINHOLE)));
   rec->log(cam_name + "/pinhole", rerun::Pinhole(*rrpinhole));
+  // // establish camera for logged pose under same name as pose
+  // rec->log(cam_name + "/pinhole",
+  //          rerun::Transform3D()
+  //              .with_relation(rerun::components::TransformRelation::ParentFromChild)
+  //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_PINHOLE)));
   // add a point to slap a label to the image pose
   // rec->log(cam_name + "/tf_label",
   //          rerun::Transform3D()
@@ -33,6 +37,12 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
   // rec->log(cam_name + "/tf_label",
   //          rerun::Points3D({{0.05f, -0.1f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
+
+  if (highlight) {
+    // log bounding box around camera pose
+    float ax_length = AXIS_LENGTH_PINHOLE;
+    rec->log(cam_name + "/bb", rerun::Boxes3D::from_half_sizes({{ax_length, ax_length, ax_length}}));
+  }
 }
 
 void rrfuse::LogCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -130,17 +140,19 @@ void rrfuse::LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> re
 void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec,
                                const std::shared_ptr<rerun::Pinhole> rrpinhole,
                                const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                               const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D) {
+                               const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                               const bool is_subset) {
   // -------------------- Images
   const std::unordered_map<colmap::camera_t, colmap::Image> images_copy = images;
   // log all registered images
   for (auto& [_, img] : images_copy) {
-    rrfuse::LogCamPose(rec, rrpinhole, img);
+    rrfuse::LogCamPose(rec, rrpinhole, img, /*highlight=*/is_subset);
   }
 
   // -------------------- Tracks
   // clear rerun 3d points
-  rec->log("world/pts_3D", rerun::Points3D::clear_fields());  // FIXME: decide if clearing all points neccessary to kill old ones
+  rec->log(rr_utils::GetPoints3DName(is_subset),
+           rerun::Points3D::clear_fields());  // FIXME: decide if clearing all points neccessary to kill old ones
 
   std::vector<rerun::Position3D> points;
   // log all 3d points
@@ -152,62 +164,71 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec
     points.emplace_back(xyz.x(), xyz.y(), xyz.z());
     // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
   }
-  rec->log("world/pts_3D", rerun::Points3D(points));
-  // rec->log("world/pts_3D", rerun::Points3D().update_fields());
+
+  rec->log(rr_utils::GetPoints3DName(is_subset), rerun::Points3D(points));
 }
 
-void rrfuse::LogReconstructionSorted(const std::shared_ptr<rerun::RecordingStream> rec,
-                                     const std::shared_ptr<rerun::Pinhole> rrpinhole,
-                                     const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                                     const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
-                                     const fuhe::edges::MapOfOdomEdges& odom_edges) {
+void rrfuse::LogActivBundle(const std::shared_ptr<rerun::RecordingStream> rec,
+                            const std::shared_ptr<rerun::Pinhole> rrpinhole,
+                            const std::unordered_map<colmap::camera_t, colmap::Image>& images,
+                            const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                            const colmap::BundleAdjustmentConfig* ba_config,
+                            const bool highlight_cams) {
   // -------------------- Images
-  // log all registered images
-  for (auto& [_, edge] : odom_edges) {
-    rrfuse::LogCamPose(rec, rrpinhole, images.at(edge.j));
-  }
+  std::unordered_map<colmap::image_t, colmap::Image> active_imgs;       // active images in current BA problem
+  std::unordered_map<colmap::point3D_t, colmap::Point3D> active_pts3D;  // active 3d points in current BA problem
+  // populated BA config knows which images and points are considered for this BA problem. log only those
+  col_utils::ImagesAndPointsInActiveBA(*ba_config, images, points3D, active_imgs, active_pts3D);
+  rrfuse::LogReconstruction(rec, rrpinhole, active_imgs, active_pts3D, highlight_cams);
+}
 
-  // -------------------- Tracks
+void rrfuse::ClearActiveBundle(const std::shared_ptr<rerun::RecordingStream> rec, const std::unordered_set<colmap::camera_t>& cam_ids) {
   // clear rerun 3d points
-  rec->log("world/pts_3D", rerun::Points3D::clear_fields());
+  rec->log(rr_utils::GetPoints3DName(/*is_subset=*/true), rerun::Points3D::clear_fields());
 
-  std::vector<rerun::Position3D> points;
-  // log all 3d points
-  for (auto& [_, pt3D] : points3D) {
-    // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
-    if (pt3D.track.Length() < 2) continue;
-
-    auto xyz = pt3D.xyz;
-    points.emplace_back(xyz.x(), xyz.y(), xyz.z());
-    // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
+  // clear pinholes highlighted with bounding boxes in local bundle
+  for (auto const id : cam_ids) {
+    std::string cam_name = rr_utils::GetCamPosesName(id);
+    rec->log(cam_name + "/bb", rerun::Boxes3D::clear_fields());
   }
-  rec->log("world/pts_3D", rerun::Points3D(points));
-  // rec->log("world/pts_3D", rerun::Points3D().update_fields());
 }
 
 void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
                               const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                              const std::map<const double, fuhe::edges::OdomEdge> edges) {
+                              const edges::MapOfImageEdges graph_data_edges) {
   const bool log_odom_as_predicted_pose = true;  // do not log odometry measurement as absolute pose
   // -------------------- Edges
   // log all registered images
-  for (auto& [_, edge] : edges) {
-    // skip source node
-    if ((edge.i == edge.j)) {
-      VLOG(4) << "Source node detected! Skip logging this one! ";
+  for (auto& [_, img_edge] : graph_data_edges) {
+    // skip image not entailed by selected images
+    if (images.find(img_edge.CurrId()) == images.end()) {
       continue;
-    } else if (edge.T_odom_ij_ptr == nullptr) {
-      LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
     }
 
-    VLOG(5) << "Rerun logging relpose factor with rigid: " << *edge.T_odom_ij_ptr;
-    rrfuse::LogOdometryEdge(rec, *(edge.T_odom_ij_ptr), images.at(edge.i), images.at(edge.j), log_odom_as_predicted_pose);
+    // skip image without odometry constraint
+    if (!img_edge.OdomEdge()) {
+      continue;
+    }
+
+    auto odom_edge = img_edge.OdomEdge();
+
+    // skip relative poses whose source node is not entailed in selected images
+    if (images.find(odom_edge->PrevId()) == images.end()) {
+      continue;
+    }
+
+    // obtain relative pose from odometry edge
+    const colmap::Rigid3d T_ij_rigid =
+        colmap::Rigid3d(Eigen::Quaterniond(odom_edge->T_i_from_j().rotation()), odom_edge->T_i_from_j().translation());
+    VLOG(5) << "Rerun logging relpose factor with rigid: " << T_ij_rigid;
+
+    rrfuse::LogOdometryEdge(rec, T_ij_rigid, images.at(odom_edge->PrevId()), images.at(odom_edge->CurrId()), log_odom_as_predicted_pose);
   }
 }
 
 void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::RecordingStream> rec,
                                           const std::unordered_map<colmap::camera_t, colmap::Image>& images,
-                                          const std::map<const double, fuhe::edges::OdomEdge> edges,
+                                          const edges::MapOfImageEdges graph_data_edges,
                                           const bool log_traj_as_linestrip) {
   const bool log_odom_as_absolute_pose = true;  // log odometry measurement as absolute pose
 
@@ -215,14 +236,16 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
       colmap::Rigid3d();  // absolute odometry pose, incremented per interation with each consecutive relpose
 
   std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
+  bool is_init = true;                      // for fetching origin absolute pose
   // -------------------- Edges
   // log all registered images
-  for (auto& [_, edge] : edges) {
+  for (auto& [_, edge] : graph_data_edges) {
     // skip source node
-    if ((edge.i == edge.j)) {
+    if (is_init) {
       VLOG(4) << "Source node detected!";
+
       // Grabbing first colmap pose as origin of tum trajectory
-      T_world_from_odom = colmap::Inverse(images.at(edge.j).CamFromWorld());
+      T_world_from_odom = colmap::Inverse(images.at(edge.CurrId()).CamFromWorld());
 
       if (log_traj_as_linestrip) {
         const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
@@ -232,14 +255,43 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
 
       continue;
 
-    } else if (edge.T_odom_ij_ptr == nullptr) {
-      LOG(WARNING) << "Edge between images without valid relative odometry detected! Id: " << edge.j;
+    } else if (is_init) {
     }
 
+    // skip if no viable odometry edge availabe for this image
+    if (!edge.OdomEdge()) {
+      continue;
+    }
+
+    auto odom_edge = edge.OdomEdge();
+
+    // whether its the very first odometry edge we received
+    if (is_init) {
+      VLOG(4) << "Source node detected!";
+
+      // skip if pose origin is not entailed by current image set
+      if (images.find(odom_edge->PrevId()) == images.end()) {
+        continue;
+      }
+
+      // Grabbing first colmap pose as origin of tum trajectory
+      T_world_from_odom = colmap::Inverse(images.at(odom_edge->PrevId()).CamFromWorld());
+
+      if (log_traj_as_linestrip) {
+        const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
+        // line strip connecting odometry poses
+        line_segments.push_back(t_j);  // node i as origin
+      }
+      is_init = false;
+    }
+
+    const colmap::Rigid3d T_ij_rigid =
+        colmap::Rigid3d(Eigen::Quaterniond(odom_edge->T_i_from_j().rotation()), odom_edge->T_i_from_j().translation());
     // increment rel pose to obtain absolute pose for current node
-    T_world_from_odom = T_world_from_odom * *(edge.T_odom_ij_ptr);
+    T_world_from_odom = T_world_from_odom * T_ij_rigid;
     VLOG(5) << "Rerun logging: " << T_world_from_odom;
-    rrfuse::LogOdometryEdge(rec, T_world_from_odom, images.at(edge.i), images.at(edge.j), !log_odom_as_absolute_pose);
+    rrfuse::LogOdometryEdge(
+        rec, T_world_from_odom, images.at(odom_edge->PrevId()), images.at(odom_edge->CurrId()), !log_odom_as_absolute_pose);
 
     if (log_traj_as_linestrip) {
       const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
@@ -257,3 +309,5 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
 void rrfuse::ClearAllOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec) {
   rec->log("/", rerun::LineStrips3D::clear_fields());
 }
+
+}  // namespace fuhe

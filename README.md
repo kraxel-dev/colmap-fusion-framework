@@ -76,6 +76,9 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 1. debug pose shift when setting campose as const ceresparam
 2. add rerun graph view
 
+## Fusion Iteration Callback
+1. Merge marathon and vanilla fusion iter class
+
 ## Cost logging
 
 1. Find a way to wrap loss function around cost in ResidualCostTracker
