@@ -22,7 +22,8 @@ namespace rrfuse {  // rerun interface namespace
 // some constant params for shared entity size
 // FIXME: we have 2 sources of img plane dist at the moment (fusion opts). kill this one eventually
 inline constexpr float IMG_PLANE_DIST = 0.3f;  // controls size of pinhole in rerun viewer
-inline constexpr float AXIS_LENGTH_PINHOLE = 0.1f * IMG_PLANE_DIST;
+// inline constexpr float AXIS_LENGTH_PINHOLE = 0.1f * IMG_PLANE_DIST;
+inline constexpr float AXIS_LENGTH_PINHOLE = 1.1f * IMG_PLANE_DIST;
 inline constexpr float AXIS_LENGTH_ODOM = 2.9f * AXIS_LENGTH_PINHOLE;
 
 /**

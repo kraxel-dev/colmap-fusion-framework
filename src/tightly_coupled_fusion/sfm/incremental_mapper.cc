@@ -1,5 +1,6 @@
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 
+#include "fusion_helper/io.h"
 #include <colmap/estimators/pose.h>
 #include <colmap/util/misc.h>
 #include <fusion_helper/rr_fusion_recorder.h>
@@ -255,6 +256,172 @@ void tcf::IncrementalMapperRerun::IterativeGlobalRefinement(int max_num_refineme
 // Incremental Fusion Mapper
 ////////////////////////////////////////////////////////////////////////////////
 
+tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
+                                                      FusionGraphBundleAdjustmentOptions& fusion_options,
+                                                      const std::string& tum_file,
+                                                      fuhe::rrfuse::RerunFusionVisOptions& rr_options)
+    : IncrementalMapper(database_cache), fusion_options_{fusion_options}, tum_file_{tum_file}, rr_options_{rr_options} {
+  // whether to allow fusion or not
+  is_fusion_mapping_ = fusion_options.is_mapping_with_fusion;
+  // get image ids images in time sorted order
+  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(database_cache->Images());
+  // get absolute poses from external odom sensor sorted by stamps
+  fuhe::types::MapOfPosesSec metric_poses;
+  fuhe::io::TumToPosesEigen(tum_file, metric_poses, true);
+
+  // -------------------- Create sequential image edges in sorted order (containing odom edges between images)
+  fusion_graph_data_edges_ =
+      std::make_shared<fuhe::edges::MapOfImageEdges>(fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses));
+}
+
+void tcf::IncrementalFusionMapper::IterativeLocalRefinement(int max_num_refinements,
+                                                            double max_refinement_change,
+                                                            const Options& options,
+                                                            const colmap::BundleAdjustmentOptions& ba_options,
+                                                            const colmap::IncrementalTriangulator::Options& tri_options,
+                                                            colmap::image_t image_id) {
+  using namespace colmap;
+
+  BundleAdjustmentOptions custom_ba_options = ba_options;
+  for (int i = 0; i < max_num_refinements; ++i) {
+    const auto report = this->AdjustLocalBundle(options, custom_ba_options, tri_options, image_id, GetModifiedPoints3D());
+    VLOG(1) << "=> Merged observations: " << report.num_merged_observations;
+    VLOG(1) << "=> Completed observations: " << report.num_completed_observations;
+    VLOG(1) << "=> Filtered observations: " << report.num_filtered_observations;
+    const double changed = report.num_adjusted_observations == 0
+                               ? 0
+                               : (report.num_merged_observations + report.num_completed_observations + report.num_filtered_observations) /
+                                     static_cast<double>(report.num_adjusted_observations);
+    VLOG(1) << StringPrintf("=> Changed observations: %.6f", changed);
+    if (changed < max_refinement_change) {
+      break;
+    }
+    // Only use robust cost function for first iteration.
+    custom_ba_options.loss_function_type = BundleAdjustmentOptions::LossFunctionType::TRIVIAL;
+  }
+  ClearModifiedPoints3D();
+}
+
+colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMapper::AdjustLocalBundle(
+    const Options& options,
+    const colmap::BundleAdjustmentOptions& ba_options,
+    const colmap::IncrementalTriangulator::Options& tri_options,
+    colmap::image_t image_id,
+    const std::unordered_set<colmap::point3D_t>& point3D_ids) {
+  using namespace colmap;
+  THROW_CHECK_NOTNULL(this->Reconstruction());
+  THROW_CHECK(options.Check());
+  LocalBundleAdjustmentReport report;
+
+  // Find images that have most 3D points with given image in common.
+  const std::vector<image_t> local_bundle = FindLocalBundle(options, image_id);
+
+  // Do the bundle adjustment only if there is any connected images.
+  if (local_bundle.size() > 0) {
+    BundleAdjustmentConfig ba_config;
+    ba_config.AddImage(image_id);
+    for (const image_t local_image_id : local_bundle) {
+      ba_config.AddImage(local_image_id);
+    }
+
+    // Fix the existing images, if option specified.
+    if (options.fix_existing_images) {
+      for (const image_t local_image_id : local_bundle) {
+        if (ExistingImageIds().count(local_image_id)) {
+          ba_config.SetConstantCamPose(local_image_id);
+        }
+      }
+    }
+
+    // Determine which cameras to fix, when not all the registered images
+    // are within the current local bundle.
+    std::unordered_map<camera_t, size_t> num_images_per_camera;
+    for (const image_t image_id : ba_config.Images()) {
+      const Image& image = this->Reconstruction()->Image(image_id);
+      num_images_per_camera[image.CameraId()] += 1;
+    }
+
+    for (const auto& [camera_id, num_images] : num_images_per_camera) {
+      const size_t num_reg_images_for_camera = NumRegImagesPerCamera().at(camera_id);
+      if (num_images < num_reg_images_for_camera) {
+        ba_config.SetConstantCamIntrinsics(camera_id);
+      }
+    }
+
+    // Fix 7 DOF to avoid scale/rotation/translation drift in bundle adjustment.
+    if (local_bundle.size() == 1) {
+      ba_config.SetConstantCamPose(local_bundle[0]);
+      ba_config.SetConstantCamPositions(image_id, {0});
+    } else if (local_bundle.size() > 1) {
+      const image_t image_id1 = local_bundle[local_bundle.size() - 1];
+      const image_t image_id2 = local_bundle[local_bundle.size() - 2];
+      ba_config.SetConstantCamPose(image_id1);
+      if (!options.fix_existing_images || !ExistingImageIds().count(image_id2)) {
+        ba_config.SetConstantCamPositions(image_id2, {0});
+      }
+    }
+
+    // Make sure, we refine all new and short-track 3D points, no matter if
+    // they are fully contained in the local image set or not. Do not include
+    // long track 3D points as they are usually already very stable and adding
+    // to them to bundle adjustment and track merging/completion would slow
+    // down the local bundle adjustment significantly.
+    std::unordered_set<point3D_t> variable_point3D_ids;
+    for (const point3D_t point3D_id : point3D_ids) {
+      const Point3D& point3D = this->Reconstruction()->Point3D(point3D_id);
+      const size_t kMaxTrackLength = 15;
+      if (!point3D.HasError() || point3D.track.Length() <= kMaxTrackLength) {
+        ba_config.AddVariablePoint(point3D_id);
+        variable_point3D_ids.insert(point3D_id);
+      }
+    }
+
+    // Adjust the local bundle.
+    std::unique_ptr<BundleAdjuster> bundle_adjuster = nullptr;
+    // if fusion is deactivated, use default bundle adjuster
+    if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_local_ba) {
+      if (rr_recorder_) {
+        // custom bundle adjuster with capability to log to rerun during optimization
+        bundle_adjuster = tcf::CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+      } else {
+        // default bundle adjuster without rerun logging
+        bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
+      }
+    } else {
+      // custom bundle adjuster with fusion capabilities
+      bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
+          ba_options, fusion_options_, rr_options_, rr_recorder_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges());
+    }
+
+    const ceres::Solver::Summary summary = bundle_adjuster->Solve();
+
+    report.num_adjusted_observations = summary.num_residuals / 2;
+
+    // Merge refined tracks with other existing points.
+    report.num_merged_observations = Triangulator().MergeTracks(tri_options, variable_point3D_ids);
+    // Complete tracks that may have failed to triangulate before refinement
+    // of camera pose and calibration in bundle-adjustment. This may avoid
+    // that some points are filtered and it helps for subsequent image
+    // registrations.
+    report.num_completed_observations = Triangulator().CompleteTracks(tri_options, variable_point3D_ids);
+    report.num_completed_observations += Triangulator().CompleteImage(tri_options, image_id);
+  }
+
+  // Filter both the modified images and all changed 3D points to make sure
+  // there are no outlier points in the model. This results in duplicate work as
+  // many of the provided 3D points may also be contained in the adjusted
+  // images, but the filtering is not a bottleneck at this point.
+  std::unordered_set<image_t> filter_image_ids;
+  filter_image_ids.insert(image_id);
+  filter_image_ids.insert(local_bundle.begin(), local_bundle.end());
+  report.num_filtered_observations =
+      this->ObservationManager().FilterPoints3DInImages(options.filter_max_reproj_error, options.filter_min_tri_angle, filter_image_ids);
+  report.num_filtered_observations +=
+      this->ObservationManager().FilterPoints3D(options.filter_max_reproj_error, options.filter_min_tri_angle, point3D_ids);
+
+  return report;
+}
+
 void tcf::IncrementalFusionMapper::IterativeGlobalRefinement(int max_num_refinements,
                                                              double max_refinement_change,
                                                              const Options& options,
@@ -266,7 +433,7 @@ void tcf::IncrementalFusionMapper::IterativeGlobalRefinement(int max_num_refinem
   VLOG(1) << "=> Retriangulated observations: " << Retriangulate(tri_options);
   for (int i = 0; i < max_num_refinements; ++i) {
     const size_t num_observations = this->Reconstruction()->ComputeNumObservations();
-    this->AdjustGlobalBundle(options, ba_options, this->isInitPair());
+    this->AdjustGlobalBundle(options, ba_options);
     if (normalize_reconstruction && !options.use_prior_position) {
       // Normalize scene for numerical stability and
       // to avoid large scale changes in the viewer.
@@ -283,9 +450,7 @@ void tcf::IncrementalFusionMapper::IterativeGlobalRefinement(int max_num_refinem
   ClearModifiedPoints3D();
 }
 
-bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
-                                                      const colmap::BundleAdjustmentOptions& ba_options,
-                                                      const bool is_init_pair) {
+bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options, const colmap::BundleAdjustmentOptions& ba_options) {
   using namespace colmap;
   VLOG(1) << "Adjusting global bundle with fusion capapbilites!";
   THROW_CHECK_NOTNULL(this->Reconstruction());
@@ -325,31 +490,27 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
     }
   }
 
-  // Only use prior pose if at least 3 images have been registered.
-  const bool use_prior_position = options.use_prior_position && reg_image_ids.size() > 2;
-
   // -------------------- Custom BA fusion code
   std::unique_ptr<BundleAdjuster> bundle_adjuster;
-  tcf::FusionGraphBundleAdjustmentOptions fusion_options;
-  fuhe::rrfuse::RerunFusionVisOptions rr_options;
 
   // FIXME: investigate and bring back in
-  // if (fusion_options.fix_first_campose) {
-  //   // Fix 7-DOFs of the bundle adjustment problem.
-  //   auto reg_image_ids_it = reg_image_ids.begin();
-  //   ba_config.SetConstantCamPose(*(reg_image_ids_it++));  // 1st image
-  //   if (!options.fix_existing_images || !this->ExistingImageIds().count(*reg_image_ids_it)) {
-  //     ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
-  //   }
-  // }
+  if (fusion_options_.fix_first_campose) {
+    // Fix 7-DOFs of the bundle adjustment problem.
+    auto reg_image_ids_it = reg_image_ids.begin();
+    ba_config.SetConstantCamPose(*(reg_image_ids_it++));  // 1st image
+    if (!options.fix_existing_images || !this->ExistingImageIds().count(*reg_image_ids_it)) {
+      ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
+    }
+  }
 
-  if (is_init_pair) {
-    // during initial image pair registration do not use fusion BA // FIXME: investigate in future
-    bundle_adjuster = CreateDefaultBundleAdjuster(std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction());
+  if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_global_ba) {
+    // default global BA with rerun visualization
+    bundle_adjuster =
+        CreateDefaultBundleAdjusterRerun(std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_recorder_);
   } else {
     // bundle adjuster with odometry fusion capabilities
     bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-        custom_ba_options, fusion_options, rr_options, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges());
+        custom_ba_options, fusion_options_, rr_options_, rr_recorder_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges());
   }
 
   return bundle_adjuster->Solve().termination_type != ceres::FAILURE;

@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   // Set log directory
   const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
   FLAGS_log_dir = log_dir;
-  VLOG(3) << "Logging path is: " << log_dir;
+  VLOG(2) << "Logging path is: " << log_dir;
 
   // -------------------- Read database cache and init fusion Mapper object
   colmap::Database db = colmap::Database(db_path);
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
 
   // -------------------- Final global bundle adjustment
   VLOG(1) << "Final round of global bundle adjustment!";
-  mapper.IterativeGlobalRefinement(incr_pipieline_opts->ba_local_max_refinements,
+  mapper.IterativeGlobalRefinement(incr_pipieline_opts->ba_global_max_refinements,
                                    incr_pipieline_opts->ba_global_max_refinement_change,
                                    mapper_opts,
                                    incr_pipieline_opts->GlobalBundleAdjustment(),

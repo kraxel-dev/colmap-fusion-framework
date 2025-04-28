@@ -122,19 +122,15 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   FusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
                             const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+                            const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
                             colmap::BundleAdjustmentConfig config,
                             colmap::Reconstruction& reconstruction,
                             const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges)
       : BundleAdjuster(std::move(options), std::move(config)),
-        fusion_options_(fusion_options),
-        rr_options_(rr_options),
-        reconstruction_(reconstruction) {
-    // -------------------- Rerun logging stuff
-    if (rr_options_.is_log_to_rerun) {
-      // initialize recorder objects when rerun logging is desired
-      rr_rec_ = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options_, reconstruction_);
-    }
-
+        fusion_options_{fusion_options},
+        rr_options_{rr_options},
+        rr_rec_{rr_recorder},
+        reconstruction_{reconstruction} {
     // -------------------- Default Bundle Adjuster creation
     default_bundle_adjuster_ = colmap::CreateDefaultBundleAdjuster(options_, config_, reconstruction_);
 
@@ -288,14 +284,16 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 };
 }  // namespace tfc
 
-std::unique_ptr<colmap::BundleAdjuster> tcf::CreateFusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
-                                                                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-                                                                             const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
-                                                                             colmap::BundleAdjustmentConfig config,
-                                                                             colmap::Reconstruction& reconstruction,
-                                                                             const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges) {
+std::unique_ptr<colmap::BundleAdjuster> tcf::CreateFusionGraphBundleAdjuster(
+    colmap::BundleAdjustmentOptions options,
+    const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
+    const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
+    colmap::BundleAdjustmentConfig config,
+    colmap::Reconstruction& reconstruction,
+    const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges) {
   return std::make_unique<tfc::FusionGraphBundleAdjuster>(
-      std::move(options), fusion_options, rr_options, std::move(config), reconstruction, fusion_graph_data_edges);
+      std::move(options), fusion_options, rr_options, rr_recorder, std::move(config), reconstruction, fusion_graph_data_edges);
 }
 
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateDefaultBundleAdjusterRerun(

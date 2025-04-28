@@ -71,7 +71,7 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
                                  const colmap::IncrementalTriangulator::Options& tri_options,
                                  bool normalize_reconstruction = true);
 
-  /// Attach RerunRecorder object to mapper. Is required if rerun logging is desired.
+  /// Attach RerunRecorder object to mapper. Required if rerun logging is desired.
   inline void AttachRerunRecorder(const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder>& rr_recorder) { rr_recorder_ = rr_recorder; }
   inline std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> RerunRecorder() const { return rr_recorder_; }
 
@@ -85,11 +85,40 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
 
 class IncrementalFusionMapper : public colmap::IncrementalMapper {
  public:
-  /// parent constructor
-  using colmap::IncrementalMapper::IncrementalMapper;
+  /**
+   * @brief Construct a new Incremental Fusion Mapper object. Fusion graph edges with odometry edges are created from the given database
+   * cache during construction.
+   *
+   * @param database_cache colmap database cache containing images, features and matches that will be same as parent.
+   * @param fusion_options options for fusion graph bundle adjustment.
+   * @param tum_file Mandatory path to tum file with absolute pose odometry data utilized for fusion. Required if mapper with odometry
+   * fusion capabilities is desired.
+   * @param rr_options rerun visualization options.
+   */
+  IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
+                          FusionGraphBundleAdjustmentOptions& fusion_options,
+                          const std::string& tum_file,
+                          fuhe::rrfuse::RerunFusionVisOptions& rr_options);
 
-  /// Derived to call multiple rounds of derived global bundle adjustment.  // FIXME: kick method if parent method safely calls custom
-  /// internal call
+  /// Derived to call multiple rounds of derived local bundle adjustment with fusion capabilities.
+  void IterativeLocalRefinement(int max_num_refinements,
+                                double max_refinement_change,
+                                const Options& options,
+                                const colmap::BundleAdjustmentOptions& ba_options,
+                                const colmap::IncrementalTriangulator::Options& tri_options,
+                                colmap::image_t image_id);
+
+  /// Derived to swap out DefaultBA with custom FusionGraphBA (besides that, exact implementation as parent). Adjust locally connected
+  /// images and points of a reference image. In addition, refine the provided 3D points. Only images connected to the reference image are
+  /// optimized.
+  colmap::IncrementalMapper::LocalBundleAdjustmentReport AdjustLocalBundle(const Options& options,
+                                                                           const colmap::BundleAdjustmentOptions& ba_options,
+                                                                           const colmap::IncrementalTriangulator::Options& tri_options,
+                                                                           colmap::image_t image_id,
+                                                                           const std::unordered_set<colmap::point3D_t>& point3D_ids);
+
+  /// Derived to call multiple rounds of derived global bundle adjustment with fusion capabilities.  // FIXME: kick method if parent method
+  /// safely calls custom internal call
   void IterativeGlobalRefinement(int max_num_refinements,
                                  double max_refinement_change,
                                  const Options& options,
@@ -97,22 +126,29 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
                                  const colmap::IncrementalTriangulator::Options& tri_options,
                                  bool normalize_reconstruction = false);
 
-  /// Derived adjustment with fusion bundle adjsutment
-  bool AdjustGlobalBundle(const Options& options, const colmap::BundleAdjustmentOptions& ba_options, const bool is_init_pair = false);
+  /// Derived Global Bundle Adjustment with fusion capabilities.
+  bool AdjustGlobalBundle(const Options& options, const colmap::BundleAdjustmentOptions& ba_options);
 
   /// Set fusion graph edges (time sorted image node sequence with odometry edges) that will be utilized by ceres optimization. Required if
-  /// mapper with odometry fusion capabilities is desired. Provide the full unfiltered range of sequential edges that would span the full
+  /// mapper with odometry fusion capabilities is desired. Provide the unfiltered range of sequential edges that would span the full
   /// colmap model after succ. reconstruction.
   inline void SetFusionGraphEdges(std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges) {
     fusion_graph_data_edges_ = fusion_graph_data_edges;
   };
   inline const std::shared_ptr<fuhe::edges::MapOfImageEdges> FusionGraphDataEdges() const { return fusion_graph_data_edges_; }
 
-  inline bool isInitPair() const { return is_init_pair; }
-  inline void setIsInitPair(bool isInitPair) { is_init_pair = isInitPair; }
+  /// Attach RerunRecorder object to mapper. Required if rerun logging is desired.
+  inline void AttachRerunRecorder(const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder>& rr_recorder) { rr_recorder_ = rr_recorder; }
+  inline std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> RerunRecorder() const { return rr_recorder_; }
 
  protected:
-  bool is_init_pair = true;
+  bool is_fusion_mapping_ = true;                      // if not, switch to default vision only ba in whole mapping process
+  FusionGraphBundleAdjustmentOptions fusion_options_;  // options for fusion graph bundle adjustment
+  const std::string tum_file_ = "";                    // path to tum file with odometry data
+
+  const fuhe::rrfuse::RerunFusionVisOptions rr_options_;                      // rerun visualization options
+  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;  // custom RerunRecorder object if visualization is desired
+
   std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges_ =
       nullptr;  // time sorted image node sequence with odometry edges constraining images
 };

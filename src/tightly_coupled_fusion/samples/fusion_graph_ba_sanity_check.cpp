@@ -89,12 +89,20 @@ int main(int argc, char** argv) {
     i++;
   }
 
+  // -------------------- Init rerun if visualization is toggled
+  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  if (rr_options.is_log_to_rerun) {
+    // initialize recorder objects when rerun logging is desired
+    VLOG(1) << "Rerun recording toggled. Attaching Recorder manager to mapper!";
+    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *reconstruction);
+  }
+
   // -------------------- Create FusionGraphBundleAdjuster object
   VLOG(1) << "Creating fusion bundle adjuster object!";
 
   // bundle adjuster with odometry fusion capabilities and automatic rerun loggung during iters
   std::unique_ptr<colmap::BundleAdjuster> fusion_bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-      *col_options.bundle_adjustment, fusion_ba_options, rr_options, ba_cfg, *reconstruction.get(), *fusion_graph_data_edges.get());
+      *col_options.bundle_adjustment, fusion_ba_options, rr_options, rr_rc, ba_cfg, *reconstruction.get(), *fusion_graph_data_edges.get());
 
   // -------------------- Solve fusion problem
   VLOG(1) << "Starting to solve bundle adjustment problem!";

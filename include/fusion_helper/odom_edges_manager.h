@@ -112,8 +112,8 @@ using MapOfOdomEdges = std::map<const double, OdometryEdge>;
 using MapOfImageEdges = std::map<const double, SequentialImageEdge>;
 
 /**
- * @brief Create (time) sorted sequence of image nodes from colmap model as main graph data edges. Finds (if availabe) for each current
- * image node j of an image edge a relative pose reading from 2 consecutive tum file absolute poses. The source node of each odometry edge
+ * @brief Create (time) sorted sequence of image nodes from colmap model as main graph data edges. Finds (if availabe), for each current
+ * image node j of an image edge, a relative pose reading from 2 consecutive tum file absolute poses. The source node of each odometry edge
  * may lie further back in time then the previous image node (i) of an image edge. NOTE: Please provide ALL images considered in this
  * reconstruction, not only currently registered ones. Otherwise image edges will link imgs that are not truly conescutive, which results in
  * odometry edges that span far away absolute poses.

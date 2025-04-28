@@ -91,7 +91,11 @@ void tcf::IncrementalFusionPipeline::Reconstruct(const colmap::IncrementalMapper
   VLOG(2) << "Custom fusion reconstruction triggered!";
 
   using namespace colmap;
-  tcf::IncrementalFusionMapper mapper(this->DatabaseCache());
+
+  const std::string tum_file = "";                    // path to tum file with odometry data
+  FusionGraphBundleAdjustmentOptions fusion_options;  // options for fusion graph bundle adjustment
+  fuhe::rrfuse::RerunFusionVisOptions rr_options;     // rerun visualization options
+  tcf::IncrementalFusionMapper mapper(this->DatabaseCache(), fusion_options, tum_file, rr_options);
 
   // Is there a sub-model before we start the reconstruction? I.e. the user
   // has imported an existing reconstruction.
@@ -246,7 +250,6 @@ colmap::IncrementalPipeline::Status tcf::IncrementalFusionPipeline::ReconstructS
     }
 
     if (reg_next_success) {
-      mapper.setIsInitPair(false);  // atleast 3 images registered. allow global ba with odometry fusion
       mapper.TriangulateImage(this->Options()->Triangulation(), next_image_id);
       mapper.IterativeLocalRefinement(this->Options()->ba_local_max_refinements,
                                       this->Options()->ba_local_max_refinement_change,
@@ -283,7 +286,6 @@ colmap::IncrementalPipeline::Status tcf::IncrementalFusionPipeline::ReconstructS
     // bundle adjustment and try again to register one image. If this fails
     // once, then exit the incremental mapping.
     if (!reg_next_success && prev_reg_next_success) {
-      mapper.setIsInitPair(false);  // failed to register another image for submodule
       IterativeGlobalRefinement(*this->Options(), mapper_options, mapper);
     }
   } while (reg_next_success || prev_reg_next_success);
@@ -336,8 +338,7 @@ colmap::IncrementalPipeline::Status tcf::IncrementalFusionPipeline::InitializeRe
   mapper.RegisterInitialImagePair(mapper_options, two_view_geometry, image_id1, image_id2);
 
   LOG(INFO) << "Global bundle adjustment";
-  const bool is_init_pair = true;
-  mapper.AdjustGlobalBundle(mapper_options, this->Options()->GlobalBundleAdjustment(), is_init_pair);
+  mapper.AdjustGlobalBundle(mapper_options, this->Options()->GlobalBundleAdjustment());
   reconstruction.Normalize();
   mapper.FilterPoints(mapper_options);
   mapper.FilterImages(mapper_options);

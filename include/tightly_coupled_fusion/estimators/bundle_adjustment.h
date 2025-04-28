@@ -24,6 +24,8 @@ namespace tcf {  // tightly coupled fusion
 
 /// Options for tightly coupled colmap fusion with odometry data TODO: other modalities
 struct FusionGraphBundleAdjustmentOptions {
+  bool is_mapping_with_fusion = true; // if not, switch to regular (vision-only) incremental mapping with rerun visualization.
+
   // FIXME: expose to user
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
 
@@ -31,6 +33,9 @@ struct FusionGraphBundleAdjustmentOptions {
   const double cov = 0.015;  // odom covariance all entries
 
   bool fix_first_campose = true;  // set pose of first camera (time sorted) as constant param in ceres optimizaton
+
+  bool fusion_in_local_ba = true;  // whether to include odometry edges in local BA
+  bool fusion_in_global_ba = true;  // whether to include odometry edges in global BA
 
   double time_between_local_ba = 1.0;  // [secs] passed time between reg images to allow new round of local BA during mapping
 
@@ -65,6 +70,7 @@ struct FusionGraphBundleAdjustmentOptions {
 std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                                                                         const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
                                                                         const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+                                                                        const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
                                                                         colmap::BundleAdjustmentConfig config,
                                                                         colmap::Reconstruction& reconstruction,
                                                                         const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges);
