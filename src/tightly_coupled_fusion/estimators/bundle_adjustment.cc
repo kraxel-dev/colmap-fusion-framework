@@ -180,8 +180,28 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
       //   }
       // }
     }
-
     VLOG(2) << "Added nr of between factors: " << between_factor_counter;
+
+    // fix cam poses deemed as constant for this bundle to static. Necessary since default BA does not actually set the ceres param block as
+    // constant during init.
+    for (const colmap::image_t image_id : config_.Images()) {
+      if (!(config_.HasConstantCamPose(image_id))) {
+        continue;
+      }
+
+      VLOG(2) << "Forcing pose parameter block of image " << image_id << " to constant!";
+      auto& img_const_pose = reconstruction_.Image(image_id);
+      // recover image pose from colmap model
+      double *q = nullptr, *t = nullptr;  // ceres param blocks for pose
+      fuhe::col_utils::GetPointersToPose(img_const_pose, q, t);
+      // Check existence of param block (in some cases like image only BA, the parameter block of a const pose might be not registered in
+      // the problem).
+      if (!(default_bundle_adjuster_->Problem()->HasParameterBlock(q) && default_bundle_adjuster_->Problem()->HasParameterBlock(t))) {
+        continue;
+      }
+      default_bundle_adjuster_->Problem()->SetParameterBlockConstant(q);
+      default_bundle_adjuster_->Problem()->SetParameterBlockConstant(t);
+    }
   }
 
   /// Add relative odometry factor to ceres problem
@@ -211,7 +231,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 
     this->Problem()->AddResidualBlock(cost_func, nullptr, q_i, t_i, q_j, t_j);
 
-    // -------------------- Double check if pose parameters are registered as manifold in optimizaion
+    // // -------------------- Double check if pose parameters are registered as manifold in optimizaion
     // Set Lie algebra for pose on manifold optimization in case it was not set already
     if (!default_bundle_adjuster_->Problem()->GetParameterization(q_i)) {
       colmap::SetQuaternionManifold(default_bundle_adjuster_->Problem().get(), q_i);

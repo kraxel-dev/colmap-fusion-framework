@@ -157,6 +157,10 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
 
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
+  if (rr_recorder_) {
+    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Global bundle adjustment!");
+  }
+
   const std::set<image_t>& reg_image_ids = this->Reconstruction()->RegImageIds();
 
   THROW_CHECK_GE(reg_image_ids.size(), 2) << "At least two images must be "
@@ -313,6 +317,10 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
   THROW_CHECK(options.Check());
   LocalBundleAdjustmentReport report;
 
+  if (rr_recorder_) {
+    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Local bundle adjustment!");
+  }
+
   // Find images that have most 3D points with given image in common.
   const std::vector<image_t> local_bundle = FindLocalBundle(options, image_id);
 
@@ -349,15 +357,40 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     }
 
     // Fix 7 DOF to avoid scale/rotation/translation drift in bundle adjustment.
-    if (local_bundle.size() == 1) {
-      ba_config.SetConstantCamPose(local_bundle[0]);
-      ba_config.SetConstantCamPositions(image_id, {0});
-    } else if (local_bundle.size() > 1) {
-      const image_t image_id1 = local_bundle[local_bundle.size() - 1];
-      const image_t image_id2 = local_bundle[local_bundle.size() - 2];
-      ba_config.SetConstantCamPose(image_id1);
-      if (!options.fix_existing_images || !ExistingImageIds().count(image_id2)) {
-        ba_config.SetConstantCamPositions(image_id2, {0});
+    if (fusion_options_.fix_first_cam_pose) {
+      if (local_bundle.size() == 1) {
+        ba_config.SetConstantCamPose(local_bundle[0]);
+        ba_config.SetConstantCamPositions(image_id, {0});
+      } else if (local_bundle.size() > 1) {
+        // vanilla approach to fix poses of least connected images (in case choosing img by oldest time below does not work)
+        image_t image_id1 = local_bundle[local_bundle.size() - 1];
+        image_t image_id2 = local_bundle[local_bundle.size() - 2];
+        // find 2 earliest images in local bundle in time to fix its pose for local BA (more consistent to sequential order of fusion
+        // mapping)
+        bool found_earliest = false;  // signal if oldest img was found to proceed with 2nd oldest
+        for (const auto& img_edge : *this->FusionGraphDataEdges()) {
+          // find earliest image of whole graph that is contained in local bundle
+          if (std::find(local_bundle.begin(), local_bundle.end(), img_edge.second.CurrId()) != local_bundle.end()) {
+            if (!found_earliest) {
+              VLOG(3) << "Earliest image in local bundle identified!";
+              image_id1 = img_edge.second.CurrId();
+              found_earliest = true;
+              continue;
+            } else {
+              image_id2 = img_edge.second.CurrId();
+              break;
+            }
+          }
+        }
+        VLOG(2) << "Tagging pose of image " << image_id1 << " as fixed in ba_config of upcoming local bundle!";
+        ba_config.SetConstantCamPose(image_id1);
+        if (!options.fix_existing_images || !ExistingImageIds().count(image_id2)) {
+          // do not fix position of 2nd image if scale should be ajusted during optim (desired in fusion)
+          if (fusion_options_.fix_second_cam_position) {
+            VLOG(2) << "Tagging position of image " << image_id2 << " as fixed in ba_config of upcoming local bundle!";
+            ba_config.SetConstantCamPositions(image_id2, {0});  // 2nd image
+          }
+        }
       }
     }
 
@@ -453,6 +486,9 @@ void tcf::IncrementalFusionMapper::IterativeGlobalRefinement(int max_num_refinem
 bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options, const colmap::BundleAdjustmentOptions& ba_options) {
   using namespace colmap;
   VLOG(1) << "Adjusting global bundle with fusion capapbilites!";
+  if (rr_recorder_) {
+    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Global bundle adjustment!");
+  }
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
   const std::set<image_t>& reg_image_ids = this->Reconstruction()->RegImageIds();
@@ -493,13 +529,17 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options, co
   // -------------------- Custom BA fusion code
   std::unique_ptr<BundleAdjuster> bundle_adjuster;
 
-  // FIXME: investigate and bring back in
-  if (fusion_options_.fix_first_campose) {
+  // fix pose of 1st image and optionally 2nd image
+  if (fusion_options_.fix_first_cam_pose) {
     // Fix 7-DOFs of the bundle adjustment problem.
     auto reg_image_ids_it = reg_image_ids.begin();
+    VLOG(2) << "Tagging pose of image " << *reg_image_ids_it << " as fixed in ba_config for upcoming global bundle!";
     ba_config.SetConstantCamPose(*(reg_image_ids_it++));  // 1st image
     if (!options.fix_existing_images || !this->ExistingImageIds().count(*reg_image_ids_it)) {
-      ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
+      // do not fix position of 2nd image if scale should be ajusted during optim (desired in fusion)
+      if (fusion_options_.fix_second_cam_position) {
+        ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
+      }
     }
   }
 

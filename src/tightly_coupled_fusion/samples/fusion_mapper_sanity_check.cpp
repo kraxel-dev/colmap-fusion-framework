@@ -70,10 +70,13 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
-  col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
   // custom fusion options
-  col_options.AddDefaultOption("time_diff_local_ba",
-                               &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
+  col_options.AddDefaultOption("fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
+  col_options.AddDefaultOption("fusion.odom_cov", &fusion_ba_options.cov);
+  col_options.AddDefaultOption("fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
+  col_options.AddDefaultOption("fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
@@ -148,17 +151,17 @@ int main(int argc, char** argv) {
   VLOG(1) << "Initial Pair found with ids: " << id_1 << " and " << id_2;
   fusion_mapper.RegisterInitialImagePair(mapper_opts, tvg, id_1, id_2);  // lock in
 
-  // // -------------------- Initial Pair Rerun visualization
-  // if (rr_options.is_log_to_rerun) {
-  //   // initialize recorder objects when rerun logging is desired
-  //   rr_rc->UpdateRerunTimeStep();
+  // -------------------- Initial Pair Rerun visualization
+  if (rr_options.is_log_to_rerun) {
+    // initialize recorder objects when rerun logging is desired
+    rr_rc->UpdateRerunTimeStep();
 
-  //   // log initial pair to rerun
-  //   fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-  //                                   rr_rc->GetRerunPinhole(),
-  //                                   fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
-  //                                   fusion_mapper.Reconstruction()->Points3D());
-  // }
+    // log initial pair to rerun
+    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
+                                    rr_rc->GetRerunPinhole(),
+                                    fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
+                                    fusion_mapper.Reconstruction()->Points3D());
+  }
   // -------------------- One round of global bundle adjustment for the inital pair
 
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
@@ -206,13 +209,30 @@ int main(int argc, char** argv) {
       break;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Local Bundle Adjustment + Triangulation
-    ////////////////////////////////////////////////////////////////////////////////
+    if (rr_options.is_log_to_rerun) {
+      fuhe::rrfuse::LogInfo(rr_rc->GetRerunRec(), "Registered image: " + std::to_string(next_image_id));
+    }
 
     VLOG(2) << "Triangulating new points for image " << next_image_id;
     // triangulate new points and run a couple rounds of local BA
     fusion_mapper.TriangulateImage(incr_pipieline_opts->Triangulation(), next_image_id);
+
+    // -------------------- Rerun visualization of newly registered image
+    if (rr_options.is_log_to_rerun) {
+      // initialize recorder objects when rerun logging is desired
+      rr_rc->UpdateRerunTimeStep();
+
+      // log initial pair to rerun
+      fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
+                                      rr_rc->GetRerunPinhole(),
+                                      fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
+                                      fusion_mapper.Reconstruction()->Points3D());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Local Bundle Adjustment
+    ////////////////////////////////////////////////////////////////////////////////
+
     VLOG(2) << "Iterative local bundle adjustments!";
     fusion_mapper.IterativeLocalRefinement(incr_pipieline_opts->ba_local_max_refinements,
                                            incr_pipieline_opts->ba_local_max_refinement_change,
@@ -236,9 +256,10 @@ int main(int argc, char** argv) {
       ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
 
-    if (incr_pipieline_opts->extract_colors) {
-      ExtractColors(*col_options.image_path, next_image_id, *reconstruction);
-    }
+    // TODO: bring in again
+    // if (incr_pipieline_opts->extract_colors) {
+    //   ExtractColors(*col_options.image_path, next_image_id, *reconstruction);
+    // }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
