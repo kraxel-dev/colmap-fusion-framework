@@ -1,5 +1,6 @@
 #include "high_level_fusion/fusion_graph_interface.h"
 
+#include "fusion_helper/rr_utils.h"
 #include <colmap/estimators/cost_functions.h>
 #include <colmap/estimators/manifold.h>
 #include <fusion_helper/ceres_eval_utils.h>
@@ -280,7 +281,7 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole =
       std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
-                                           .with_image_plane_distance(fuhe::rrfuse::IMG_PLANE_DIST));
+                                           .with_image_plane_distance(fuhe::rr_utils::IMG_PLANE_DIST));
   // create different looking pinhole object for pose predicted from wheel odom
   this->rr_pinhole_pred = std::make_shared<rerun::Pinhole>(
       rerun::Pinhole::from_focal_length_and_resolution({focal_length_y / 2, focal_length_x / 2}, {height / 2, width / 2}));

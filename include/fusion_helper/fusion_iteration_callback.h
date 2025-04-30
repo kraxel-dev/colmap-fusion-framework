@@ -76,7 +76,6 @@ class MarathonBundleAdjustIterCallback : public BundleAdjustmentIterationCallbac
 
   ~MarathonBundleAdjustIterCallback() override {
     if (ba_config_) {
-      rr_rec_->set_time_sequence("step", step_count_++);
       // log updated reconstruction to rerun (filter out images that are not yet registered in model and still lack pose info)
       rrfuse::LogReconstruction(rr_rec_, rrpinhole_, col_utils::SubsetOfImages(ba_config_->Images(), images_), points3D_);
       rrfuse::ClearActiveBundle(rr_rec_, ba_config_->Images());
@@ -118,7 +117,8 @@ class MarathonFusionIterCallback : public MarathonBundleAdjustIterCallback {
   ~MarathonFusionIterCallback() override { rrfuse::ClearAllOdometryEdges(this->rr_rec_); }
   ceres::CallbackReturnType operator()(const ceres::IterationSummary& summary) override {
     // -------------------- Log active imgs and pts in current BA
-    rr_rec_->set_time_sequence("step", step_count_++);
+    step_count_++;
+    rr_rec_->set_time_sequence("step", step_count_);
 
     // when a populated BA config knows which images and points are considered for this BA problem, log only those
     rrfuse::LogActivBundle(rr_rec_, rrpinhole_, images_, points3D_, ba_config_, is_highlight_active_cams_);

@@ -8,6 +8,10 @@
 
 namespace fuhe {
 
+void rrfuse::LogInfo(const std::shared_ptr<rerun::RecordingStream> rec, const std::string& msg) {
+  rec->log("logs", rerun::TextLog(msg).with_level(rerun::TextLogLevel::Info));
+}
+
 void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
                         const std::shared_ptr<rerun::Pinhole> rrpinhole,
                         const colmap::Image& img,
@@ -18,7 +22,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
 
   // log camera pose to rerun. data of t and R may go out of scope, but as rerun object they shall live on
-  rec->log(cam_name, rerun::Transform3D(T.first, T.second).with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_PINHOLE)));
+  rec->log(cam_name, rerun::Transform3D(T.first, T.second));
 
   /*
   NOTE: For som weird reaseon, child entity display does not work in rerun viewer once an entity has been established a pinhole.
@@ -40,7 +44,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
 
   if (highlight) {
     // log bounding box around camera pose
-    float ax_length = AXIS_LENGTH_PINHOLE;
+    const float ax_length = rr_utils::IMG_PLANE_DIST / 2.6f;
     rec->log(cam_name + "/bb", rerun::Boxes3D::from_half_sizes({{ax_length, ax_length, ax_length}}));
   }
 }
@@ -72,6 +76,34 @@ void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const
   rerun::Position3D pos(xyz.x(), xyz.y(), xyz.z());
 
   rec->log(pt3d_name, rerun::archetypes::Points3D(pos));
+}
+
+void rrfuse::LogPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
+                         const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                         const bool is_subset,
+                         const bool ignore_far_away_points) {
+  // clear rerun 3d points
+  rec->log(rr_utils::GetPoints3DName(is_subset),
+           rerun::Points3D::clear_fields());  // FIXME: decide if clearing all points neccessary to kill old ones
+
+  std::vector<rerun::Position3D> points;
+  // log all 3d points
+  for (auto& [_, pt3D] : points3D) {
+    // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
+    if (pt3D.track.Length() < 2) continue;
+
+    const Eigen::Vector3f xyz = pt3D.xyz.cast<float>();
+    if (ignore_far_away_points) {
+      // ignore points that are outside the bounding box of the camera
+      if (std::abs(xyz.x()) > rr_utils::XY_BOUND || std::abs(xyz.y()) > rr_utils::XY_BOUND || std::abs(xyz.z()) > rr_utils::Z_BOUND) {
+        continue;
+      }
+    }
+    points.emplace_back(xyz.x(), xyz.y(), xyz.z());
+    // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
+  }
+
+  rec->log(rr_utils::GetPoints3DName(is_subset), rerun::Points3D(points));
 }
 
 void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -106,10 +138,12 @@ void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
   line_segments.push_back(t_j);              // end line strip in pose of image j
   rerun::LineStrip3D line_strip(line_segments);
 
-  // log predicted camera pose to rerun.
-  rec->log(pred_cam_name,
-           rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second)
-               .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH_ODOM)));
+  // -------------------- log predicted camera pose to rerun.
+  // transform without visible axis to propagate correct pose
+  rec->log(pred_cam_name, rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second));
+  // draw coord frame axis onto predicted pose for visiblity
+  rec->log(pred_cam_name + "/frame", rr_utils::FrameAxis());
+
   // add a point to slap a label to the image pose
   // rec->log(pred_cam_name + "/tf_label",
   //          rerun::Transform3D()
@@ -150,22 +184,7 @@ void rrfuse::LogReconstruction(const std::shared_ptr<rerun::RecordingStream> rec
   }
 
   // -------------------- Tracks
-  // clear rerun 3d points
-  rec->log(rr_utils::GetPoints3DName(is_subset),
-           rerun::Points3D::clear_fields());  // FIXME: decide if clearing all points neccessary to kill old ones
-
-  std::vector<rerun::Position3D> points;
-  // log all 3d points
-  for (auto& [_, pt3D] : points3D) {
-    // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
-    if (pt3D.track.Length() < 2) continue;
-
-    const Eigen::Vector3f xyz = pt3D.xyz.cast<float>();
-    points.emplace_back(xyz.x(), xyz.y(), xyz.z());
-    // colors.emplace_back(track.color[0], track.color[1], track.color[2]);
-  }
-
-  rec->log(rr_utils::GetPoints3DName(is_subset), rerun::Points3D(points));
+  rrfuse::LogPoints3D(rec, points3D, is_subset, /*ignore_far_away_points=*/true);
 }
 
 void rrfuse::LogActivBundle(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -307,7 +326,8 @@ void rrfuse::LogOdometryEdgesAsTrajectory(const std::shared_ptr<rerun::Recording
 }
 
 void rrfuse::ClearAllOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec) {
-  rec->log("/", rerun::LineStrips3D::clear_fields());
+  rec->log("/world/00_predicted_odom_poses/", rerun::archetypes::Clear(true));
+  rec->log("/world/00_absolute_odom_poses/", rerun::archetypes::Clear(true));
 }
 
 }  // namespace fuhe

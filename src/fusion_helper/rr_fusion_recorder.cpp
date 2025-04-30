@@ -35,7 +35,7 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   // create rerun pinhole object needed to visualize camera poses in rerun
   this->rr_pinhole =
       std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
-                                           .with_image_plane_distance(rr_opts.img_plane_dist));
+                                           .with_image_plane_distance(rr_utils::IMG_PLANE_DIST));
 }
 
 /// increase time sequence of rerun logger by one

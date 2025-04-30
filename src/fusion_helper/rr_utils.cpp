@@ -23,6 +23,12 @@ std::pair<rerun::Vec3D, rerun::Mat3x3> fuhe::rr_utils::ToRerunPose3D(const colma
   return std::pair<rerun::Vec3D, rerun::Mat3x3>(rerun::Vec3D(t.data()), rerun::Mat3x3(R.data()));
 }
 
+rerun::Arrows3D fuhe::rr_utils::FrameAxis() {
+  return rerun::Arrows3D::from_vectors(
+             {{rr_utils::AXIS_LENGTH_ODOM, 0.0, 0.0}, {0.0, rr_utils::AXIS_LENGTH_ODOM, 0.0}, {0.0, 0.0, rr_utils::AXIS_LENGTH_ODOM}})
+      .with_colors({{255, 0, 0}, {0, 255, 0}, {0, 0, 255}});
+}
+
 const std::string fuhe::rr_utils::GetCamPosesName(const colmap::image_t img_id) { return "world/cams/cam" + std::to_string(img_id); }
 
 const std::string fuhe::rr_utils::GetPoints3DName(const bool is_subset) {
@@ -38,8 +44,8 @@ std::pair<std::string, std::string> fuhe::rr_utils::GetEntityNamesOdomEdge(const
                                                                            const colmap::image_t img_id_j,
                                                                            const bool is_relative_pose) {
   std::string source_frame = "world";
-  std::string odom_pose_name;
-  std::string edge_i_pred_j_name;
+  std::string odom_pose_name = "";
+  std::string edge_i_pred_j_name = "";
 
   // easy way in viewer to toggle between odometry view (absolute poses vs predicted ones)
   if (is_relative_pose) {

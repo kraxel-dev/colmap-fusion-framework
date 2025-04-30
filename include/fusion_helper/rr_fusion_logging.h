@@ -19,12 +19,8 @@
 namespace fuhe {
 namespace rrfuse {  // rerun interface namespace
 
-// some constant params for shared entity size
-// FIXME: we have 2 sources of img plane dist at the moment (fusion opts). kill this one eventually
-inline constexpr float IMG_PLANE_DIST = 0.3f;  // controls size of pinhole in rerun viewer
-// inline constexpr float AXIS_LENGTH_PINHOLE = 0.1f * IMG_PLANE_DIST;
-inline constexpr float AXIS_LENGTH_PINHOLE = 1.1f * IMG_PLANE_DIST;
-inline constexpr float AXIS_LENGTH_ODOM = 2.9f * AXIS_LENGTH_PINHOLE;
+/// Log a text log message to rerun viewer
+void LogInfo(const std::shared_ptr<rerun::RecordingStream> rec, const std::string& msg);
 
 /**
  * @brief // TODO: write brief
@@ -49,6 +45,20 @@ void ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
 
 /// log a single 3D point to rerun
 void LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz);
+
+/**
+ * @brief log whole set of 3D points to rerun. Switches rerun entity name of points3D, if marked as subset. This is only relevant in local
+ * and global BA and controlled by upsteram logic.
+ *
+ * @param rec
+ * @param points3D
+ * @param is_subset
+ * @param ignore_far_away_points Do not visualize far away 3d points that mess up the 3D viewer.
+ */
+void LogPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
+                 const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
+                 const bool is_subset = false,
+                 const bool ignore_far_away_points = false);
 
 /// Log odometry edge constraining to colmap nodes i j as linestrip and the pose of the odometry measruement to highlight them as factor
 /// graph edge. Pose can be drawn as relative increment (seen from source image i) or as absolute pose with respect to some coord frame.

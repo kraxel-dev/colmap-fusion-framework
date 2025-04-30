@@ -23,7 +23,7 @@ struct RerunFusionVisOptions {
   bool is_log_to_rerun = true;         // enable logging and visualization of graph construction and optimization to rerun
   bool is_save_rerun_to_disk = false;  // enable saving rerun logged data to disk as rrd file
   std::string recording_path = "";
-  float img_plane_dist = 0.5f;  // controls size of cam pinhole in rerun viewer
+  float img_plane_dist = 0.2f;  // controls size of cam pinhole in rerun viewer CURRENTLY NOT USED
 
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   bool draw_rerun_odom_as_predicted_poses = true;
