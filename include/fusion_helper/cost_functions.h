@@ -1,7 +1,9 @@
 /**
  * @file cost_functions.h
  * @author kraxel
- * @brief ceres cost functions
+ * @brief Adjusted ceres cost functions (from glomap, colmap and ceres itself) to construct sensor fusion based optimization problems
+ * (High-lvl fusion + tightly coupled fusion). Is used to extend vanilla colmap bundle adjustment problems with fusion capabilities of
+ * external odometry and more. Also introduces additional capabilities like cost-functors that can track residual cost during optimization.
  * @version 0.1
  * @date 2025-02-27
  *
@@ -20,7 +22,8 @@ namespace cost {
 /**
  * @brief Derived colmap::CovarianceWeightedCostFunctor, behaving exacly as colmap parent but with addition of exposing its
  * calculated residuals to outside world. Can be used for accessing residuals during ceres iteration or evaluation callbacks, if an stalker
- * obejct is attached to it during creation.
+ * obejct is attached to it during creation. Please check associated class in fusion_evaluation_callback.h to build an understanding of how
+ * to use residual tracking.
  *
  * @tparam CostFunctor
  */
@@ -144,6 +147,61 @@ ceres::CostFunction* CreateWeightedCamCostExposedResiduals(const std::shared_ptr
 #undef CAMERA_MODEL_CASE
   }
 }
+
+/**
+ * @brief Relative pose + scale factor taken and slightly modified from sources:
+ - https://github.com/colmap/glomap/blob/main/glomap/estimators/cost_function.h
+ - https://github.com/colmap/colmap/blob/682ea9ac4020a143047758739259b3ff04dabe8d/src/colmap/estimators/cost_functions.h#L405
+ 6 + 1 DoF error between two absolute camera poses (with identical non-real-world scale for the translation) given a relative pose
+ measurement from external odometry source with true metric scale. Estimated scale can be used to transform the colmap model
+ afterwards with a Sim3 tf. The residual is computed in the frame of camera i. Its first and last three components correspond to the
+ rotation and translation errors, respectively.
+ * Derivation: i_T_w = ΔT_i·i_T_j_meas·j_T_w where ΔT_i = exp(η_i) is the resjdual in SE(3) and
+ η_i in tangent space.
+ * Thus η_i = log(i_T_w·j_T_w⁻¹·j_T_i_measured)
+ * Rotation term: ΔR = log(i_R_w·j_R_w⁻¹·j_R_i)
+ * Translation term: Δt = scale * i_t_w + i_R_w·j_R_w⁻¹·(j_t_i_measured - scale * j_t_w)
+
+ */
+struct ScaleAwareRelativePoseCostFunctor : public colmap::AutoDiffCostFunctor<ScaleAwareRelativePoseCostFunctor, 6, 1, 4, 3, 4, 3> {
+ public:
+  /**
+   * @brief Construct a new Scale Aware Relative Pose Cost Functor object
+   *
+   * @param T_i_from_j measured relative camera pose (j w.r.t to i)
+   */
+  explicit ScaleAwareRelativePoseCostFunctor(const colmap::Rigid3d& T_i_from_j) : j_from_i_measured_(Inverse(T_i_from_j)) {}
+
+  template <typename T>
+  bool operator()(const T* scale,
+                  const T* const i_from_world_rotation,
+                  const T* const i_from_world_translation,
+                  const T* const j_from_world_rotation,
+                  const T* const j_from_world_translation,
+                  T* residuals_ptr) const {
+    // Rotation term: ΔR = log(i_R_w·j_R_w⁻¹·j_R_i)
+    const Eigen::Quaternion<T> i_from_j_rotation =
+        colmap::EigenQuaternionMap<T>(i_from_world_rotation) * colmap::EigenQuaternionMap<T>(j_from_world_rotation).inverse();
+    const Eigen::Quaternion<T> param_from_prior_rotation = i_from_j_rotation * j_from_i_measured_.rotation.cast<T>();
+    colmap::EigenQuaternionToAngleAxis(param_from_prior_rotation.coeffs().data(), residuals_ptr);
+
+    // Translation term (with scale estimation):
+    // j_t_i_measured - scale*j_t_w
+    const Eigen::Matrix<T, 3, 1> j_from_i_prior_translation =
+        j_from_i_measured_.translation.cast<T>() -
+        colmap::EigenVector3Map<T>(j_from_world_translation) * scale[0];  // invert  measurement translation by the real world scale
+    Eigen::Map<Eigen::Matrix<T, 3, 1>> param_from_prior_translation(residuals_ptr + 3);
+    // Δt = scale*i_t_w + i_R_w·j_R_w⁻¹·(j_t_i_measured - scale*j_t_w )
+    param_from_prior_translation =
+        colmap::EigenVector3Map<T>(i_from_world_translation) * scale[0] + i_from_j_rotation * j_from_i_prior_translation;
+
+    return true;
+  }
+
+ private:
+  // relative pose measurement with true scale obtained from external odometry (pose of j w.r.t. i)
+  const colmap::Rigid3d j_from_i_measured_;
+};
 
 }  // namespace cost
 }  // namespace fuhe

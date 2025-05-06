@@ -1,8 +1,12 @@
 /**
  * @file bundle_adjustment.h
  * @author kraxel
- * @brief
- * @ref (original colmap repo) src/colmap/estimators/bundle_adjustment.h
+ * @brief Drived versions of colmaps default BundleAdjuster classes to:
+ - introduce rerun visualization into colmaps standard bundle adjustment optimization.
+ - introduce colmap BundleAdjustment with fusion capabilities of other sensor modalities (e.g. odometry).
+ The BA obejcts in this (and the original colmap) header are in charge of building and solving the actual ceres optimization problem. Actual
+ implementations are in the corresponding .cc file.
+ * @source: (original colmap repo) src/colmap/estimators/bundle_adjustment.h
  * @version 0.1
  * @date 2025-03-12
  *
@@ -29,7 +33,6 @@ struct FusionGraphBundleAdjustmentOptions {
   // FIXME: expose to user
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
 
-  // FIXME: expose to user
   double cov = 0.015;  // odom covariance all entries
 
   // set pose of first camera (time sorted) in active Bundle Adjustemnt as constant param in ceres optimizaton
@@ -42,15 +45,18 @@ struct FusionGraphBundleAdjustmentOptions {
   bool fusion_in_local_ba = true;   // whether to include odometry edges in local BA
   bool fusion_in_global_ba = true;  // whether to include odometry edges in global BA
 
+  // Whether to estimate real world scale between colmap model and odometry as part of ceres optimization or brute force the scale through
+  // enforcing the odometry measurements. If brute force is toggled make sure to reduce measurement covariance to enforce the relative
+  // odometry sacle onto the camera poses.
+  bool brute_force_scale_recovery = false;
+  // estimated scale diff between colmap model and rel pose measurements abve this value will be ignored
+  double scale_diff_thresh = 0.92;
+  // Cauchy loss on ceres scale parameter estimatinon. only valid if not brute force scale recovery
+  bool use_robust_loss_on_scale_estimation = true;
+  // Blindly taken from colmaps PosePriorBA options: Threshold on the residual for the robust loss (chi2 for 3DOF at 95% = 7.815).
+  double scale_estimation_loss_factor = 7.815;
+
   double time_between_local_ba = 1.0;  // [secs] passed time between reg images to allow new round of local BA during mapping
-
-  // FIXME: Kick section below if not needed
-  //   // Whether to use a robust loss on prior locations.
-  //   bool use_robust_loss_on_prior_position = false;
-
-  //   // Threshold on the residual for the robust loss
-  //   // (chi2 for 3DOF at 95% = 7.815).
-  //   double prior_position_loss_scale = 7.815;
 
   // Maximum RANSAC error for Sim3 alignment.
   double ransac_max_error = 0.;
@@ -63,9 +69,10 @@ struct FusionGraphBundleAdjustmentOptions {
 /**
  * @brief Factory create custom fusion bundle adjuster object that can be used in colmaps incremental mapping pipeline.
  *
- * @param options ba options (global vs local)
- * @param fusion_options
+ * @param options BA options (global vs local)
+ * @param fusion_options options for fusion enhanced BA
  * @param rr_options rerun visaulization options
+ * @param rr_recorder custom rerun recorder object
  * @param config pre-populated config that states which images and points will be considered in ceres for building the factor graph
  * @param reconstruction full colmap reconstruction
  * @param fusion_graph_data_edges full (non-filtered) fusion graph data edges (image edges with odometry) that adds relative pose
@@ -81,6 +88,15 @@ std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(
     colmap::Reconstruction& reconstruction,
     const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges);
 
+/**
+ * @brief Create a Default Bundle Adjuster with capabilities to stream optimization process to rerun.
+ *
+ * @param options BA options (global vs local)
+ * @param config pre-populated config that states which images and points will be considered in ceres for building the factor graph
+ * @param reconstruction rerun visaulization options
+ * @param rr_recorder custom rerun recorder object
+ * @return std::unique_ptr<colmap::BundleAdjuster>
+ */
 std::unique_ptr<colmap::BundleAdjuster> CreateDefaultBundleAdjusterRerun(
     colmap::BundleAdjustmentOptions options,
     colmap::BundleAdjustmentConfig config,

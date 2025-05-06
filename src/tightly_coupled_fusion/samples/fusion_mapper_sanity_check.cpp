@@ -21,7 +21,7 @@
 #include <fusion_helper/rr_fusion_recorder.h>
 
 /**
- * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap repo
+ * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap repo.
  *
  * @param reconstruction
  * @param incr_pipieline_opts
@@ -73,10 +73,12 @@ int main(int argc, char** argv) {
   // custom fusion options
   col_options.AddDefaultOption("fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
   col_options.AddDefaultOption("fusion.odom_cov", &fusion_ba_options.cov);
-  col_options.AddDefaultOption("fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
-  col_options.AddDefaultOption("fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
   col_options.AddDefaultOption("fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
   col_options.AddDefaultOption("fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
+  col_options.AddDefaultOption("fusion.brute_force_scale_recovery", &fusion_ba_options.brute_force_scale_recovery);
+  col_options.AddDefaultOption("fusion.use_robust_loss_on_scale_estimation", &fusion_ba_options.use_robust_loss_on_scale_estimation);
+  col_options.AddDefaultOption("fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
@@ -187,7 +189,6 @@ int main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////////////////
   // Continues image registration and mapping
   ////////////////////////////////////////////////////////////////////////////////
-
   size_t ba_prev_num_reg_images = reconstruction->NumRegImages();
   size_t ba_prev_num_points = reconstruction->NumPoints3D();
 
@@ -256,7 +257,7 @@ int main(int argc, char** argv) {
       ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
 
-    // TODO: bring in again
+    // TODO: bring in again once we have sorted out correct image path
     // if (incr_pipieline_opts->extract_colors) {
     //   ExtractColors(*col_options.image_path, next_image_id, *reconstruction);
     // }
@@ -265,7 +266,6 @@ int main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////////////////
   // Done with all images. Final round of global BA
   ////////////////////////////////////////////////////////////////////////////////
-
   // Only run final global BA, if last incremental BA was not global.
   if (reconstruction->NumRegImages() >= 2 && reconstruction->NumRegImages() != ba_prev_num_reg_images &&
       reconstruction->NumPoints3D() != ba_prev_num_points) {

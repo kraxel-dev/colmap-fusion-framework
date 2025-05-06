@@ -66,17 +66,24 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 1. between factor with scale as optimization param from glomap
 
-## Reconstruction preproccessing
+## Scale and frame alignment
+
+1. Adapt strategy: scale estimation after n poses and only brute force afterwards to tackle mono sfm scale drift
+2. Use pca to align to ground-plane
+
+## Reconstruction quality and filtering
 
 1. Test different quality presets for OptionsManager
-1. Validated filtering of 3d points with reconstruction bounding box
+2. Validated filtering of 3d points with reconstruction bounding box
 
 ## Rerun
 
 1. debug pose shift when setting campose as const ceresparam
-2. add rerun graph view
+2. Generalize 3d points visualization crop bounding box that is still hardcoded
+3. add rerun graph view
 
 ## Fusion Iteration Callback
+
 1. Merge marathon and vanilla fusion iter class
 
 ## Cost logging

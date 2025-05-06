@@ -9,7 +9,8 @@ namespace fusion_evaluation_callback {
 
 /**
  * @brief Friend function that notifies a residual stalker object whether upcoming ceres evaluation step is a jacobian evaluation step. If
- not, stalker is allowed to obtain residuals from ceres cost functor for that iteration.
+ not, stalker is allowed to obtain residuals from ceres cost functor for that iteration. Should only be called from ceres evaluation
+ callback is its the only object that could know.
  *
  * @tparam kNumResiduals
  * @param is_jacobian_iter true or false. Knowledge comes from ceres evaluation callback.

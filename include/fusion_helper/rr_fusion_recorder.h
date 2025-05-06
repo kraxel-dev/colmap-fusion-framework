@@ -28,8 +28,8 @@ struct RerunFusionVisOptions {
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   bool draw_rerun_odom_as_predicted_poses = true;
 
-  // whether to highlight active images of BA in rerun with bounding boxes. Deactivate for use cases of BA for full model where view can get
-  // cluttered.
+  // whether to highlight active images of BA in rerun with bounding boxes. Deactivate for use cases of BA in which the full model is part
+  // of the optimization and the view can get cluttered as a result (high-lvl fusion for example).
   bool is_highlight_active_cams = true;
 };
 
@@ -51,7 +51,7 @@ class RerunFusionRecorder {
 
  private:
   const RerunFusionVisOptions options;
-  std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger and viewer object
+  std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger / streamer and viewer object
   std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;      // rerun pinhole model representing the camera used in colmap model
   int time_step = 0;
 };

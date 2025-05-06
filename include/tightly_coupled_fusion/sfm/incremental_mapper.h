@@ -1,8 +1,13 @@
 /**
  * @file incremental_mapper.h
  * @author kraxel
- * @brief Drived version of colmaps IncrementalMapper to introduce custom fusion graph bundle adjustment into colmaps standard incremental
- * mapping process.
+ * @brief Drived versions of colmaps default IncrementalMapper to:
+ -  introduce rerun visualization of colmaps standard incremental mapping process.
+ -  introduce custom sensor fusion bundle adjustment into colmaps standard incremental mapping process.
+ The incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch. You can either use it in
+ your own script to perform incremental mapping from scratch or have a look at the incremental_pipeline class in original colmap lib, that
+ acts as an wrapper to perform the mapping duties you see in the default colmap gui.
+ * @source: https://github.com/colmap/colmap/blob/3.11.1/src/colmap/sfm/incremental_mapper.h
  * @version 0.1
  * @date 2025-03-17
  *
@@ -83,11 +88,46 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
 // Incremental Fusion Mapper
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Derived incremental mapper to extend colmaps default mapping behavior with sensor fusion (e.g. relative odometry constraints)
+capabilities. The fusion is integrated into the local and global Bundle Adjustemnt steps of the mapping process.
+
+The incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch and the fusion mapper mirrors
+this. Order of images processed for mapping is decided externally (either manually or by incremental_pipeline class). You can either use
+this class in your own script to perform incremental mapping from scratch or have a look at the incremental_pipeline class in original
+colmap lib, that acts as an wrapper to perform the mapping duties you see in the default colmap gui.
+
+@soruce: https://github.com/colmap/colmap/blob/3.11.1/src/colmap/sfm/incremental_mapper.h
+* See the original docs of the incremental mapper class to get a feel:
+// Class that provides all functionality for the incremental reconstruction
+// procedure. Example usage:
+//
+//  IncrementalMapper mapper(&database_cache);
+//  mapper.BeginReconstruction(&reconstruction);
+//  TwoViewGeometry tvg;
+//  THROW_CHECK(
+//      mapper.FindInitialImagePair(options, tvg, image_id1, image_id2));
+//  mapper.RegisterInitialImagePair(options, tvg, image_id1, image_id2);
+//  while (...) {
+//    const auto next_image_ids = mapper.FindNextImages(options);
+//    for (const auto image_id : next_image_ids) {
+//      THROW_CHECK(mapper.RegisterNextImage(options, image_id));
+//      if (...) {
+//        mapper.AdjustLocalBundle(...);
+//      } else {
+//        mapper.AdjustGlobalBundle(...);
+//      }
+//    }
+//  }
+//  mapper.EndReconstruction(false);
+//
+ *
+ */
 class IncrementalFusionMapper : public colmap::IncrementalMapper {
  public:
   /**
-   * @brief Construct a new Incremental Fusion Mapper object. Fusion graph edges with odometry edges are created from the given database
-   * cache during construction.
+   * @brief Construct a new Incremental Fusion Mapper object. Fusion graph edges containing the odometry edges are created from the given
+   * database cache during object construction.
    *
    * @param database_cache colmap database cache containing images, features and matches that will be same as parent.
    * @param fusion_options options for fusion graph bundle adjustment.
