@@ -16,9 +16,10 @@ void LogBetweenFactorCost(ceres::CostFunction*& cost_func, double*& q_i, double*
   LOG(INFO) << "roll: " << residuals[0] << " pitch: " << residuals[1] << " yaw: " << residuals[2];
 }
 
-void LogReprojFactorCost(ceres::CostFunction*& cost_func, double*& q_cw, double*& t_cw, double*& pt3Dxyz, double*& camera_params) {
+void LogReprojFactorCost(
+    ceres::CostFunction*& cost_func, double*& q_cw, double*& t_cw, double*& pt3Dxyz, double*& camera_params) {
   const double* params[4] = {q_cw, t_cw, pt3Dxyz, camera_params};  // pose parameters of both images
-  double residuals[2];                                             // residuals of relative pose factor (roll, pitch, yaw, x, y, z)
+  double residuals[2];  // residuals of relative pose factor (roll, pitch, yaw, x, y, z)
 
   // log reisudal error of current between factor
   cost_func->Evaluate(params, residuals, nullptr);
@@ -35,6 +36,7 @@ double CalcTotalFactorTypeCost(ceres::Problem& graph, const std::vector<ceres::R
   eval_options.residual_blocks = residual_ids;
 
   double total_error = 0;  // total cost of factor type
+  // call ceres internal total cost calculation method on all forwarded cost-function ids
   graph.Evaluate(eval_options, &total_error, &residuals, nullptr, nullptr);
 
   return total_error;
