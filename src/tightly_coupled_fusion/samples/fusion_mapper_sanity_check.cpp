@@ -1,10 +1,10 @@
 /**
  * @file fusion_mapper_sanity_check.cpp
  * @author kraxel
- * @brief Sanity check for the FusionIncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper (described
- * in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch with fusion (odometry) capabilities. Order
- * of images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as initial pair for mapping. Camera
- * intrinsics are fixed.
+ * @brief Sanity check for the FusionIncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
+ * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch with fusion
+ * (odometry) capabilities. Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are
+ * forced as initial pair for mapping. Camera intrinsics are fixed.
  * @version 0.1
  * @date 2025-04-23
  *
@@ -12,6 +12,7 @@
  *
  */
 
+#include "fusion_helper/frame_align_utils.h"
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 #include <colmap/controllers/incremental_pipeline.h>
 #include <colmap/controllers/option_manager.h>
@@ -21,7 +22,8 @@
 #include <fusion_helper/rr_fusion_recorder.h>
 
 /**
- * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap repo.
+ * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap
+ * repo.
  *
  * @param reconstruction
  * @param incr_pipieline_opts
@@ -62,6 +64,7 @@ int main(int argc, char** argv) {
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rrfuse::RerunFusionVisOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
+  fuhe::align::AlignmentOptions alignment_options;            // colmap reconstruction coordinate alingment options
 
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
@@ -71,14 +74,21 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   // custom fusion options
-  col_options.AddDefaultOption("fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
-  col_options.AddDefaultOption("fusion.odom_cov", &fusion_ba_options.cov);
-  col_options.AddDefaultOption("fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
-  col_options.AddDefaultOption("fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
-  col_options.AddDefaultOption("fusion.brute_force_scale_recovery", &fusion_ba_options.brute_force_scale_recovery);
-  col_options.AddDefaultOption("fusion.use_robust_loss_on_scale_estimation", &fusion_ba_options.use_robust_loss_on_scale_estimation);
-  col_options.AddDefaultOption("fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
-  col_options.AddDefaultOption("fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("Fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
+  col_options.AddDefaultOption("Fusion.time_diff_local_ba",
+                               &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
+  col_options.AddDefaultOption("Fusion.odom_cov", &fusion_ba_options.cov);
+  col_options.AddDefaultOption("Fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
+  col_options.AddDefaultOption("Fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
+  col_options.AddDefaultOption("Fusion.brute_force_scale_recovery", &fusion_ba_options.brute_force_scale_recovery);
+  col_options.AddDefaultOption("Fusion.use_robust_loss_on_scale_estimation",
+                               &fusion_ba_options.use_robust_loss_on_scale_estimation);
+  col_options.AddDefaultOption("Fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("Fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
+  // custom frame alignment options
+  col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
+  col_options.AddDefaultOption("FrameAlign.rotate_init_motion_onto_global_x_axis",
+                               &alignment_options.rotate_init_motion_onto_global_x_axis);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
@@ -99,7 +109,8 @@ int main(int argc, char** argv) {
   // -------------------- Read database cache and init fusion Mapper object
   colmap::Database db = colmap::Database(db_path);
   std::shared_ptr<colmap::DatabaseCache> db_cache = colmap::DatabaseCache::Create(db, 0, false, {});
-  tcf::IncrementalFusionMapper fusion_mapper(db_cache, fusion_ba_options, fusion_ba_options.tum_file, rr_options);  // fusion mapper object
+  tcf::IncrementalFusionMapper fusion_mapper(
+      db_cache, fusion_ba_options, fusion_ba_options.tum_file, rr_options);  // fusion mapper object
   // create empty reconstruction
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   VLOG(1) << "Begin reconstruction!";
@@ -136,8 +147,8 @@ int main(int argc, char** argv) {
   mapper_opts.init_max_forward_motion = 1.0;  // essential matrix z motion
 
   // -------------------- Force Select intial image pair
-  colmap::TwoViewGeometry tvg;                                       // Essential matrix and (filtered matches) between initial image pair
-  colmap::image_t id_1 = img_ids_sorted.begin()->second;             // very first image in tajectory sequence
+  colmap::TwoViewGeometry tvg;                            // Essential matrix and (filtered matches) between initial image pair
+  colmap::image_t id_1 = img_ids_sorted.begin()->second;  // very first image in tajectory sequence
   colmap::image_t id_2 = std::next(img_ids_sorted.begin())->second;  // second image in sequence
 
   VLOG(2) << "Trying to force 1st and 2nd image as initial pair of new reconstruction!";
@@ -164,13 +175,12 @@ int main(int argc, char** argv) {
                                     fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
                                     fusion_mapper.Reconstruction()->Points3D());
   }
-  // -------------------- One round of global bundle adjustment for the inital pair
 
+  // -------------------- One round of global bundle adjustment for the inital pair
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
   fusion_mapper.AdjustGlobalBundle(mapper_opts, incr_pipieline_opts->GlobalBundleAdjustment());
-  // fusion_mapper.Reconstruction()->Normalize(/*fixed_scale=*/true);
   fusion_mapper.Reconstruction()->Normalize();
-  // separate set of 3d point filtering due to low triangulation angle in init
+  // for first global ba use separate set of 3d point filtering options due to low triangulation angle in init
   colmap::IncrementalMapper::Options init_filter_mapper_opts = mapper_opts;
   init_filter_mapper_opts.filter_min_tri_angle = init_filter_mapper_opts.init_min_tri_angle * 1.5;
   fusion_mapper.FilterPoints(init_filter_mapper_opts);
@@ -194,46 +204,69 @@ int main(int argc, char** argv) {
 
   // -------------------- Iterate over all time sorted images to register them
   VLOG(1) << "Begin reconstruction process!";
-  double prev_stamp = 0;
+  double prev_local_ba_stamp = 0;  // img stamp of last successfully applied local ba process
   for (const auto& [stamp, next_image_id] : img_ids_sorted) {
     // skip inital pair
     if (next_image_id == id_1 || next_image_id == id_2) {
-      prev_stamp = stamp;  // store stamps from initial pair for time compare
+      prev_local_ba_stamp = stamp;  // store stamps from initial pair for time compare
       continue;
     }
 
-    VLOG(2) << "Registering image " << next_image_id;
     // register image in reconstruction
+    VLOG(2) << "Registering image " << next_image_id;
     if (!fusion_mapper.RegisterNextImage(mapper_opts, next_image_id)) {
-      VLOG(1) << "Registration of current image failed! Stopping mapping process!";
+      LOG(ERROR) << "Registration of current image failed! Stopping mapping process!";
       // break if registration fails TODO: make more robust and allow to try other images for reg before failing
       break;
     }
 
+    // text log to rerun
     if (rr_options.is_log_to_rerun) {
       fuhe::rrfuse::LogInfo(rr_rc->GetRerunRec(), "Registered image: " + std::to_string(next_image_id));
     }
 
-    VLOG(2) << "Triangulating new points for image " << next_image_id;
     // triangulate new points and run a couple rounds of local BA
+    VLOG(2) << "Triangulating new points for image " << next_image_id;
     fusion_mapper.TriangulateImage(incr_pipieline_opts->Triangulation(), next_image_id);
+
+    // perform colmap model coordinate frame alignment (once) if condition are met
+    if (fuhe::align::CheckRunAlignment(reconstruction->NumRegImages(), alignment_options)) {
+      // pca alignment, forcing 1st cam pose to a specfici intial value, etc. read frame_align_utils.h for more info
+      fuhe::align::PerformAlignmentStrategies(reconstruction, alignment_options);
+      // text log to rerun
+      if (rr_options.is_log_to_rerun) {
+        fuhe::rrfuse::LogInfo(rr_rc->GetRerunRec(), "Performed coordinate frame alignment strategies on colmap model!");
+      }
+    }
 
     // -------------------- Rerun visualization of newly registered image
     if (rr_options.is_log_to_rerun) {
-      // initialize recorder objects when rerun logging is desired
       rr_rc->UpdateRerunTimeStep();
 
-      // log initial pair to rerun
+      // log newly registered image to rerun
       fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
                                       rr_rc->GetRerunPinhole(),
                                       fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
                                       fusion_mapper.Reconstruction()->Points3D());
     }
 
+    // TODO: bring in again once we have sorted out correct image path
+    // if (incr_pipieline_opts->extract_colors) {
+    //   ExtractColors(*col_options.image_path, next_image_id, *reconstruction);
+    // }
+
     ////////////////////////////////////////////////////////////////////////////////
     // Local Bundle Adjustment
     ////////////////////////////////////////////////////////////////////////////////
+    // perform local or global BA only if enough time has passed between current image and last employed BA image
+    if (stamp - prev_local_ba_stamp < fusion_ba_options.time_between_local_ba) {
+      VLOG(2) << "Time dff for new local BA not yet reached. Diff to last local BA only " << stamp - prev_local_ba_stamp
+              << ". Skipping local and potential global BA!";
+      continue;
+    }
 
+    VLOG(2) << "More than " << fusion_ba_options.time_between_local_ba
+            << " seconds passed between images. Trigger iterative local refinmenent!";
     VLOG(2) << "Iterative local bundle adjustments!";
     fusion_mapper.IterativeLocalRefinement(incr_pipieline_opts->ba_local_max_refinements,
                                            incr_pipieline_opts->ba_local_max_refinement_change,
@@ -241,12 +274,14 @@ int main(int argc, char** argv) {
                                            incr_pipieline_opts->LocalBundleAdjustment(),
                                            incr_pipieline_opts->Triangulation(),
                                            next_image_id);
+    prev_local_ba_stamp = stamp;
 
     ////////////////////////////////////////////////////////////////////////////////
     // Global BA that is called only after x amount of registered images
     ////////////////////////////////////////////////////////////////////////////////
-    if (CheckRunGlobalRefinement(*reconstruction, *incr_pipieline_opts, ba_prev_num_reg_images, ba_prev_num_points)) {
-      VLOG(2) << "Enough imgs registered since last global BA. Global  bundle adjustments toggled!";
+    if (CheckRunGlobalRefinement(*reconstruction, *incr_pipieline_opts, ba_prev_num_reg_images, ba_prev_num_points) &&
+        reconstruction->NumRegImages() > mapper_opts.local_ba_num_images) {
+      VLOG(2) << "Enough imgs registered since last global BA. Global bundle adjustments toggled!";
       fusion_mapper.IterativeGlobalRefinement(incr_pipieline_opts->ba_global_max_refinements,
                                               incr_pipieline_opts->ba_global_max_refinement_change,
                                               mapper_opts,
@@ -256,11 +291,6 @@ int main(int argc, char** argv) {
       ba_prev_num_points = reconstruction->NumPoints3D();
       ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
-
-    // TODO: bring in again once we have sorted out correct image path
-    // if (incr_pipieline_opts->extract_colors) {
-    //   ExtractColors(*col_options.image_path, next_image_id, *reconstruction);
-    // }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -279,7 +309,8 @@ int main(int argc, char** argv) {
   }
 
   VLOG(1) << "Done registering all images in reconstruction!";
-  VLOG(1) << "Writing model to: " << output_path;
+  VLOG(1) << "Writing model and tum file to: " << output_path;
+  fuhe::col_utils::ToTum(reconstruction.get(), output_path);
   reconstruction->WriteText(output_path);
 
   fusion_mapper.EndReconstruction(/*false*/ false);  // finalize reconstruction

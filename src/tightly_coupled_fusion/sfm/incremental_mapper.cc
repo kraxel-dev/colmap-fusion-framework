@@ -116,8 +116,8 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalMapperRer
   std::unordered_set<image_t> filter_image_ids;
   filter_image_ids.insert(image_id);
   filter_image_ids.insert(local_bundle.begin(), local_bundle.end());
-  report.num_filtered_observations =
-      this->ObservationManager().FilterPoints3DInImages(options.filter_max_reproj_error, options.filter_min_tri_angle, filter_image_ids);
+  report.num_filtered_observations = this->ObservationManager().FilterPoints3DInImages(
+      options.filter_max_reproj_error, options.filter_min_tri_angle, filter_image_ids);
   report.num_filtered_observations +=
       this->ObservationManager().FilterPoints3D(options.filter_max_reproj_error, options.filter_min_tri_angle, point3D_ids);
 
@@ -138,10 +138,11 @@ void tcf::IncrementalMapperRerun::IterativeLocalRefinement(int max_num_refinemen
     VLOG(1) << "=> Merged observations: " << report.num_merged_observations;
     VLOG(1) << "=> Completed observations: " << report.num_completed_observations;
     VLOG(1) << "=> Filtered observations: " << report.num_filtered_observations;
-    const double changed = report.num_adjusted_observations == 0
-                               ? 0
-                               : (report.num_merged_observations + report.num_completed_observations + report.num_filtered_observations) /
-                                     static_cast<double>(report.num_adjusted_observations);
+    const double changed =
+        report.num_adjusted_observations == 0
+            ? 0
+            : (report.num_merged_observations + report.num_completed_observations + report.num_filtered_observations) /
+                  static_cast<double>(report.num_adjusted_observations);
     VLOG(1) << StringPrintf("=> Changed observations: %.6f", changed);
     if (changed < max_refinement_change) {
       break;
@@ -209,7 +210,8 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
     }
 
     if (rr_recorder_) {
-      bundle_adjuster = CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+      bundle_adjuster =
+          CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
     } else {
       bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
     }
@@ -220,7 +222,8 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
     //   prior_options.use_robust_loss_on_prior_position = options.use_robust_loss_on_prior_position;
     //   prior_options.prior_position_loss_scale = options.prior_position_loss_scale;
     //   bundle_adjuster = CreatePosePriorBundleAdjuster(
-    //       std::move(custom_ba_options), prior_options, std::move(ba_config),  database_cache_->PosePriors(), *this->Reconstruction());
+    //       std::move(custom_ba_options), prior_options, std::move(ba_config),  database_cache_->PosePriors(),
+    //       *this->Reconstruction());
     throw std::runtime_error("Pose prior bundle adjustment not implemented with rerun yet!");
   }
 
@@ -292,10 +295,11 @@ void tcf::IncrementalFusionMapper::IterativeLocalRefinement(int max_num_refineme
     VLOG(1) << "=> Merged observations: " << report.num_merged_observations;
     VLOG(1) << "=> Completed observations: " << report.num_completed_observations;
     VLOG(1) << "=> Filtered observations: " << report.num_filtered_observations;
-    const double changed = report.num_adjusted_observations == 0
-                               ? 0
-                               : (report.num_merged_observations + report.num_completed_observations + report.num_filtered_observations) /
-                                     static_cast<double>(report.num_adjusted_observations);
+    const double changed =
+        report.num_adjusted_observations == 0
+            ? 0
+            : (report.num_merged_observations + report.num_completed_observations + report.num_filtered_observations) /
+                  static_cast<double>(report.num_adjusted_observations);
     VLOG(1) << StringPrintf("=> Changed observations: %.6f", changed);
     if (changed < max_refinement_change) {
       break;
@@ -365,8 +369,8 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
         // vanilla approach to fix poses of least connected images (in case choosing img by oldest time below does not work)
         image_t image_id1 = local_bundle[local_bundle.size() - 1];
         image_t image_id2 = local_bundle[local_bundle.size() - 2];
-        // find 2 earliest images in local bundle in time to fix its pose for local BA (more consistent to sequential order of fusion
-        // mapping)
+        // find 2 earliest images in local bundle in time to fix its pose for local BA (more consistent to sequential order of
+        // fusion mapping)
         bool found_earliest = false;  // signal if oldest img was found to proceed with 2nd oldest
         for (const auto& img_edge : *this->FusionGraphDataEdges()) {
           // find earliest image of whole graph that is contained in local bundle
@@ -415,15 +419,21 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_local_ba) {
       if (rr_recorder_) {
         // custom bundle adjuster with capability to log to rerun during optimization
-        bundle_adjuster = tcf::CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+        bundle_adjuster =
+            tcf::CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
       } else {
         // default bundle adjuster without rerun logging
         bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
       }
     } else {
       // custom bundle adjuster with fusion capabilities
-      bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-          ba_options, fusion_options_, rr_options_, rr_recorder_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges());
+      bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(ba_options,
+                                                             fusion_options_,
+                                                             rr_options_,
+                                                             rr_recorder_,
+                                                             ba_config,
+                                                             *this->Reconstruction(),
+                                                             *this->FusionGraphDataEdges());
     }
 
     const ceres::Solver::Summary summary = bundle_adjuster->Solve();
@@ -447,8 +457,8 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
   std::unordered_set<image_t> filter_image_ids;
   filter_image_ids.insert(image_id);
   filter_image_ids.insert(local_bundle.begin(), local_bundle.end());
-  report.num_filtered_observations =
-      this->ObservationManager().FilterPoints3DInImages(options.filter_max_reproj_error, options.filter_min_tri_angle, filter_image_ids);
+  report.num_filtered_observations = this->ObservationManager().FilterPoints3DInImages(
+      options.filter_max_reproj_error, options.filter_min_tri_angle, filter_image_ids);
   report.num_filtered_observations +=
       this->ObservationManager().FilterPoints3D(options.filter_max_reproj_error, options.filter_min_tri_angle, point3D_ids);
 
@@ -483,7 +493,8 @@ void tcf::IncrementalFusionMapper::IterativeGlobalRefinement(int max_num_refinem
   ClearModifiedPoints3D();
 }
 
-bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options, const colmap::BundleAdjustmentOptions& ba_options) {
+bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
+                                                      const colmap::BundleAdjustmentOptions& ba_options) {
   using namespace colmap;
   VLOG(1) << "Adjusting global bundle with fusion capapbilites!";
   if (rr_recorder_) {
@@ -545,12 +556,17 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options, co
 
   if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_global_ba) {
     // default global BA with rerun visualization
-    bundle_adjuster =
-        CreateDefaultBundleAdjusterRerun(std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+    bundle_adjuster = CreateDefaultBundleAdjusterRerun(
+        std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_recorder_);
   } else {
     // bundle adjuster with odometry fusion capabilities
-    bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-        custom_ba_options, fusion_options_, rr_options_, rr_recorder_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges());
+    bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(custom_ba_options,
+                                                           fusion_options_,
+                                                           rr_options_,
+                                                           rr_recorder_,
+                                                           ba_config,
+                                                           *this->Reconstruction(),
+                                                           *this->FusionGraphDataEdges());
   }
 
   return bundle_adjuster->Solve().termination_type != ceres::FAILURE;

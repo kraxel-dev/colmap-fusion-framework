@@ -37,12 +37,10 @@ void AlignFirstPoseToSpecified(const std::shared_ptr<colmap::Reconstruction> rec
     // direction of x axis in global frame that we want to rotate the init motion into
     const Eigen::Vector3d t_x_axis({1.0, 0.0, 0.0});
 
-    // rotation axis between the 2 directions as cross product
-    const auto rot_axis = t_x_axis.cross(t_init_motion);
-    // theta between the 2 directions
-    const double theta = acos(t_x_axis.dot(t_init_motion));
-    // rotation to bring x axis onto init motion dir
-    const Eigen::Quaterniond q(Eigen::AngleAxisd(theta, rot_axis));
+    // obtain rotation axis between global x-axis dir and init-motion-dir
+    const auto rot_axis = t_x_axis.cross(t_init_motion);  // rotation axis between the 2 directions as cross product
+    const double theta = acos(t_x_axis.dot(t_init_motion));  // theta between the 2 directions
+    const Eigen::Quaterniond q(Eigen::AngleAxisd(theta, rot_axis));  // rotation to bring x axis onto init motion dir
 
     // target rotation that would rotate the initial motion onto the x axis
     const colmap::Rigid3d T_target_rot(q.inverse(), Eigen::Vector3d::Zero());
