@@ -23,6 +23,18 @@ operators in global namespace and in header files in general is not recommended.
  */
 
 /**
+ * @brief stream operator overload to format Eigen vector3d in a more readable way when using glog.
+ * 
+ * @param os std::ostream&
+ * @param vec to be printed Eigen vector3d
+ * @return std::ostream& 
+ */
+inline std::ostream& operator<<(std::ostream& os, const Eigen::Vector3d& vec) {
+  os << "\n" << std::setfill(' ') << vec.matrix();  // get rid of these pesky zeros in front of matrix elements when logging
+  return os;
+}
+
+/**
  * @brief stream operator overload to format Eigen Isometry3d matrices in a more readable way when using with glog.
  *
  * @param os std::ostream&

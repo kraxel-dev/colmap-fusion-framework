@@ -40,8 +40,8 @@ class RerunFusionRecorder {
   RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, const colmap::Reconstruction& reconstruction);
   ~RerunFusionRecorder() = default;
 
-  inline const std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
-  inline const std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
+  std::shared_ptr<rerun::RecordingStream> GetRerunRec() const;
+  std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const;
 
   /// increment time sequence for rerun recording stream. can be called in every ceres iteration or before registering a new image
   void UpdateRerunTimeStep();

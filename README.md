@@ -69,7 +69,7 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 ## Scale and frame alignment
 
 1. Adapt strategy: scale estimation after n poses and only brute force afterwards to tackle mono sfm scale drift
-2. Use pca to align to ground-plane
+2. Use pca to align to ground-plane after n reg images
 
 ## Reconstruction quality and filtering
 
@@ -78,9 +78,11 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## Rerun
 
-1. debug pose shift when setting campose as const ceresparam
-2. Generalize 3d points visualization crop bounding box that is still hardcoded
-3. add rerun graph view
+1. Insert pngs into pinhole plane
+2. color extraction
+3. Generalize 3d points visualization crop bounding box that is still hardcoded
+4. add rerun graph view
+5. debug pose shift when setting campose as const ceresparam
 
 ## Fusion Iteration Callback
 
@@ -94,6 +96,11 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## OdomEdgesManager
 
-1. Deal with multiple tums simultaneously
-2. Deal with disconnected poses in tum file or disconnected image ids
-3. Find better name
+1. Decide if edges are created outside of mapper and delete setter method accordingly
+2. Deal with multiple tums simultaneously
+3. Deal with disconnected poses in tum file or disconnected image ids
+4. Find better class name
+
+## Incremental fusion mapper
+1. create superset of mapping options to control actions that belong to mapper and not to FusionBA object
+    1. PCA alginment options is task of mapper

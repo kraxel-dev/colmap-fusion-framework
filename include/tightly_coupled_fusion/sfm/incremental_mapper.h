@@ -192,12 +192,16 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   FusionGraphBundleAdjustmentOptions fusion_options_;  // options for fusion graph bundle adjustment
   const std::string tum_file_ = "";                    // path to tum file with odometry data
 
-  const fuhe::rrfuse::RerunFusionVisOptions rr_options_;  // rerun visualization options
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ =
-      nullptr;  // custom RerunRecorder object if visualization is desired
+  // rerun visualization options
+  const fuhe::rrfuse::RerunFusionVisOptions rr_options_;
+  // custom RerunRecorder object if visualization is desired
+  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;
 
-  std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges_ =
-      nullptr;  // time sorted image node sequence with odometry edges constraining images
+  // time sorted image node sequence with odometry edges constraining images
+  std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges_ = nullptr;
+
+  // whether model alignment via pca was performed once
+  bool aligned_model_with_pca_once_ = false;
 };
 
 }  // namespace tcf

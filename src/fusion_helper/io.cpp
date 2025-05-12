@@ -77,7 +77,7 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
   }
 }
 
-void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool inv) {
+void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv) {
   std::fstream outFile(tum_file, std::istream::out);
 
   VLOG(2) << "Exporting trajectory to : " << tum_file;
@@ -86,7 +86,7 @@ void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& 
   // write each optimized pose into _fumfile
   for (const colmap::Rigid3d T : X) {
     // invert pose if desired (remember that colmap poses are world poses expressed in camera frame)
-    const colmap::Rigid3d outPose = (inv) ? colmap::Inverse(T) : T;
+    const colmap::Rigid3d outPose = (do_inv) ? colmap::Inverse(T) : T;
     // write write write
     outFile << n << " " << outPose.translation.x() << " " << outPose.translation.y() << " " << outPose.translation.z() << " "
             << outPose.rotation.x() << " " << outPose.rotation.y() << " " << outPose.rotation.z() << " " << outPose.rotation.w() << '\n';

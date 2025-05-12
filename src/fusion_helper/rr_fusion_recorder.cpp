@@ -12,8 +12,8 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   this->rr_rec = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->rr_rec->spawn().exit_on_failure();
 
-  // this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
-  this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Y_DOWN);  // Set an up-axis
+  this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an up-axis
+  // this->rr_rec->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Y_DOWN);  // Set an up-axis
 
   // -------------------- Save rerun recording to disk if specified
   if (this->options.is_save_rerun_to_disk) {
@@ -33,10 +33,13 @@ RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, c
   VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
-  this->rr_pinhole =
-      std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
-                                           .with_image_plane_distance(rr_utils::IMG_PLANE_DIST));
+  this->rr_pinhole = std::make_shared<rerun::Pinhole>(
+      rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
+          .with_image_plane_distance(rr_utils::IMG_PLANE_DIST));
 }
+
+std::shared_ptr<rerun::RecordingStream> RerunFusionRecorder::GetRerunRec() const { return this->rr_rec; }
+std::shared_ptr<rerun::Pinhole> RerunFusionRecorder::GetRerunPinhole() const { return this->rr_pinhole; }
 
 /// increase time sequence of rerun logger by one
 void RerunFusionRecorder::UpdateRerunTimeStep() {

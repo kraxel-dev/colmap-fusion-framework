@@ -95,9 +95,12 @@ void GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_fro
 /**
  * @brief Print statistics of two view geometry that matter to intialization criterias of reconstruction initial pairs.
  *
- * @param tvg
+ * @param tvg two view geometry that should be printed
  */
 void PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg);
+
+/// given a finalized colmap model, export the image poses w.r.t to world as tum trajectory
+void ToTum(const colmap::Reconstruction* reconstruction, const std::string& out_folder);
 
 }  // namespace col_utils
 }  // namespace fuhe

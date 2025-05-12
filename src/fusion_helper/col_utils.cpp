@@ -3,7 +3,8 @@
 #include "fusion_helper/io.h"
 #include <colmap/util/file.h>
 
-fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(const std::unordered_map<colmap::image_t, colmap::Image>& images_by_id) {
+fuhe::types::MapOfImageIdsSec fuhe::col_utils::ImageIdsByStamp(
+    const std::unordered_map<colmap::image_t, colmap::Image>& images_by_id) {
   // hashmap that takes care of the sorting automatically
   fuhe::types::MapOfImageIdsSec ordered_image_stamps;  // output map -> image ids by timestamps [secs]
 
@@ -46,7 +47,8 @@ const std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::Subset
 }
 
 const std::unordered_map<colmap::point3D_t, colmap::Point3D> fuhe::col_utils::SubsetOfPoints3D(
-    const std::unordered_set<colmap::point3D_t>& target_ids, const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D) {
+    const std::unordered_set<colmap::point3D_t>& target_ids,
+    const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D) {
   // output map
   std::unordered_map<colmap::point3D_t, colmap::Point3D> subset;
 
@@ -75,9 +77,8 @@ std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredIm
   return registered_images;
 }
 
-const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(const colmap::image_t& image_id,
-                                                                        const int min_track_len,
-                                                                        const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(
+    const colmap::image_t& image_id, const int min_track_len, const std::shared_ptr<colmap::Reconstruction> reconstruction) {
   const auto& img = reconstruction->Image(image_id);
   std::vector<colmap::Point3D> pts3D;
 
@@ -114,8 +115,8 @@ bool fuhe::col_utils::ImagesAndPointsInActiveBA(const colmap::BundleAdjustmentCo
   active_images = fuhe::col_utils::SubsetOfImages(ba_config.Images(), images);
 
   // -------------------- Subset 3d points
-  // use same strategy for adding rerun 3d points as colmaps bundle adjuster does for adding points to the problem. ba_config does not
-  // entail all active 3d points per se as they are pulled from the images themselved.
+  // use same strategy for adding rerun 3d points as colmaps bundle adjuster does for adding points to the problem. ba_config
+  // does not entail all active 3d points per se as they are pulled from the images themselved.
 
   // iterate over all active images
   for (auto& img_id : ba_config.Images()) {
@@ -156,9 +157,11 @@ void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruc
   VLOG(3) << "Bounding Box Corenrs 1 are: " << bbox.first;
   VLOG(3) << "Bounding Box Corenrs 2 are: " << bbox.second;
 
-  std::vector<colmap::point3D_t> for_del;  // collect point ids for deletion
+  // collect point ids for deletion
+  std::vector<colmap::point3D_t> for_del;
   for (const auto& point3D : reconstruction->Points3D()) {
-    if (!((point3D.second.xyz.array() >= bbox.first.array()).all() && (point3D.second.xyz.array() <= bbox.second.array()).all())) {
+    if (!((point3D.second.xyz.array() >= bbox.first.array()).all() &&
+          (point3D.second.xyz.array() <= bbox.second.array()).all())) {
       VLOG(4) << "Bogus 3d point detected! Prepare deletion of id: " << point3D.first;
       VLOG(4) << "Bogus 3d Position: \n" << point3D.second.xyz;
       // NOTE: Do not delete point while iterating
@@ -180,10 +183,11 @@ void fuhe::col_utils::GetPointersToPose(colmap::Image& img, double*& q_c_from_w,
   img.CamFromWorld().rotation.normalize();
 
   // cam from world -> pose of world expressed in camera frame
-  q_c_from_w = img.CamFromWorld().rotation.coeffs().data();  // pointer to quaternion part of image pose.
-                                                             // represents ceres parameter pointer to position part of image pose.
-  t_c_from_w = img.CamFromWorld().translation.data();        // pointer to translation part of image pose.
-                                                             // represents ceres parameter pointer to position part of image pose.
+  q_c_from_w =
+      img.CamFromWorld().rotation.coeffs().data();     // pointer to quaternion part of image pose.
+                                                       // represents ceres parameter pointer to position part of image pose.
+  t_c_from_w = img.CamFromWorld().translation.data();  // pointer to translation part of image pose.
+                                                       // represents ceres parameter pointer to position part of image pose.
 }
 
 void fuhe::col_utils::PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg) {
@@ -191,4 +195,16 @@ void fuhe::col_utils::PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg)
   VLOG(1) << "Inlier matches: " << tvg.inlier_matches.size();
   VLOG(1) << "Z forward motion: " << tvg.cam2_from_cam1.translation.z();
   VLOG(1) << "Triangulation angle: " << tvg.tri_angle;
+}
+
+void fuhe::col_utils::ToTum(const colmap::Reconstruction* reconstruction, const std::string& out_folder) {
+  std::vector<colmap::Rigid3d> X;
+  X.reserve(reconstruction->RegImageIds().size());
+
+  for (auto& id : reconstruction->RegImageIds()) {
+    X.push_back(reconstruction->Image(id).CamFromWorld());
+  }
+
+  const std::string tum = colmap::EnsureTrailingSlash(out_folder) + "cam_trajectory.tum";
+  io::Rigid3dToTum(X, tum, /*do_inv=*/true);
 }

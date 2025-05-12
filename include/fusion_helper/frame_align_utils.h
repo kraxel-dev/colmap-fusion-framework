@@ -1,0 +1,59 @@
+/**
+ * @file frame_align_utils.h
+ * @author kraxel
+ * @brief collection of helper tools to perform colmap model frame and coordinate transformations given use-cases like trajectory
+ * evaluation. Can be used as pos-processing step or during active reconstruction.
+ * @version 0.1
+ * @date 2025-05-12
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+#pragma once
+
+#include <colmap/estimators/coordinate_frame.h>
+#include <colmap/scene/reconstruction.h>
+
+namespace fuhe {
+namespace align {
+
+struct AlignmentOptions {
+  // perform all alignment duties listed below on colmap model once when specified amount of images were registered. Set to 0 if
+  // alignment is not desired (any alignment will be ignored)
+  uint n_reg_for_alignment = 24;
+
+  // align colmap reconstruction through PCA to the axes along the motion. This works well to find xy plane for vehicle data
+  // (that didnt endlessly drive up a parking garage ramp) but will probably less useful on drone data.
+  bool pca_align = true;
+
+  // transform colmap model such that the translation of the first image assumes the translation specified by xyz values below.
+  // Important to let the camera trajectory start at the position of your camera with respect to your base vehicle. E.g. if your
+  // camera is mounted 1 m in front and 0.5 m above your vehicle baselink, the cam trajectory should start at that position
+  // instead of coordinate origin. In other words, your first image pose should be aligned to the extrinsic calibration of your
+  // mounted cam with respect to your vechicle. NOTE: this option alone does not orient the trajectory.
+  bool align_first_cam_to_specific_pos = true;
+  const double align_cam_to_x = 1.58;  // w.r.t global world frame
+  const double align_cam_to_y = 0.0;  // w.r.t global world frame
+  const double align_cam_to_z = 1.566;  // w.r.t global world frame
+
+  // orient the colmap trajectory such that the initial motion (direction of 1st to 2nd colmap pose) aligns with the x-axis of
+  // the global coordinate frame. Important to better compare with ground truth data from other sensor links that set the start
+  // position of the vechicle as coordinate origin. NOTE: this strategy is brittle with backwards or turning motion as trajectory
+  // start.
+  bool rotate_init_motion_onto_global_x_axis = true;
+};
+
+/// simple check on whether to run coordinage frame alignment strategies on colmap model. Returns true when specified nr of
+/// images were registered
+bool CheckRunAlignment(const int n_registered_imgs, const AlignmentOptions& align_opts);
+
+/// align first colmap pose to some initial pose (e.g. cam extrinsics) specified by alignment options given a translation and
+/// some rotation strategy. Call after pca alignment to make things easier.
+void AlignFirstPoseToSpecified(const std::shared_ptr<colmap::Reconstruction> reconstruction, const AlignmentOptions& align_opts);
+
+/// perform all coordinate frame alignment strategies on a colmap model specified by alignment options
+void PerformAlignmentStrategies(const std::shared_ptr<colmap::Reconstruction> reconstruction,
+                                const AlignmentOptions& align_opts);
+
+}  // namespace align
+}  // namespace fuhe

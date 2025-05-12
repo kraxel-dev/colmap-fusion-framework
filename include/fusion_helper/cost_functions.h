@@ -1,9 +1,10 @@
 /**
  * @file cost_functions.h
  * @author kraxel
- * @brief Adjusted ceres cost functions (from glomap, colmap and ceres itself) to construct sensor fusion based optimization problems
- * (High-lvl fusion + tightly coupled fusion). Is used to extend vanilla colmap bundle adjustment problems with fusion capabilities of
- * external odometry and more. Also introduces additional capabilities like cost-functors that can track residual cost during optimization.
+ * @brief Adjusted ceres cost functions (from glomap, colmap and ceres itself) to construct sensor-fusion based optimization
+ * problems (High-lvl fusion + tightly coupled fusion). Is used to extend vanilla colmap bundle adjustment problems with fusion
+ * capabilities of external odometry and more. Also introduces additional capabilities like cost-functors that can track residual
+ * cost during optimization.
  * @version 0.1
  * @date 2025-02-27
  *
@@ -21,9 +22,9 @@ namespace cost {
 
 /**
  * @brief Derived colmap::CovarianceWeightedCostFunctor, behaving exacly as colmap parent but with addition of exposing its
- * calculated residuals to outside world. Can be used for accessing residuals during ceres iteration or evaluation callbacks, if an stalker
- * obejct is attached to it during creation. Please check associated class in fusion_evaluation_callback.h to build an understanding of how
- * to use residual tracking.
+ * calculated residuals to outside world. Can be used for accessing residuals during ceres iteration or evaluation callbacks, if
+ * an stalker obejct is attached to it during creation. Please check associated class in fusion_evaluation_callback.h to build an
+ * understanding of how to use residual tracking.
  *
  * @tparam CostFunctor
  */
@@ -41,12 +42,13 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
 
   template <typename... Args>
   explicit WeightedCostExposedResiduals(const ResidualStalkerPtr residual_stalker, const CovMat& cov, Args&&... args)
-      : residual_stalker{residual_stalker}, colmap::CovarianceWeightedCostFunctor<CostFunctor>{cov, std::forward<Args>(args)...} {}
+      : residual_stalker{residual_stalker},
+        colmap::CovarianceWeightedCostFunctor<CostFunctor>{cov, std::forward<Args>(args)...} {}
 
   /**
-   * @brief Create ceres cost-function of any native colmap weighted cost-functor type with additional capabilites to pass down its own
-   * residuals during optimization. Usage: Create exactly like standard colmap CovarianceWeightedCostFunctor but with additional stalker
-   * object as additional input in front of the covariance matrix.
+   * @brief Create ceres cost-function of any native colmap weighted cost-functor type with additional capabilites to pass down
+   * its own residuals during optimization. Usage: Create exactly like standard colmap CovarianceWeightedCostFunctor but with
+   * additional stalker object as additional input in front of the covariance matrix.
    * @ref thirdparty/install/include/colmap/estimators/cost_functions.h
    *
    * @tparam Args
@@ -73,7 +75,8 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
     // -------------------- Safety checks
     // no stalker = no stalking
     if (!this->residual_stalker) {
-      LOG(ERROR) << "Trying to pass down ceres residuals to stalker without him being supervised by evaluation callback! Refer to stalker "
+      LOG(ERROR) << "Trying to pass down ceres residuals to stalker without him being supervised by evaluation callback! Refer "
+                    "to stalker "
                     "object docs to understand how to setup ceres residuals stalking during optimization.";
       return true;
     }
@@ -89,8 +92,8 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
     }
 
     // obtain residual ptr (internally filled by parent operator() call)
-    /* NOTE: Every 2nd call of operator overlad results in residual ptr being of type ceres::Jet instead of typical numeric. Stalker should
-     * have safety overalds to mitigate the Jet iterations since these would blow up residual stalking process
+    /* NOTE: Every 2nd call of operator overlad results in residual ptr being of type ceres::Jet instead of typical numeric.
+     * Stalker should have safety overalds to mitigate the Jet iterations since these would blow up residual stalking process
      */
     auto residuals_ptr = colmap::LastValueParameterPack(args...);
     typedef typename std::remove_reference<decltype(*residuals_ptr)>::type T;
@@ -117,10 +120,10 @@ class WeightedCostExposedResiduals : public colmap::CovarianceWeightedCostFuncto
 };
 
 /**
- * @brief Sloppy way to create a covariance weighted camera cost function with exposed residuals during optimization for stalker objects to
- * copy. NOTE: Adapted colmaps macro expansion to generalize cost-functor to any colmap camera model, since this is still missing for
- * colmaps native covariance-weighted cost creation. In the future, colmap might deliver a CovarianceWeighted cost creation for any camera
- * type but this is the best we have at the moment.
+ * @brief Sloppy way to create a covariance weighted camera cost function with exposed residuals during optimization for stalker
+ * objects to copy. NOTE: Adapted colmaps macro expansion to generalize cost-functor to any colmap camera model, since this is
+ * still missing for colmaps native covariance-weighted cost creation. In the future, colmap might deliver a CovarianceWeighted
+ * cost creation for any camera type but this is the best we have at the moment.
  *
  * @tparam CostFunctor
  * @tparam Args
@@ -137,12 +140,14 @@ ceres::CostFunction* CreateWeightedCamCostExposedResiduals(const std::shared_ptr
                                                            Args&&... args) {
   switch (camera_model_id) {
     using namespace colmap;
-#define CAMERA_MODEL_CASE(CameraModel)                                                                                               \
-  case CameraModel::model_id:                                                                                                        \
-    return fuhe::cost::WeightedCostExposedResiduals<CostFunctor<CameraModel>>::Create(stalker, CovMat, std::forward<Args>(args)...); \
+#define CAMERA_MODEL_CASE(CameraModel)                                                 \
+  case CameraModel::model_id:                                                          \
+    return fuhe::cost::WeightedCostExposedResiduals<CostFunctor<CameraModel>>::Create( \
+        stalker, CovMat, std::forward<Args>(args)...);                                 \
     break;
 
-    CAMERA_MODEL_SWITCH_CASES  // macro expansion
+    // macro expansion in same style as original colmap
+    CAMERA_MODEL_SWITCH_CASES
 
 #undef CAMERA_MODEL_CASE
   }
@@ -152,18 +157,18 @@ ceres::CostFunction* CreateWeightedCamCostExposedResiduals(const std::shared_ptr
  * @brief Relative pose + scale factor taken and slightly modified from sources:
  - https://github.com/colmap/glomap/blob/main/glomap/estimators/cost_function.h
  - https://github.com/colmap/colmap/blob/682ea9ac4020a143047758739259b3ff04dabe8d/src/colmap/estimators/cost_functions.h#L405
- 6 + 1 DoF error between two absolute camera poses (with identical non-real-world scale for the translation) given a relative pose
- measurement from external odometry source with true metric scale. Estimated scale can be used to transform the colmap model
- afterwards with a Sim3 tf. The residual is computed in the frame of camera i. Its first and last three components correspond to the
- rotation and translation errors, respectively.
- * Derivation: i_T_w = ΔT_i·i_T_j_meas·j_T_w where ΔT_i = exp(η_i) is the resjdual in SE(3) and
- η_i in tangent space.
+ 6 + 1 DoF error between two absolute camera poses (with identical non-real-world scale for the translation) given a relative
+ pose measurement from external odometry source with true metric scale. Estimated scale can be used to transform the colmap model
+ afterwards with a Sim3 tf. The residual is computed in the frame of camera i. Its first and last three components correspond to
+ the rotation and translation errors, respectively.
+ * Derivation: i_T_w = ΔT_i·i_T_j_meas·j_T_w
+ * where ΔT_i = exp(η_i) is the resjdual in SE(3) and η_i in tangent space.
  * Thus η_i = log(i_T_w·j_T_w⁻¹·j_T_i_measured)
  * Rotation term: ΔR = log(i_R_w·j_R_w⁻¹·j_R_i)
  * Translation term: Δt = scale * i_t_w + i_R_w·j_R_w⁻¹·(j_t_i_measured - scale * j_t_w)
-
  */
-struct ScaleAwareRelativePoseCostFunctor : public colmap::AutoDiffCostFunctor<ScaleAwareRelativePoseCostFunctor, 6, 1, 4, 3, 4, 3> {
+struct ScaleAwareRelativePoseCostFunctor
+    : public colmap::AutoDiffCostFunctor<ScaleAwareRelativePoseCostFunctor, 6, 1, 4, 3, 4, 3> {
  public:
   /**
    * @brief Construct a new Scale Aware Relative Pose Cost Functor object
@@ -186,10 +191,9 @@ struct ScaleAwareRelativePoseCostFunctor : public colmap::AutoDiffCostFunctor<Sc
     colmap::EigenQuaternionToAngleAxis(param_from_prior_rotation.coeffs().data(), residuals_ptr);
 
     // Translation term (with scale estimation):
-    // j_t_i_measured - scale*j_t_w
+    // j_t_i_measured - scale*j_t_w -> apply scale onto cam pose translation
     const Eigen::Matrix<T, 3, 1> j_from_i_prior_translation =
-        j_from_i_measured_.translation.cast<T>() -
-        colmap::EigenVector3Map<T>(j_from_world_translation) * scale[0];  // invert  measurement translation by the real world scale
+        j_from_i_measured_.translation.cast<T>() - colmap::EigenVector3Map<T>(j_from_world_translation) * scale[0];
     Eigen::Map<Eigen::Matrix<T, 3, 1>> param_from_prior_translation(residuals_ptr + 3);
     // Δt = scale*i_t_w + i_R_w·j_R_w⁻¹·(j_t_i_measured - scale*j_t_w )
     param_from_prior_translation =

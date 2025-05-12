@@ -28,8 +28,8 @@ namespace tfc {  // namespace tfc
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * @brief Exact same behavior as DefaultBundelAdjuster but with rerun logging during optimization. Can be used in both local and global BA
- * of colmaps native (standard behavior) incremental mapping process.
+ * @brief Exact same behavior as DefaultBundelAdjuster but with rerun logging during optimization. Can be used in both local and
+ * global BA of colmaps native (standard behavior) incremental mapping process.
  *
  */
 class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
@@ -86,11 +86,11 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
     VLOG(2) << "Deploying rerun iteration callback!";
 
     // deploy own iteration callback that logs to rerun during optimization
-    iter_callback_ =
-        std::make_shared<fuhe::MarathonBundleAdjustIterCallback>(rr_recorder_,
-                                                                 reconstruction_.Images(),
-                                                                 reconstruction_.Points3D(),
-                                                                 &config_);  // pass ba_config to only log subset of images and points
+    iter_callback_ = std::make_shared<fuhe::MarathonBundleAdjustIterCallback>(
+        rr_recorder_,
+        reconstruction_.Images(),
+        reconstruction_.Points3D(),
+        &config_);  // pass ba_config to only log subset of images and points
 
     // only with real value updates can rerun log during the optimization process
     solver_options.update_state_every_iteration = true;
@@ -108,17 +108,17 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * @brief Fusion Bundle Adjuster class that builds and solves bundle adjustment problem with additional odometry data. Can be used in both
- * local and global BA steps of colmaps incremental mapping steps. Full declaration and definiton is scopred to this .cc to adept native
- * colmaps implementation style.
+ * @brief Fusion Bundle Adjuster class that builds and solves bundle adjustment problem with additional odometry data. Can be
+ * used in both local and global BA steps of colmaps incremental mapping steps. Full declaration and definiton is scopred to this
+ * .cc to adept native colmaps implementation style.
  *
  */
 class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
  public:
   /**
-   * @brief Construct a new Fusion Graph Bundle Adjuster object, assumming a correctly populated ba_config (e.g. which images are contained
-   * in problem and which poses are set const) and correctly constructed fusion-graph-data-edges (image edges holding odometry edges) that
-   * span the whole colmap model (even not yet registered images)
+   * @brief Construct a new Fusion Graph Bundle Adjuster object, assumming a correctly populated ba_config (e.g. which images are
+   * contained in problem and which poses are set const) and correctly constructed fusion-graph-data-edges (image edges holding
+   * odometry edges) that span the whole colmap model (even not yet registered images)
    *
    * @param options BA options (global vs local)
    * @param fusion_options options for fusion optimization
@@ -126,9 +126,9 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
    * @param rr_recorder custom rerun recorder object to log data to rerun viewer
    * @param config correctly populated ba_config (e.g. which images are contained in problem and which are set const)
    * @param reconstruction full colmap model
-   * @param fusion_graph_data_edges (non-filtered) fusion graph data edges (image edges with odometry), entailing the full reconstruction
-   * (even not yet registered images), that add relative pose constraints to the ceres optimization. Will be filtered internally to only
-   * keep edges that are active in the current BA problem.
+   * @param fusion_graph_data_edges (non-filtered) fusion graph data edges (image edges with odometry), entailing the full
+   * reconstruction (even not yet registered images), that add relative pose constraints to the ceres optimization. Will be
+   * filtered internally to only keep edges that are active in the current BA problem.
    */
   FusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
@@ -146,8 +146,8 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     default_bundle_adjuster_ = colmap::CreateDefaultBundleAdjuster(options_, config_, reconstruction_);
 
     // -------------------- Filter graph data edges (img to img)
-    // keep only images edges with odometry that are active part of current BA. Note that ba_cfg must be correctly populated before this
-    // call
+    // keep only images edges with odometry that are active part of current BA. Note that ba_cfg must be correctly populated
+    // before this call
     active_fusion_graph_edges_ = fuhe::edges::SubsetActiveEdges(config_, fusion_graph_data_edges);
 
     // -------------------- Iterate over fusion graph edges to build factor graph problem
@@ -174,8 +174,8 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     }
     VLOG(2) << "Added nr of between factors: " << between_factor_counter;
 
-    // fix cam poses deemed as constant for this bundle to static. Necessary since default BA does not actually set the ceres param block as
-    // constant during init.
+    // fix cam poses deemed as constant for this bundle. Necessary since default BA does not actually set the ceres
+    // param block as constant during init.
     for (const colmap::image_t image_id : config_.Images()) {
       if (!(config_.HasConstantCamPose(image_id))) {
         continue;
@@ -186,9 +186,10 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
       // recover image pose from colmap model
       double *q = nullptr, *t = nullptr;  // ceres param blocks for pose
       fuhe::col_utils::GetPointersToPose(img_const_pose, q, t);
-      // Check existence of param block (in some cases like image only BA, the parameter block of a const pose might be not registered in
-      // the problem).
-      if (!(default_bundle_adjuster_->Problem()->HasParameterBlock(q) && default_bundle_adjuster_->Problem()->HasParameterBlock(t))) {
+      // Check existence of param block (in some cases like image only BA, the parameter block of a const pose might be not
+      // registered in the problem).
+      if (!(default_bundle_adjuster_->Problem()->HasParameterBlock(q) &&
+            default_bundle_adjuster_->Problem()->HasParameterBlock(t))) {
         continue;
       }
       default_bundle_adjuster_->Problem()->SetParameterBlockConstant(q);
@@ -197,8 +198,9 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   }
 
   /**
-   * @brief Add relative odometry factor to ceres problem. Assumes that images have already been correctly added to problem by DefaultBA.
-   * Can additionally add scale estimation between relative odometry and (non-real-world-scale) image poses into the problem, if specified.
+   * @brief Add relative odometry factor to ceres problem. Assumes that images have already been correctly added to problem by
+   * DefaultBA. Can additionally add scale estimation between relative odometry and (non-real-world-scale) image poses into the
+   * problem, if specified.
    *
    * @param img_id_i colmap image id of camera pose i
    * @param img_id_j colmap image id of camera pose j
@@ -231,18 +233,21 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
       cost_func = colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
 
       VLOG(4) << "Adding residual block to ceres graph!";
-      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j, t_j
+      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j,
+      // t_j
       this->Problem()->AddResidualBlock(cost_func, nullptr, q_i, t_i, q_j, t_j);
     } else {
       // also estimates scale between sfm model and measurements
-      cost_func = colmap::CovarianceWeightedCostFunctor<fuhe::cost::ScaleAwareRelativePoseCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+      cost_func =
+          colmap::CovarianceWeightedCostFunctor<fuhe::cost::ScaleAwareRelativePoseCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
 
       if (fusion_options_.use_robust_loss_on_scale_estimation && !scale_estimation_loss_func_) {
         scale_estimation_loss_func_ = std::make_unique<ceres::CauchyLoss>(fusion_options_.scale_estimation_loss_factor);
       }
 
       VLOG(4) << "Adding residual block to ceres graph!";
-      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: scale, q_i, t_i, q_j, t_j
+      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: scale, q_i,
+      // t_i, q_j, t_j
       this->Problem()->AddResidualBlock(cost_func, scale_estimation_loss_func_.get(), model_scale_.get(), q_i, t_i, q_j, t_j);
       VLOG(3) << "Scale estimation in relative pose factor included!";
     }
@@ -261,8 +266,9 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   std::shared_ptr<ceres::Problem>& Problem() override { return default_bundle_adjuster_->Problem(); };
 
   /**
-   * @brief Solves ceres fusion BA problem. If scale estimation is toggled, the resulting scale diff (camera poses vs odometry meas) will be
-   * applied to the colmap model after the optimization, to bring the model into real-world scale of the odometry.
+   * @brief Solves ceres fusion BA problem. If scale estimation is toggled, the resulting scale diff (camera poses vs odometry
+   * meas) will be applied to the colmap model after the optimization, to bring the model into real-world scale of the odometry.
+   * Additionally, reconstruction will be aligned by PCA to x and y motion plane of the camera poses, if specified in options.
    *
    * @return ceres::Solver::Summary
    */
@@ -276,27 +282,30 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     ceres::Solver::Options solver_options = options_.CreateSolverOptions(config_, *problem);
 
     // attach iteration callback for rerun visualization of iterations if toggled
-    if (rr_rec_->GetRerunRec()) {
+    if (rr_rec_) {
       VLOG(2) << "Attaching fusion iteration callback to log data to rerun during optimization!";
       this->AddFusionIterationCallback(solver_options);
     }
 
     ceres::Solve(solver_options, problem.get(), &summary);
 
+    if (options_.print_summary || VLOG_IS_ON(3)) {
+      colmap::PrintSolverSummary(summary, "Fusion Graph Bundle adjustment report");
+    }
+
     // apply estimated scale onto model, if co-estimated from metric odom meas during optimzation
     if (!fusion_options_.brute_force_scale_recovery) {
       if (*model_scale_.get() < fusion_options_.scale_diff_thresh) {
         VLOG(2) << "Applying estimated scale diff of " << *model_scale_.get()
                 << " between colmap model and rel poses to align model with metric real world!";
-        colmap::Sim3d real_world_scale = colmap::Sim3d(*model_scale_.get(), Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero());
+        // create scale tf with identity in trans and rot
+        colmap::Sim3d real_world_scale =
+            colmap::Sim3d(*model_scale_.get(), Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero());
+        // apply scale
         reconstruction_.Transform(real_world_scale);
       } else {
         VLOG(2) << "Estimated scale diff of " << *model_scale_.get() << " between colmap model and rel poses can be neglected.";
       }
-    }
-
-    if (options_.print_summary || VLOG_IS_ON(3)) {
-      colmap::PrintSolverSummary(summary, "Fusion Graph Bundle adjustment report");
     }
 
     return summary;
@@ -306,10 +315,11 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   const tcf::FusionGraphBundleAdjustmentOptions fusion_options_;  // tum file path, cov mat, etc
   const fuhe::rrfuse::RerunFusionVisOptions rr_options_;          // rerun visualization options
   std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rec_ = nullptr;
-  std::shared_ptr<fuhe::MarathonFusionIterCallback> iter_callback_ = nullptr;  // custom iteration callback to log data to rerun if toggled
+  std::shared_ptr<fuhe::MarathonFusionIterCallback> iter_callback_ =
+      nullptr;  // custom iteration callback to log data to rerun if toggled
 
-  // time sorted image sequence with odometry edges constraining images (if availabe). Already subsetted to entail only images active in
-  // current BA.
+  // time sorted image sequence with odometry edges constraining images (if availabe). Already subsetted to entail only images
+  // active in current BA.
   fuhe::edges::MapOfImageEdges active_fusion_graph_edges_;
   // scale parameter that aligns vision only colmap model dimension with metric relative poses. Will be estimated as part of the
   // ceres optimization if toggled, otherwise ignored.
@@ -360,5 +370,6 @@ std::unique_ptr<colmap::BundleAdjuster> tcf::CreateDefaultBundleAdjusterRerun(
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
     const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder) {
-  return std::make_unique<tfc::DefaultBundleAdjusterRerunLogging>(std::move(options), std::move(config), reconstruction, rr_recorder);
+  return std::make_unique<tfc::DefaultBundleAdjusterRerunLogging>(
+      std::move(options), std::move(config), reconstruction, rr_recorder);
 }

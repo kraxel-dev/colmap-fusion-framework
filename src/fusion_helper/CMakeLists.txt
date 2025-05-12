@@ -8,6 +8,7 @@ set(FUSION_HELPER_SOURCES
     ceres_eval_utils.cpp
     fusion_residuals_tracker.cpp
     fusion_evaluation_callback.cpp
+    frame_align_utils.cpp
     rr_utils.cpp
     rr_fusion_recorder.cpp
     rr_fusion_logging.cpp
