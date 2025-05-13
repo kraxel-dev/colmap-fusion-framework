@@ -77,23 +77,20 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
   }
 }
 
-void fuhe::io::Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv) {
-  std::fstream outFile(tum_file, std::istream::out);
+void fuhe::io::Rigid3dToTum(const std::vector<double>& stamps, std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv) {
+  std::fstream out_file(tum_file, std::istream::out);
 
+  // write each optimized pose into tumfile
   VLOG(2) << "Exporting trajectory to : " << tum_file;
-
-  int n = 0;
-  // write each optimized pose into _fumfile
-  for (const colmap::Rigid3d T : X) {
+  for (int n = 0; n < X.size(); n++) {
     // invert pose if desired (remember that colmap poses are world poses expressed in camera frame)
-    const colmap::Rigid3d outPose = (do_inv) ? colmap::Inverse(T) : T;
+    const colmap::Rigid3d pose = (do_inv) ? colmap::Inverse(X.at(n)) : X.at(n);
     // write write write
-    outFile << n << " " << outPose.translation.x() << " " << outPose.translation.y() << " " << outPose.translation.z() << " "
-            << outPose.rotation.x() << " " << outPose.rotation.y() << " " << outPose.rotation.z() << " " << outPose.rotation.w() << '\n';
-    n++;
+    out_file << std::fixed << std::setprecision(6) << stamps.at(n) << " " << pose.translation.x() << " " << pose.translation.y() << " " << pose.translation.z()
+            << " " << pose.rotation.x() << " " << pose.rotation.y() << " " << pose.rotation.z() << " "
+            << pose.rotation.w() << '\n';
   }
-
-  outFile.close();
+  out_file.close();
 }
 
 std::string fuhe::io::GetRepoRootDir() {
@@ -108,7 +105,7 @@ std::string fuhe::io::GetRepoRootDir() {
     }
     repo_root = repo_root.parent_path();
   }
-  
+
   LOG(WARNING) << "Path to colmap_fusion_framework repo root dir not found. Returning path to currently run exe instead.";
   return exe_path;
 }

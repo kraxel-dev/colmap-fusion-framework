@@ -57,7 +57,9 @@ void ExtractColors(const std::string& image_path, const colmap::image_t image_id
 }
 
 int main(int argc, char** argv) {
-  // -------------------- Parse COLMAP and Ceres inputs
+  ////////////////////////////////////////////////////////////////////////////////
+  // Parse COLMAP and ceres options and inputs
+  ////////////////////////////////////////////////////////////////////////////////
   std::string db_path;  // database path
   std::string output_path;
 
@@ -309,8 +311,8 @@ int main(int argc, char** argv) {
   }
 
   VLOG(1) << "Done registering all images in reconstruction!";
-  VLOG(1) << "Writing model and tum file to: " << output_path;
   fuhe::col_utils::ToTum(reconstruction.get(), output_path);
+  VLOG(1) << "Writing model to: " << output_path;
   reconstruction->WriteText(output_path);
 
   fusion_mapper.EndReconstruction(/*false*/ false);  // finalize reconstruction

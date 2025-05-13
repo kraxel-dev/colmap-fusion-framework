@@ -61,20 +61,23 @@ const std::unordered_map<colmap::point3D_t, colmap::Point3D> fuhe::col_utils::Su
   }
   return subset;
 }
-
 std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredImages(
-    const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+    const colmap::Reconstruction* reconstruction) {
   // output map
   std::unordered_map<colmap::image_t, colmap::Image> registered_images;
 
   // iterate over all existing images (containing no registered)
-  for (const auto& img : reconstruction->Images()) {
-    if (reconstruction->IsImageRegistered(img.first)) {
-      registered_images[img.first] = img.second;
+  for (const auto pair : reconstruction->Images()) {
+    if (reconstruction->IsImageRegistered(pair.first)) {
+      registered_images[pair.first] = pair.second;
     }
   }
-
   return registered_images;
+}
+
+std::unordered_map<colmap::image_t, colmap::Image> fuhe::col_utils::RegisteredImages(
+    const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+  return fuhe::col_utils::RegisteredImages(reconstruction.get());
 }
 
 const std::vector<colmap::Point3D> fuhe::col_utils::GetPoints3DForImage(
@@ -198,13 +201,20 @@ void fuhe::col_utils::PrintTwoViewStatistics(const colmap::TwoViewGeometry& tvg)
 }
 
 void fuhe::col_utils::ToTum(const colmap::Reconstruction* reconstruction, const std::string& out_folder) {
+  std::vector<double> stamps;
   std::vector<colmap::Rigid3d> X;
-  X.reserve(reconstruction->RegImageIds().size());
 
-  for (auto& id : reconstruction->RegImageIds()) {
+  // sort trajectory by time
+  fuhe::types::MapOfImageIdsSec ids_by_stamp = col_utils::ImageIdsByStamp(col_utils::RegisteredImages(reconstruction));
+
+  for (auto& [stamp, id] : ids_by_stamp) {
+    if (!reconstruction->Image(id).HasPose()) {
+      continue;
+    }
     X.push_back(reconstruction->Image(id).CamFromWorld());
+    stamps.push_back(stamp);
   }
 
   const std::string tum = colmap::EnsureTrailingSlash(out_folder) + "cam_trajectory.tum";
-  io::Rigid3dToTum(X, tum, /*do_inv=*/true);
+  io::Rigid3dToTum(stamps, X, tum, /*do_inv=*/true);
 }

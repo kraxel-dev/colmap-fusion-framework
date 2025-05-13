@@ -60,14 +60,16 @@ void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>
  */
 void TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec& out_poses_map, const bool cut_precision = true);
 
+
 /**
- * @brief Given a vector of colmap image poses, write to tum file and perfom inversion if necessary.
+ * @brief Given a vector of colmap image poses and their timestamps [secs], write to tum file and perfom inversion if necessary.
  * 
- * @param X 
- * @param tum_file 
- * @param do_inv perform inversion
+ * @param stamps time stamps for each pose in seconds
+ * @param X time sorted image poses from colmap model
+ * @param tum_file absolute path file name of output .tum 
+ * @param do_inv perform inversion on all poses
  */
-void Rigid3dToTum(std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv = false);
+ void Rigid3dToTum(const std::vector<double>& stamps, std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv = false);
 
 /// find root dir of current repo
 std::string GetRepoRootDir();
