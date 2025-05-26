@@ -2,6 +2,7 @@
 
 #include "fusion_helper/io.h"
 #include <colmap/estimators/pose.h>
+#include <colmap/util/file.h>
 #include <colmap/util/misc.h>
 #include <fusion_helper/rr_fusion_recorder.h>
 
@@ -269,7 +270,19 @@ tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colm
                                                       fuhe::rrfuse::RerunFusionVisOptions& rr_options)
     : IncrementalMapper(database_cache), fusion_options_{fusion_options}, tum_file_{tum_file}, rr_options_{rr_options} {
   // whether to allow fusion or not
-  is_fusion_mapping_ = fusion_options.is_mapping_with_fusion;
+  is_fusion_mapping_ = fusion_options_.is_mapping_with_fusion;
+
+  if (is_fusion_mapping_) {
+    VLOG(1) << "Fusion mapping toggled! Tum file path: " << tum_file_;
+    if (tum_file_.empty() || !colmap::ExistsFile(tum_file_)) {
+      LOG(ERROR) << "Fusion is toggled but provided tum file path for metric poses is either faulty or non-existent! Please "
+                    "double check your paths!";
+      throw std::runtime_error("Problem reading and parsing tumfile for fusion mapping!");
+    }
+  } else {
+    VLOG(1) << "Fusion during mapping deactivated! Incremental Mapper will default to vanilla colmap behavior!";
+  }
+
   // get image ids images in time sorted order
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(database_cache->Images());
   // get absolute poses from external odom sensor sorted by stamps

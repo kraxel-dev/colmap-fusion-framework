@@ -104,3 +104,6 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 ## Incremental fusion mapper
 1. create superset of mapping options to control actions that belong to mapper and not to FusionBA object
     1. PCA alginment options is task of mapper
+
+# Auto eval pipeline
+Automatically reconstruct multiple colmap models for same image dataset under different conditions.

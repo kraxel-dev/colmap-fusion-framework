@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   // custom fusion options
   col_options.AddDefaultOption("Fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
+  col_options.AddDefaultOption("Fusion.tum_file", &fusion_ba_options.tum_file);
   col_options.AddDefaultOption("Fusion.time_diff_local_ba",
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
   col_options.AddDefaultOption("Fusion.odom_cov", &fusion_ba_options.cov);
@@ -284,12 +285,13 @@ int main(int argc, char** argv) {
     if (CheckRunGlobalRefinement(*reconstruction, *incr_pipieline_opts, ba_prev_num_reg_images, ba_prev_num_points) &&
         reconstruction->NumRegImages() > mapper_opts.local_ba_num_images) {
       VLOG(2) << "Enough imgs registered since last global BA. Global bundle adjustments toggled!";
-      fusion_mapper.IterativeGlobalRefinement(incr_pipieline_opts->ba_global_max_refinements,
-                                              incr_pipieline_opts->ba_global_max_refinement_change,
-                                              mapper_opts,
-                                              incr_pipieline_opts->GlobalBundleAdjustment(),
-                                              incr_pipieline_opts->Triangulation(),
-                                              /*normalize */ false);
+      fusion_mapper.IterativeGlobalRefinement(
+          incr_pipieline_opts->ba_global_max_refinements,
+          incr_pipieline_opts->ba_global_max_refinement_change,
+          mapper_opts,
+          incr_pipieline_opts->GlobalBundleAdjustment(),
+          incr_pipieline_opts->Triangulation(),
+          /*normalize (if fusion is toggled off)*/ !fusion_ba_options.is_mapping_with_fusion);
       ba_prev_num_points = reconstruction->NumPoints3D();
       ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
@@ -307,7 +309,7 @@ int main(int argc, char** argv) {
                                             mapper_opts,
                                             incr_pipieline_opts->GlobalBundleAdjustment(),
                                             incr_pipieline_opts->Triangulation(),
-                                            /*normalize */ false);
+                                            /*normalize (if fusion is toggled off)*/ !fusion_ba_options.is_mapping_with_fusion);
   }
 
   VLOG(1) << "Done registering all images in reconstruction!";

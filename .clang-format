@@ -1,6 +1,6 @@
 BasedOnStyle: Google
 IndentWidth: 2
-ColumnLimit: 140
+ColumnLimit: 129
 BinPackArguments: false
 BinPackParameters: false
 DerivePointerAlignment: false

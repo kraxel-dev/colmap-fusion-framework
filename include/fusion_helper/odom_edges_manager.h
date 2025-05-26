@@ -119,7 +119,7 @@ using MapOfImageEdges = std::map<const double, SequentialImageEdge>;
  * odometry edges that span far away absolute poses.
  *
  * @param img_ids_by_stamp Please provide ids of ALL images considered by the reconstruction, not just currently registered ones.
- * @param odom_poses_by_stamp absolute poses of external odom source from tum file
+ * @param odom_poses_by_stamp absolute poses of external odom source from tum file. Can be empty in which only image edges are created.
  * @return fuhe::edges::MapOfImageEdges
  */
 fuhe::edges::MapOfImageEdges CreateSequentialImageEdges(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,

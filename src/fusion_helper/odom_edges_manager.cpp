@@ -35,7 +35,6 @@ fuhe::edges::SequentialImageEdge::SequentialImageEdge(const double curr_stamp,
 ////////////////////////////////////////////////////////////////////////////////
 // Create Sequential Image Edges
 ////////////////////////////////////////////////////////////////////////////////
-
 fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                                                                      const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
   VLOG(2) << "Creating sequential image edges for the fusion graph!";

@@ -1,3 +1,5 @@
+""" Forward colmap model (images.txt) to convert image poses to tum trajectory.
+"""
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -91,7 +93,10 @@ def main():
                     if int(tstamp[0]) <= lower_bound:
                         # skip this pose
                         continue
-
+                
+                # convert nsecs to secs
+                tstamp[0] = int(tstamp[0]) / 1e9
+                
                 # timestamp x y z q_x q_y q_z q_w
                 tum_row = tstamp + list(pos) + list(quat)
                 tum_row.insert(0, idx)

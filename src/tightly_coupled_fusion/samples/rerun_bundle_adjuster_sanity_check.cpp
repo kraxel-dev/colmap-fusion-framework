@@ -1,3 +1,15 @@
+/**
+ * @file rerun_bundle_adjuster_sanity_check.cpp
+ * @author kraxel
+ * @brief Small sample of how to use the default colmap Bundle Adjuster with extra rerun visualization of the full BA on a fully
+ * reconstructed model. Also acts as showcase how to populate the ba_config, which will dictate which images are considered in
+ * the BA process by ceres.
+ * @version 0.1
+ * @date 2025-05-26
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #include "tightly_coupled_fusion/estimators/bundle_adjustment.h"
 #include <colmap/controllers/option_manager.h>
 #include <fusion_helper/col_utils.h>
@@ -46,7 +58,7 @@ int main(int argc, char** argv) {
   // obtain image ids in database sorted by ascending time
   fuhe::types::MapOfImageIdsSec img_ids_sorted = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
   // TODO: decide for better generic strategy on kicking bad points
-//   fuhe::col_utils::CropFarAwayPoints(reconstruction);
+  //   fuhe::col_utils::CropFarAwayPoints(reconstruction);
 
   // -------------------- Init rerun if visualization is toggled
   std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
