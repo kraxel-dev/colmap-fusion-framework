@@ -63,6 +63,7 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
   std::vector<double> stamps;
 
   // -------------------- Parse from tumfile
+  VLOG(2) << "Extracting poses from tum file: " << tum_file;
   io::TumToPosesEigen(tum_file, poses);
   fuhe::io::TumToStamps(tum_file, stamps);
 
@@ -75,9 +76,13 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
     }
     out_poses_map[stamp] = poses.at(i);
   }
+  VLOG(2) << out_poses_map.size() << " poses from tum extracted!";
 }
 
-void fuhe::io::Rigid3dToTum(const std::vector<double>& stamps, std::vector<colmap::Rigid3d>& X, const std::string& tum_file, const bool do_inv) {
+void fuhe::io::Rigid3dToTum(const std::vector<double>& stamps,
+                            std::vector<colmap::Rigid3d>& X,
+                            const std::string& tum_file,
+                            const bool do_inv) {
   std::fstream out_file(tum_file, std::istream::out);
 
   // write each optimized pose into tumfile
@@ -86,9 +91,9 @@ void fuhe::io::Rigid3dToTum(const std::vector<double>& stamps, std::vector<colma
     // invert pose if desired (remember that colmap poses are world poses expressed in camera frame)
     const colmap::Rigid3d pose = (do_inv) ? colmap::Inverse(X.at(n)) : X.at(n);
     // write write write
-    out_file << std::fixed << std::setprecision(6) << stamps.at(n) << " " << pose.translation.x() << " " << pose.translation.y() << " " << pose.translation.z()
-            << " " << pose.rotation.x() << " " << pose.rotation.y() << " " << pose.rotation.z() << " "
-            << pose.rotation.w() << '\n';
+    out_file << std::fixed << std::setprecision(6) << stamps.at(n) << " " << pose.translation.x() << " " << pose.translation.y()
+             << " " << pose.translation.z() << " " << pose.rotation.x() << " " << pose.rotation.y() << " " << pose.rotation.z()
+             << " " << pose.rotation.w() << '\n';
   }
   out_file.close();
 }

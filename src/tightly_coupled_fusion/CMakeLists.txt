@@ -13,6 +13,8 @@ target_include_directories(tightly_coupled_fusion PUBLIC ${PROJECT_SOURCE_DIR}/i
 target_link_libraries(tightly_coupled_fusion PUBLIC ${PROJECT_DEPENDENCIES};fusion_helper) # add dependency found in toplevel cmake
 
 # add executable for tightly_coupled_fusion
+add_executable(model_align samples/model_align.cpp)
+target_link_libraries(model_align tightly_coupled_fusion)
 add_executable(fusion_graph_ba_sanity_check samples/fusion_graph_ba_sanity_check.cpp)
 target_link_libraries(fusion_graph_ba_sanity_check tightly_coupled_fusion)
 add_executable(incremental_mapper_sanity_check samples/incremental_mapper_sanity_check.cpp)
