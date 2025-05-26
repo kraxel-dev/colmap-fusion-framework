@@ -37,9 +37,10 @@ struct AlignmentOptions {
   double specified_y = 0.06;        // w.r.t global world frame
   double specified_z = 1.566;       // w.r.t global world frame
   double specified_roll = 0.0;      // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
-  double specified_pitch = -0.2;    // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
+  double specified_pitch = -0.1705;  // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   double specified_yaw = 0.0;       // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
-  bool auto_rot_into_optical = true;  // apply final rotation of camera center onto the optical lense frame (from x forward to z forward y down)
+  // apply final rotation of camera center onto the optical lense frame (from x forward to z forward y down)
+  bool auto_rot_into_optical = true;
 
   // orient the colmap trajectory such that the initial motion (direction of 1st to 2nd colmap pose) aligns with the x-axis of
   // the global coordinate frame. Important to better compare with ground truth data from other sensor links that set the start

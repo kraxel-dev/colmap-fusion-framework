@@ -1,9 +1,10 @@
 /**
  * @file model_align.cpp
  * @author kraxel
- * @brief sample/helper to apply the colmap reconstruction alignment strategies, implemented in the fusion helper module. Mainly
- * use this to pca align a reconstruciton or force the first pose of model to assume a provided pose from config (e.g. extrinsic
- * camera position)
+ * @brief sample/helper to apply the colmap reconstruction alignment strategies to a fully reconstructed model, implemented in
+ * the fusion helper module. Mainly use this to pca align a reconstruciton or force the first pose of model to assume a provided
+ * pose from config (e.g. extrinsic camera position). Additional rerun visualization can help you eyball your extrinsics in case
+ * they are not 100% error free.
  * @version 0.1
  * @date 2025-05-26
  *
