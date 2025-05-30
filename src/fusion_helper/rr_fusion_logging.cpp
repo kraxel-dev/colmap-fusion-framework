@@ -19,7 +19,7 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   std::string cam_name = rr_utils::GetCamPosesName(img.ImageId());
 
   // match rerun adapter type.
-  std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), true);
+  std::pair<rerun::Vec3D, rerun::Mat3x3> T = fuhe::rr_utils::ToRerunPose3D(img.CamFromWorld(), /*inv=*/true);
 
   // log camera pose to rerun. data of t and R may go out of scope, but as rerun object they shall live on
   rec->log(cam_name, rerun::Transform3D(T.first, T.second));

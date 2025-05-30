@@ -3,7 +3,7 @@
  * @author kraxel
  * @brief Helper functions and class to evaluate error values for employed ceres cost functions by category (e.g. reprojection
  * err vs relative pose factor). Functionalities of this .h and .cpp file are limited to usage before and after problem
- * optimization, eval during optimization is not possible.
+ * optimization. Eval during optimization is not possible.
  * @version 0.1
  * @date 2025-02-11
  *

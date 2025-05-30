@@ -69,7 +69,6 @@ void fuhe::io::TumToPosesEigen(const std::string& tum_file, types::MapOfPosesSec
 
   for (size_t i = 0; i < poses.size(); i++) {
     double stamp = stamps.at(i);
-
     if (cut_precision) {
       // roundoff digits after decimal to easen time stamp matching for stamps with too many digits to parse
       stamp = TruncateDouble(stamp, fuhe::io::DIGIT_PRECISION);

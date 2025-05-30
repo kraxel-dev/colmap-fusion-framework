@@ -15,9 +15,9 @@
 namespace fuhe {
 
 /**
- * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap reconstruction pose and point
- * updates during each optim steps to rerun. Works for vanilla colmap models from original colmap repo and can be used when you build your
- * ceres problem manually (e.g. in high level fusion)
+ * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap reconstruction
+ * pose and point updates during each optim steps to rerun. Works for vanilla colmap models from original colmap repo and can be
+ * used when you build your ceres problem manually (e.g. in high level fusion)
  * @ref 1. https://github.com/rerun-io/glomap/blob/main/glomap/estimators/global_positioning.cc#L26
  *      2. http://ceres-solver.org/nnls_solving.html#_CPPv4N5ceres17IterationCallbackE
  *
@@ -50,9 +50,9 @@ class BundleAdjustmentIterationCallback : public ceres::IterationCallback {
 };
 
 /**
- * @brief Same as parent but used by colmap internal BundelAdjuster object. Assumes a correctly populated ba_config to only log active imgs
- * and pts. Can log consistently when there are multiple consecutive local and global bundle adjustemnts. This class obtains time step info
- * from outside to log rerun data consistently in chronological order.
+ * @brief Same as parent but used by colmap internal BundelAdjuster object. Assumes a correctly populated ba_config to only log
+ * active imgs and pts. Can log consistently when there are multiple consecutive local and global bundle adjustemnts. This class
+ * obtains time step info from outside to log rerun data consistently in chronological order.
  *
  */
 class MarathonBundleAdjustIterCallback : public BundleAdjustmentIterationCallback {
@@ -60,7 +60,8 @@ class MarathonBundleAdjustIterCallback : public BundleAdjustmentIterationCallbac
   /**
    * @brief Construct a new Marathon Bundle Adust Iter Callback object
    *
-   * @param rr_recorder custom object holding rerun recording stream and pinhole camera. Contains counter to set correct rerun time steps.
+   * @param rr_recorder custom object holding rerun recording stream and pinhole camera. Contains counter to set correct rerun
+   * time steps.
    * @param images all images of reconstruction (might contain images that are not registered yet)
    * @param points3D all 3d pts of reconstruction
    * @param ba_config visualize only a subset in rerun considered by BA problem. Requires correctly populated BA config (normaly
@@ -146,13 +147,14 @@ class MarathonFusionIterCallback : public MarathonBundleAdjustIterCallback {
   }
 
  protected:
-  // subset of seqeuential image edges wiht active odometry in current BA problem. Make sure to filter properly before passing to this class
+  // subset of seqeuential image edges wiht active odometry in current BA problem. Make sure to filter properly before passing to
+  // this class
   const edges::MapOfImageEdges& active_fusion_edges_;
 
   const bool is_draw_odom_edges_as_pred_pose_ = true;
 
-  // whether to highlight active images in rerun with bounding boxes. Toggle of for use cases of BA for full model where view can get
-  // cluttered.
+  // whether to highlight active images in rerun with bounding boxes. Toggle of for use cases of BA for full model where view can
+  // get cluttered.
   const bool is_highlight_active_cams_;
 
   // residuals_tracker exposing sensor factor residuals during optimization. Will be ingroned if received as nullptr
@@ -161,8 +163,8 @@ class MarathonFusionIterCallback : public MarathonBundleAdjustIterCallback {
 
 // FIXME: kill class below once compared against the marathon class
 /**
- * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap fusion factor graph to
- * rerun. Logs colmap images in sorted order.
+ * @brief Ceres iteration callback, called during every iteration of ceres optimization. Derived to log colmap fusion factor
+ * graph to rerun. Logs colmap images in sorted order.
  * @ref 1. https://github.com/rerun-io/glomap/blob/main/glomap/estimators/global_positioning.cc#L26
  *      2. http://ceres-solver.org/nnls_solving.html#_CPPv4N5ceres17IterationCallbackE
  *
@@ -198,14 +200,21 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
       bool log_odom_trajectory_as_linestrip =
           (summary.iteration > 1) ? false : true;  // draw odometry linestrip only once at first iteration
                                                    // FIXME: refactor to new graph edge data
-      rrfuse::LogOdometryEdgesAsTrajectory(this->rr_rec_, this->images_, this->graph_data_edges, log_odom_trajectory_as_linestrip);
+      rrfuse::LogOdometryEdgesAsTrajectory(
+          this->rr_rec_, this->images_, this->graph_data_edges, log_odom_trajectory_as_linestrip);
     }
 
     // -------------------- track total factor costs in rerun plots if toggled on
     // if (this->tracked_residuals && summary.iteration > 1) {
     if (this->tracked_residuals) {
+      
+      // skip total reprojection cost if its way larger than total graph error  to avoid rerun plotting problems
+      const double reproj_cost = this->tracked_residuals->GetTotalReprojCost();
+      if (reproj_cost < 6 * summary.cost) {
+        rrfuse::LogTotalFactorCost(this->rr_rec_, "reproj", reproj_cost);
+      }
+
       rrfuse::LogTotalFactorCost(this->rr_rec_, "odom", this->tracked_residuals->GetTotalOdomCost());
-      rrfuse::LogTotalFactorCost(this->rr_rec_, "reproj", this->tracked_residuals->GetTotalReprojCost());
       rrfuse::LogTotalFactorCost(this->rr_rec_, "graph", summary.cost);
     }
     return ceres::SOLVER_CONTINUE;
@@ -214,7 +223,8 @@ class FusionIterationCallback : public BundleAdjustmentIterationCallback {
  protected:
   const edges::MapOfImageEdges& graph_data_edges;
 
-  // whether to draw all external odometry measurements as absolute poses or predictes pose increments, seen from each colmap pose
+  // whether to draw all external odometry measurements as absolute poses or predictes pose increments, seen from each colmap
+  // pose
   bool is_draw_odom_edges_as_pred_pose = true;
 
   // residuals_tracker exposing sensor factor residuals during optimization. Will be ingroned if received as nullptr

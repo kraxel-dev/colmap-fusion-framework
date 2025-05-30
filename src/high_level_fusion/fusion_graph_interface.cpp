@@ -33,10 +33,10 @@ hifuse::FusionGraphInterface::FusionGraphInterface(const std::shared_ptr<colmap:
   }
 }
 
-void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t img_id,
-                                                         const bool const_t,
-                                                         const bool const_q,
-                                                         const bool const_3d_pts) {
+void hifuse::FusionGraphInterface::AddReprojectionFactors(const colmap::image_t img_id,
+                                                          const bool const_t,
+                                                          const bool const_q,
+                                                          const bool const_3d_pts) {
   // -------------------- Recover pointers to image pose from colmap model
   // recover image pose from colmap model
   colmap::Image& img = this->reconstruction->Image(img_id);
@@ -47,13 +47,12 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
   fuhe::col_utils::GetPointersToPose(img, q_cw, t_cw);
   double* camera_params = cam.params.data();
 
-  std::vector<colmap::Point3D> points3D_curr_img;  // store 3D points for rerun
-  std::vector<ceres::ResidualBlockId>
-      reproj_residual_ids_curr_img;  // ceres residual block ids of all reprojection factors for current image
+  // ceres residual block ids of all reprojection factors for current image
+  std::vector<ceres::ResidualBlockId> reproj_residual_ids_curr_img;
 
   size_t num_observations = 0;
   std::unordered_map<colmap::point3D_t, size_t> point3D_num_observations;
-  const int min_track_len = 2;  // HACK: make parametrizable
+  const int min_track_len = 2;  // NOTE: default colmap behavior
 
   VLOG(3) << "Starting to iterate over all 2d points of target image!";
   // -------------------- Iterate over all 2d points associated to image
@@ -72,7 +71,6 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
     num_observations += 1;
     point3D_num_observations[point2D.point3D_id] += 1;
-    points3D_curr_img.push_back(point3D);  // append for Rerun visualization
 
     // create ceres reprojection factor weighted by its covariance
     ceres::CostFunction* cost_function = nullptr;
@@ -81,11 +79,16 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
       const std::shared_ptr<fuhe::ResidualStalker<2>> stalker = fuhe::ResidualStalker<2>::Create();
 
       // attach stalker to BOTH cost function AND datacontainer to access its tracked values later on during optimization
-      this->residuals_tracker->RegisterStalkedReprojectionResidual(stalker, std::to_string(img_id), std::to_string(point2D.point3D_id));
+      this->residuals_tracker->RegisterStalkedReprojectionResidual(
+          stalker, std::to_string(img_id), std::to_string(point2D.point3D_id));
 
-      // create reproj factor for 3d point (weighted by its covariance) with an attached stalker for residual logging during iterations
+      // create reproj factor for 3d point (weighted by its covariance) with an attached stalker for residual logging during
+      // iterations
       cost_function = fuhe::cost::CreateWeightedCamCostExposedResiduals<colmap::ReprojErrorCostFunctor>(
-          stalker, Eigen::Matrix<double, 2, 2>::Identity(), cam.model_id, point2D.xy);  // TODO: covariance for reprojection error
+          stalker,
+          Eigen::Matrix<double, 2, 2>::Identity(),
+          cam.model_id,
+          point2D.xy);  // TODO: covariance for reprojection error
 
     } else {
       // create reprojection error cost function for 3d point with native colmap creation method and without covariance weighting
@@ -94,7 +97,7 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
 
     // add cost function to ceres problem
     reproj_residual_ids_curr_img.push_back(
-        ceres_graph.AddResidualBlock(cost_function, new ceres::HuberLoss(1.5), q_cw, t_cw, point3D.xyz.data(), camera_params));
+        ceres_graph.AddResidualBlock(cost_function, new ceres::HuberLoss(1.5), q_cw, t_cw, point3D.xyz.data(), camera_params)); //FIXME loss function from ColmapBAOpts
 
     // log reisudal error of current reprojecion factor
     if (VLOG_IS_ON(5)) {
@@ -123,11 +126,6 @@ void hifuse::FusionGraphInterface::AddReprojectionFactor(const colmap::image_t i
     VLOG(2) << "Set cam orientation of id " << img_id << " to constant!";
   }
 
-  // log camera pose and 3d pts to rerun
-  if (this->is_log_to_rerun) {
-    fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, img);
-    fuhe::rrfuse::LogCamPoints3D(this->rr_rec, img, points3D_curr_img);
-  }
   this->reproj_residual_ids.push_back(reproj_residual_ids_curr_img);
 }
 
@@ -148,10 +146,6 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   // convert raltive eigen pose to colmap format
   const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
 
-  // if (this->is_log_to_rerun) {
-  //   fuhe::rrfuse::LogRelPoseFactor(this->rr_rec, T_ij_rigid, img_i, img_j);
-  // }
-
   // create ceres relative pose factor weighted by its covariance
   ceres::CostFunction* weighted_cost_function = nullptr;
   if (this->is_track_residuals) {
@@ -161,15 +155,18 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
     // attach stalker to BOTH cost function AND datacontainer to access its tracked values later on during optimization
     this->residuals_tracker->RegisterStalkedOdomResidual(stalker, std::to_string(img_id_j));
 
-    VLOG(3) << "Creating metric relative odom cost function with exposed residuals from img id: " << img_id_i << " to id: " << img_id_j;
-    // create ceres relative pose factor weighted by its covariance with an attached stalker for residual logging during iterations
-    weighted_cost_function =
-        fuhe::cost::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>::Create(stalker, cov_i_from_j, T_ij_rigid);
+    VLOG(3) << "Creating metric relative odom cost function with exposed residuals from img id: " << img_id_i
+            << " to id: " << img_id_j;
+    // create ceres relative pose factor weighted by its covariance with an attached stalker for residual logging during
+    // iterations
+    weighted_cost_function = fuhe::cost::WeightedCostExposedResiduals<colmap::RelativePosePriorCostFunctor>::Create(
+        stalker, cov_i_from_j, T_ij_rigid);
 
   } else {
     VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
     // create ceres relative pose factor weighted by its covariance with vanilla colmap functor
-    weighted_cost_function = colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
+    weighted_cost_function =
+        colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
   }
 
   if (VLOG_IS_ON(5)) {
@@ -191,66 +188,9 @@ void hifuse::FusionGraphInterface::AddBetweenFactor(const colmap::image_t img_id
   }
 }
 
-void hifuse::FusionGraphInterface::UpdateRegisterdFactorsRerun(const fuhe::types::MapOfPosesSec& metric_poses) {
-  auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(this->reconstruction->Images());
-
-  int i = 0;
-  colmap::image_t curr_img_id, prev_img_id = -1;
-  double curr_img_stamp = -1, prev_stamp = -1;
-  const int min_track_length = 2;
-
-  // iterate over all images in model
-  for (const auto pair : imgs_by_stamp) {
-    curr_img_stamp = pair.first;
-    curr_img_id = pair.second;
-    // -------------------- First iteration init condition
-    if (i == 0) {
-      // start only if synchronized meas from both sources are availalbe
-      if (metric_poses.find(curr_img_stamp) != metric_poses.end()) {
-        fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
-        fuhe::rrfuse::LogCamPoints3D(this->rr_rec,
-                                     this->reconstruction->Image(curr_img_id),
-                                     fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
-
-        // preparing next iteration
-        prev_stamp = curr_img_stamp;
-        i++;  // break init loop
-      }
-      continue;
-    }
-
-    VLOG(2) << "Searching matching tumpose:" << curr_img_id;
-
-    // check if external odom is available for current image
-    if (metric_poses.find(curr_img_stamp) == metric_poses.end()) {
-      i++;
-      continue;
-    }
-
-    fuhe::rrfuse::LogCamPose(this->rr_rec, this->rr_pinhole, this->reconstruction->Image(curr_img_id));
-    fuhe::rrfuse::LogCamPoints3D(this->rr_rec,
-                                 this->reconstruction->Image(curr_img_id),
-                                 fuhe::col_utils::GetPoints3DForImage(curr_img_id, min_track_length, this->reconstruction));
-
-    // -------------------- Fetch relative pose
-    // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
-    const Eigen::Isometry3d T_i_from_j = metric_poses.at(prev_stamp).inverse() * metric_poses.at(curr_img_stamp);
-
-    // -------------------- Update rel pose factor in rerun
-    colmap::image_t prev_img_id = imgs_by_stamp.at(prev_stamp);
-    fuhe::rrfuse::LogOdometryEdge(this->rr_rec,
-                                  colmap::Rigid3d(Eigen::Quaterniond(T_i_from_j.rotation()), T_i_from_j.translation()),
-                                  this->reconstruction->Image(prev_img_id),
-                                  this->reconstruction->Image(curr_img_id),
-                                  true);
-    // preparing next iteration
-    prev_stamp = curr_img_stamp;
-    i++;
-  }
-}
-
 void hifuse::FusionGraphInterface::UpdateWholeReconstroctionRerun() {
-  fuhe::rrfuse::LogReconstruction(this->rr_rec, this->rr_pinhole, this->reconstruction->Images(), this->reconstruction->Points3D());
+  fuhe::rrfuse::LogReconstruction(
+      this->rr_rec, this->rr_pinhole, this->reconstruction->Images(), this->reconstruction->Points3D());
 }
 
 void hifuse::FusionGraphInterface::InitRerunViewer() {
@@ -279,9 +219,9 @@ void hifuse::FusionGraphInterface::InitRerunViewer() {
   VLOG(2) << "Resolution of first camera in model [pxl]: " << width << " and " << height;
 
   // create rerun pinhole object needed to visualize camera poses in rerun
-  this->rr_pinhole =
-      std::make_shared<rerun::Pinhole>(rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
-                                           .with_image_plane_distance(fuhe::rr_utils::IMG_PLANE_DIST));
+  this->rr_pinhole = std::make_shared<rerun::Pinhole>(
+      rerun::Pinhole::from_focal_length_and_resolution({focal_length_x, focal_length_y}, {width, height})
+          .with_image_plane_distance(fuhe::rr_utils::IMG_PLANE_DIST));
   // create different looking pinhole object for pose predicted from wheel odom
   this->rr_pinhole_pred = std::make_shared<rerun::Pinhole>(
       rerun::Pinhole::from_focal_length_and_resolution({focal_length_y / 2, focal_length_x / 2}, {height / 2, width / 2}));
