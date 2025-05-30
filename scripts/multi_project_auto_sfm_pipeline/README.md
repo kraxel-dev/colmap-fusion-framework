@@ -1,0 +1,1 @@
+Auto reconstruction pipeline to run colmap reconstruction on multiple projects at once (with shared param set)
