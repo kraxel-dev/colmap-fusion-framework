@@ -33,10 +33,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # define folder names of reduced img sets
-    n2 = "sparse"  # keep every 2nd img
-    n5 = "sparse5x"  # keep every 5th img
-    keep_every_nth = [2, 3, 5]
+    # duplicated folders will be created with every n-th image kept (e.g. sparse3x, sparse5x, sparse7x)
+    keep_every_nth = [3, 5, 7]
 
     # root dir path where the folders with reduced imgs will be created
     project_dir = Path(args.input).resolve()
@@ -58,13 +56,22 @@ def main():
     for n in keep_every_nth:
 
         # destination folder for reduced imgs in root dir (next to original /images dir)
-        reduced_imgs_path = project_dir / f"sparse{n}x" / "images"
+        reduced_proj_dir = project_dir / f"sparse{n}x"
+        reduced_imgs_path = reduced_proj_dir / "images"
         print(f"Copying images to new path: {reduced_imgs_path}")
 
         # copy original images to new dst
         shutil.copytree(og_imgs_path, reduced_imgs_path, dirs_exist_ok=is_overwrite)
+        # check wheter img mask exists and copy it as well
+        if (project_dir/"mask").is_dir():
+            print(f"Found image mask in: {project_dir}. Copying it to reduced images folder.")
+            shutil.copytree(
+                project_dir / "mask",
+                reduced_proj_dir / "mask",
+                dirs_exist_ok=is_overwrite,
+            )
 
-        # grab img paths
+        # grab all imgs existing in new images folder
         image_files = sorted(
             f
             for f in reduced_imgs_path.rglob("*")

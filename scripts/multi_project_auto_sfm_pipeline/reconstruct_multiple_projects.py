@@ -58,6 +58,7 @@ class ColmapCmdArgs:
         self.mapper_ba_refine_principal_point = CmdArg("--Mapper.ba_refine_principal_point", 0)
         self.mapper_ba_refine_extra_params = CmdArg("--Mapper.ba_refine_extra_params", 0)
         self.mapper_ba_use_gpu = CmdArg("--Mapper.ba_use_gpu", 0)
+        self.mapper_multiple_models = CmdArg("--Mapper.multiple_models", 1)
 
 
 def extract_features(cmd_args: ColmapCmdArgs):
@@ -150,6 +151,7 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs):
         cmd_args.mapper_ba_refine_principal_point.flag, str(cmd_args.mapper_ba_refine_principal_point.value),
         cmd_args.mapper_ba_refine_extra_params.flag, str(cmd_args.mapper_ba_refine_extra_params.value),
         cmd_args.mapper_ba_use_gpu.flag, str(cmd_args.mapper_ba_use_gpu.value),
+        cmd_args.mapper_multiple_models.flag, str(cmd_args.mapper_multiple_models.value),
     ]
     # fmt: on
     run_cmd(command, mapper)

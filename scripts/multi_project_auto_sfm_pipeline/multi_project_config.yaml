@@ -4,6 +4,14 @@ reconstruction_quality: low # quality settings {low, medium, high, extreme}
 
 # workspace folder a reconstruction should be run on. each workspace should contain a subfolder "images" with the images to be reconstructed.
 workspaces:
+  ramp2x7:
+    ws_path: "~/transfer/eval/spring-cloudy/ramp2/sparse7x"
+  ramp2x5:
+    ws_path: "~/transfer/eval/spring-cloudy/ramp2/sparse5x"
+  ramp2x3:
+    ws_path: "~/transfer/eval/spring-cloudy/ramp2/sparse3x"
+  x5:
+    ws_path: "~/transfer/eval/spring-cloudy/tiny-floor1/sparse5x"
   x5:
     ws_path: "~/transfer/eval/spring-cloudy/tiny-floor1/sparse5x"
   x3:
