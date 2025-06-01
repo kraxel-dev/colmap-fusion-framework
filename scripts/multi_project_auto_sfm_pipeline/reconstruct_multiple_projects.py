@@ -75,44 +75,8 @@ class ColmapCmdArgs:
         self.mapper_multiple_models = CmdArg("--Mapper.multiple_models", 1)
 
 
-def extract_features(cmd_args: ColmapCmdArgs):
-    # --- check if images subfolder exists in project dir
-    if not cmd_args.image_path.value.is_dir():
-        print(
-            f"Error: Subfolder '{cmd_args.image_path.value}' not found in '{cmd_args.workspace_path.value}'. Make sure you have placed the /images folder into your project dir accordingly."
-        )
-        return
-
-    print(f"Images found for : {cmd_args.workspace_path.value}")
-
-    # generic path to colmap exe given the root dir of this repo
-    col_exe = str(get_generic_colmap_exe_path())
-
-    # --- Build the feature extraction command
-    extractor = "feature_extractor"
-    # fmt: off
-    command = [
-        col_exe, extractor, 
-        cmd_args.database_path.flag,  str(cmd_args.database_path.value), 
-        cmd_args.image_path.flag, str(cmd_args.image_path.value),
-        cmd_args.single_camera.flag, str(cmd_args.single_camera.value),
-        cmd_args.camera_model.flag, str(cmd_args.camera_model.value),
-        cmd_args.camera_params.flag, str(cmd_args.camera_params.value),
-    ]
-    # fmt: on
-
-    # --- Check for mask path and add it to the command if it exists
-    if cmd_args.camera_mask_path.value.is_file():
-        print(f"Camera mask img detected: {cmd_args.camera_mask_path.value}")
-        command.append(cmd_args.camera_mask_path.flag)
-        command.append(str(cmd_args.camera_mask_path.value))
-
-    # --- Run the feature extractor command
-    run_cmd(command, extractor)
-
-
 def extract_features(cmd_args: ColmapCmdArgs, ini_config: dict):
-    """_summary_
+    """Execute colmap cli command to extract features from the images in the given workspace and database.
 
     Args:
         cmd_args (ColmapCmdArgs): cmd args containing image and database paths
@@ -158,30 +122,8 @@ def extract_features(cmd_args: ColmapCmdArgs, ini_config: dict):
     run_cmd(command, extractor)
 
 
-def sequentially_match_imgs(cmd_args: ColmapCmdArgs):
-    if not cmd_args.database_path.value.is_file():
-        print(
-            f"Error: Database '{cmd_args.database_path.value}' does not exist. Skipping sequential matching!"
-        )
-        return
-
-    print(f"Database found for : {cmd_args.workspace_path.value}")
-    col_exe = str(get_generic_colmap_exe_path())
-    matcher = "sequential_matcher"
-
-    # fmt: off
-    command = [
-        col_exe, matcher, 
-        cmd_args.matcher_use_gpu.flag,  str(cmd_args.matcher_use_gpu.value), 
-        cmd_args.matcher_quadratic_overlap.flag, str(cmd_args.matcher_quadratic_overlap.value),
-        cmd_args.database_path.flag, str(cmd_args.database_path.value),
-    ]
-    # fmt: on
-    run_cmd(command, matcher)
-
-
 def sequentially_match_imgs(cmd_args: ColmapCmdArgs, ini_config: dict):
-    """_summary_
+    """Execute colmap cli command to sequentially match the images in the given workspace and database.
 
     Args:
         cmd_args (ColmapCmdArgs): cmd args containing image and database paths
@@ -216,52 +158,9 @@ def sequentially_match_imgs(cmd_args: ColmapCmdArgs, ini_config: dict):
     run_cmd(command, matcher)
 
 
-def reoncstruct_model(cmd_args: ColmapCmdArgs):
-    if not cmd_args.database_path.value.is_file():
-        print(
-            f"Error: Database '{cmd_args.database_path.value}' does not exist. Skipping model reconstruction!"
-        )
-        return
-    elif not cmd_args.image_path.value.is_dir():
-        print(
-            f"Error: Images folder '{cmd_args.image_path.value}' does not exist. Skipping model reconstruction!"
-        )
-        return
-
-    # --- cancel reoncstr if model already exists
-    if (cmd_args.output_path.value / "0").is_dir() and (
-        cmd_args.output_path.value / "0" / "images.bin"
-    ).is_file():
-        # if images.bin exists and is not empty, model already exists
-        if (
-            os.path.getsize(cmd_args.output_path.value / "0" / "images.bin") > 1000
-        ):  # bytes
-            print(
-                f"Model already exists at {cmd_args.output_path.value}. Skipping reconstruction."
-            )
-            return
-
-    col_exe = str(get_generic_colmap_exe_path())
-    mapper = "mapper"
-
-    # fmt: off
-    command = [
-        col_exe, mapper,
-        cmd_args.database_path.flag, str(cmd_args.database_path.value),
-        cmd_args.image_path.flag, str(cmd_args.image_path.value),
-        cmd_args.output_path.flag, str(cmd_args.output_path.value),
-        cmd_args.mapper_ba_refine_focal_length.flag, str(cmd_args.mapper_ba_refine_focal_length.value),
-        cmd_args.mapper_ba_refine_principal_point.flag, str(cmd_args.mapper_ba_refine_principal_point.value),
-        cmd_args.mapper_ba_refine_extra_params.flag, str(cmd_args.mapper_ba_refine_extra_params.value),
-        cmd_args.mapper_ba_use_gpu.flag, str(cmd_args.mapper_ba_use_gpu.value),
-        cmd_args.mapper_multiple_models.flag, str(cmd_args.mapper_multiple_models.value),
-    ]
-    # fmt: on
-    run_cmd(command, mapper)
-
 
 def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
-    """_summary_
+    """Execute cli command to reconstruct the model using COLMAP's mapper module.
 
     Args:
         cmd_args (ColmapCmdArgs): cmd args containing image and database paths
@@ -292,6 +191,7 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
             )
             return
 
+    # col_exe = str(get_generic_colmap_exe_path())
     col_exe = str(get_generic_colmap_exe_path())
     mapper = "mapper"
 
@@ -299,6 +199,7 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
     # fmt: off
     command = [
         col_exe, mapper,
+        "--log_level", "0",
         cmd_args.database_path.flag, str(cmd_args.database_path.value),
         cmd_args.image_path.flag, str(cmd_args.image_path.value),
         cmd_args.output_path.flag, str(cmd_args.output_path.value),
