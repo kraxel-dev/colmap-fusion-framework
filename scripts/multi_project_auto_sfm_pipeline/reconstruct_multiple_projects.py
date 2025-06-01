@@ -1,11 +1,13 @@
-import os, subprocess, yaml, subprocess, sys
+import os, subprocess, yaml, subprocess, sys, configparser
 from pathlib import Path
 
 
 def get_git_root() -> Path:
     """Get the root directory of the Git repository this python script is lying in."""
     try:
-        root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
+        root = subprocess.check_output(
+            ["git", "rev-parse", "--show-toplevel"], text=True
+        ).strip()
         return Path(root)
     except subprocess.CalledProcessError:
         raise RuntimeError("This script must be run inside a Git repository.")
@@ -36,7 +38,9 @@ class ColmapCmdArgs:
         )  # model output path is same as workspace/project path
         # subfolder to project ws path
         self.image_path = CmdArg("--image_path", ws_path / "images")
-        self.database_path = CmdArg("--database_path", ws_path / f"db_{quality}_q.db")
+        self.database_path = CmdArg(
+            "--database_path", ws_path / f"db_{quality}_q.db"
+        )
         self.quality = CmdArg("--quality", quality)
 
         # --- camera and feature extratcion params
@@ -47,16 +51,26 @@ class ColmapCmdArgs:
             "--ImageReader.camera_params",
             "501.4757919305817, 501.4757919305817, 421.7953735163109, 167.65799492501083",
         )
-        self.camera_mask_path = CmdArg("--ImageReader.camera_mask_path", ws_path / "mask/img_mask.png")
+        self.camera_mask_path = CmdArg(
+            "--ImageReader.camera_mask_path", ws_path / "mask/img_mask.png"
+        )
 
         # --- sequential matcher params
         self.matcher_use_gpu = CmdArg("--SiftMatching.use_gpu", 0)
-        self.matcher_quadratic_overlap = CmdArg("--SequentialMatching.quadratic_overlap", 1)
+        self.matcher_quadratic_overlap = CmdArg(
+            "--SequentialMatching.quadratic_overlap", 1
+        )
 
         # --- Mapper params
-        self.mapper_ba_refine_focal_length = CmdArg("--Mapper.ba_refine_focal_length", 0)
-        self.mapper_ba_refine_principal_point = CmdArg("--Mapper.ba_refine_principal_point", 0)
-        self.mapper_ba_refine_extra_params = CmdArg("--Mapper.ba_refine_extra_params", 0)
+        self.mapper_ba_refine_focal_length = CmdArg(
+            "--Mapper.ba_refine_focal_length", 0
+        )
+        self.mapper_ba_refine_principal_point = CmdArg(
+            "--Mapper.ba_refine_principal_point", 0
+        )
+        self.mapper_ba_refine_extra_params = CmdArg(
+            "--Mapper.ba_refine_extra_params", 0
+        )
         self.mapper_ba_use_gpu = CmdArg("--Mapper.ba_use_gpu", 0)
         self.mapper_multiple_models = CmdArg("--Mapper.multiple_models", 1)
 
@@ -68,7 +82,7 @@ def extract_features(cmd_args: ColmapCmdArgs):
             f"Error: Subfolder '{cmd_args.image_path.value}' not found in '{cmd_args.workspace_path.value}'. Make sure you have placed the /images folder into your project dir accordingly."
         )
         return
-    
+
     print(f"Images found for : {cmd_args.workspace_path.value}")
 
     # generic path to colmap exe given the root dir of this repo
@@ -86,6 +100,53 @@ def extract_features(cmd_args: ColmapCmdArgs):
         cmd_args.camera_params.flag, str(cmd_args.camera_params.value),
     ]
     # fmt: on
+
+    # --- Check for mask path and add it to the command if it exists
+    if cmd_args.camera_mask_path.value.is_file():
+        print(f"Camera mask img detected: {cmd_args.camera_mask_path.value}")
+        command.append(cmd_args.camera_mask_path.flag)
+        command.append(str(cmd_args.camera_mask_path.value))
+
+    # --- Run the feature extractor command
+    run_cmd(command, extractor)
+
+
+def extract_features(cmd_args: ColmapCmdArgs, ini_config: dict):
+    """_summary_
+
+    Args:
+        cmd_args (ColmapCmdArgs): cmd args containing image and database paths
+        ini_config (dict): colmap params from project.ini file containing all other reconstructino related settings
+    """
+    # --- check if images subfolder exists in project dir
+    if not cmd_args.image_path.value.is_dir():
+        print(
+            f"Error: Subfolder '{cmd_args.image_path.value}' not found in '{cmd_args.workspace_path.value}'. Make sure you have placed the /images folder into your project dir accordingly."
+        )
+        return
+
+    print(f"Images found for : {cmd_args.workspace_path.value}")
+
+    # generic path to colmap exe given the root dir of this repo
+    col_exe = str(get_generic_colmap_exe_path())
+
+    # --- Build the feature extraction cli command
+    extractor = "feature_extractor"
+
+    # define input and output paths from our own yaml
+    # fmt: off
+    command = [
+        col_exe, extractor, 
+        cmd_args.database_path.flag,  str(cmd_args.database_path.value), 
+        cmd_args.image_path.flag, str(cmd_args.image_path.value),
+    ]
+    # fmt: on
+
+    # pipe rest of the parameters from project.ini file into the exe command
+    image_reader = "ImageReader"
+    sift_extratcion = "SiftExtraction"
+    command = extend_cmd_args_with_ini(command, ini_config, image_reader)
+    command = extend_cmd_args_with_ini(command, ini_config, sift_extratcion)
 
     # --- Check for mask path and add it to the command if it exists
     if cmd_args.camera_mask_path.value.is_file():
@@ -119,6 +180,42 @@ def sequentially_match_imgs(cmd_args: ColmapCmdArgs):
     run_cmd(command, matcher)
 
 
+def sequentially_match_imgs(cmd_args: ColmapCmdArgs, ini_config: dict):
+    """_summary_
+
+    Args:
+        cmd_args (ColmapCmdArgs): cmd args containing image and database paths
+        ini_config (dict): colmap params from project.ini file containing all other reconstructino related settings
+
+    """
+    if not cmd_args.database_path.value.is_file():
+        print(
+            f"Error: Database '{cmd_args.database_path.value}' does not exist. Skipping sequential matching!"
+        )
+        return
+
+    print(f"Database found for : {cmd_args.workspace_path.value}")
+    col_exe = str(get_generic_colmap_exe_path())
+    matcher = "sequential_matcher"
+
+    # start build cmd arg for runnug matcher and define database paths from our own yaml
+    # fmt: off
+    command = [
+        col_exe, matcher, 
+        cmd_args.database_path.flag, str(cmd_args.database_path.value),
+    ]
+    # fmt: on
+
+    # pipe rest of the parameters from project.ini file into the exe command
+    TwoViewGeometry = "TwoViewGeometry"
+    SiftMatching = "SiftMatching"
+    SequentialMatching = "SequentialMatching"
+    command = extend_cmd_args_with_ini(command, ini_config, TwoViewGeometry)
+    command = extend_cmd_args_with_ini(command, ini_config, SiftMatching)
+    command = extend_cmd_args_with_ini(command, ini_config, SequentialMatching)
+    run_cmd(command, matcher)
+
+
 def reoncstruct_model(cmd_args: ColmapCmdArgs):
     if not cmd_args.database_path.value.is_file():
         print(
@@ -130,12 +227,18 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs):
             f"Error: Images folder '{cmd_args.image_path.value}' does not exist. Skipping model reconstruction!"
         )
         return
-    
+
     # --- cancel reoncstr if model already exists
-    if (cmd_args.output_path.value / "0").is_dir() and (cmd_args.output_path.value / "0" / "images.bin").is_file(): 
+    if (cmd_args.output_path.value / "0").is_dir() and (
+        cmd_args.output_path.value / "0" / "images.bin"
+    ).is_file():
         # if images.bin exists and is not empty, model already exists
-        if os.path.getsize(cmd_args.output_path.value / "0" / "images.bin") > 1000: # bytes
-            print(f"Model already exists at {cmd_args.output_path.value}. Skipping reconstruction.")
+        if (
+            os.path.getsize(cmd_args.output_path.value / "0" / "images.bin") > 1000
+        ):  # bytes
+            print(
+                f"Model already exists at {cmd_args.output_path.value}. Skipping reconstruction."
+            )
             return
 
     col_exe = str(get_generic_colmap_exe_path())
@@ -155,6 +258,84 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs):
     ]
     # fmt: on
     run_cmd(command, mapper)
+
+
+def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
+    """_summary_
+
+    Args:
+        cmd_args (ColmapCmdArgs): cmd args containing image and database paths
+        ini_config (dict): colmap params from project.ini file containing all other reconstructino related settings
+
+    """
+    if not cmd_args.database_path.value.is_file():
+        print(
+            f"Error: Database '{cmd_args.database_path.value}' does not exist. Skipping model reconstruction!"
+        )
+        return
+    elif not cmd_args.image_path.value.is_dir():
+        print(
+            f"Error: Images folder '{cmd_args.image_path.value}' does not exist. Skipping model reconstruction!"
+        )
+        return
+
+    # --- cancel reoncstr if model already exists
+    if (cmd_args.output_path.value / "0").is_dir() and (
+        cmd_args.output_path.value / "0" / "images.bin"
+    ).is_file():
+        # if images.bin exists and is not empty, model already exists
+        if (
+            os.path.getsize(cmd_args.output_path.value / "0" / "images.bin") > 1000
+        ):  # bytes
+            print(
+                f"Model already exists at {cmd_args.output_path.value}. Skipping reconstruction."
+            )
+            return
+
+    col_exe = str(get_generic_colmap_exe_path())
+    mapper = "mapper"
+
+    # build cli command for mapper and provide input, database and output paths from our own yaml
+    # fmt: off
+    command = [
+        col_exe, mapper,
+        cmd_args.database_path.flag, str(cmd_args.database_path.value),
+        cmd_args.image_path.flag, str(cmd_args.image_path.value),
+        cmd_args.output_path.flag, str(cmd_args.output_path.value),
+    ]
+    # fmt: on
+
+    # pipe rest of the parameters from project.ini file into the exe command
+    Mapper = "Mapper"
+    command = extend_cmd_args_with_ini(command, ini_config, Mapper)
+    run_cmd(command, mapper)
+
+
+def is_blacklisted(cmd_flag: str) -> bool:
+    """Check if a command line flag is blacklisted based on manually selected criteria."""
+    # "--ImageReader.camera_mask_path" should not be parsed from project.ini file as it is generically handled for each ws through this python script
+    blacklist = {
+        "--ImageReader.camera_mask_path",
+    }
+    return cmd_flag in blacklist
+
+
+def extend_cmd_args_with_ini(command: list, ini_config: dict, col_module: str):
+    """Extend the colmap command line args for running a specific module (e.g. ./colmap feature_extractor --Flag FlagValue) with parameters from the project.ini file."""
+    # iterate over all flags for colmap ini category (e.g. ImageReader, SequentialMatching, Mapper)
+    for key, value in ini_config[col_module].items():
+        # extent the cli command with the flag and value
+        flag = f"--{col_module}.{key}"
+
+        # check handcrafted list if cmd flag from project.ini should be skipped
+        if is_blacklisted(flag):
+            print(f"Skipping blacklisted flag: {flag}")
+            continue
+
+        command.append(flag)
+        command.append(value)
+
+    return command
 
 
 def run_cmd(command, type):
@@ -180,12 +361,30 @@ def run_cmd(command, type):
 if __name__ == "__main__":
 
     # --- load yaml configuration file
+    # Yaml mainly contains the paths to the workspaces so that the actual settings from parms.ini can be applied generically to all workspaces
     cfg_path = get_curr_pyscript_dir() / "multi_project_config.yaml"
     print(f"Loading configuration from {cfg_path}")
     with open(str(cfg_path), "r") as file:
         cfg = yaml.safe_load(file)
 
     reconstruction_quality = cfg["reconstruction_quality"]
+    project_ini_file = (
+        (get_curr_pyscript_dir() / cfg["project_ini"]).expanduser().resolve()
+    )
+
+    # --- parse project.ini param file
+    # Contains actual settings that will be applied to each reconstruction equally
+    print(f"Loading project parameters from {project_ini_file}")
+    if not project_ini_file.is_file():
+        print(f"Project parameters file {project_ini_file} does not exist. Exiting.")
+        sys.exit(1)
+
+    ini_config = configparser.ConfigParser()
+    ini_config.read(project_ini_file)
+    # convert ini config to dict for easier access
+    ini_dict = {
+        section: dict(ini_config.items(section)) for section in ini_config.sections()
+    }  # dict containing colmap params from project.ini
 
     # --- iterate over all workspaces for reconstruction
     for ws in cfg["workspaces"]:
@@ -194,17 +393,22 @@ if __name__ == "__main__":
 
         # --- check if workspace path exists
         if not ws_path.is_dir():
-            print(f"Workspace path {ws_path} does not exist. Skipping reconstruction.")
+            print(
+                f"Workspace path {ws_path} does not exist. Skipping reconstruction."
+            )
             continue
 
         # --- prepare command line arguments for colmap reconstruction
         col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
 
         # --- perform feature extraction on current workspace
-        extract_features(col_args)
+        extract_features(col_args, ini_dict)
+        # extract_features(col_args)
 
         # --- sequentially match images on curr ws
-        sequentially_match_imgs(col_args)
+        sequentially_match_imgs(col_args, ini_dict)
+        # sequentially_match_imgs(col_args)
 
         # --- reconstruct model for current workspace
-        reoncstruct_model(col_args)
+        reoncstruct_model(col_args, ini_dict)
+        # reoncstruct_model(col_args)

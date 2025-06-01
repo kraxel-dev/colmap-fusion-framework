@@ -2,6 +2,9 @@
 
 reconstruction_quality: low # quality settings {low, medium, high, extreme}
 
+# path to the project ini file containing the colmap settings. Pleas strip the hardocded input and db paths. Will be applied to all workspaces. 
+project_ini: ./cfg/project_tum4seasons.ini
+
 # workspace folder a reconstruction should be run on. each workspace should contain a subfolder "images" with the images to be reconstructed.
 workspaces:
   ramp2x7:
@@ -10,8 +13,6 @@ workspaces:
     ws_path: "~/transfer/eval/spring-cloudy/ramp2/sparse5x"
   ramp2x3:
     ws_path: "~/transfer/eval/spring-cloudy/ramp2/sparse3x"
-  x5:
-    ws_path: "~/transfer/eval/spring-cloudy/tiny-floor1/sparse5x"
   x5:
     ws_path: "~/transfer/eval/spring-cloudy/tiny-floor1/sparse5x"
   x3:
