@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   std::string input_path;
 
   colmap::OptionManager col_options;                // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunFusionVisOptions rr_options;   // rerun visualization options
+  fuhe::rrfuse::RerunVisualizationOptions rr_options;   // rerun visualization options
   fuhe::align::AlignmentOptions alignment_options;  // colmap reconstruction coordinate alingment options
 
   // classic colmap options

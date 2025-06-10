@@ -267,7 +267,7 @@ void tcf::IncrementalMapperRerun::IterativeGlobalRefinement(int max_num_refineme
 tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
                                                       FusionGraphBundleAdjustmentOptions& fusion_options,
                                                       const std::string& tum_file,
-                                                      fuhe::rrfuse::RerunFusionVisOptions& rr_options)
+                                                      fuhe::rrfuse::RerunVisualizationOptions& rr_options)
     : IncrementalMapper(database_cache), fusion_options_{fusion_options}, tum_file_{tum_file}, rr_options_{rr_options} {
   // whether to allow fusion or not
   is_fusion_mapping_ = fusion_options_.is_mapping_with_fusion;

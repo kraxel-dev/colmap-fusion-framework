@@ -2,20 +2,22 @@
  * @file metric_odom_bundle_adjust.cpp
  * @author kraxel
  * @brief Showcase of high-level-fusion between a fully constructed colmap model and relative pose constraints from an external
- odometry source.
- Input:
- - Colmap model
- - external tum file of odometry with asbolute poses.
- Iterates through registered colmap images in time ascending order and adds reprojection factors as well as relative pose factors
- between images to a ceres optimization problem.
+ odometry source. Iterates through registered colmap images in time ascending order and adds reprojection factors as well as
+ relative pose factors between images to a ceres optimization problem.
 
- Entails ALL images of reconstruction, checking validity of src and destination img id of an odom edge is not
- * necessary.
+ Inputs:
+ 1. Colmap model, 2. external tum file of odometry with asbolute poses. Optimization prolem entails ALL images of reconstruction,
+ checking validity of src and destination img id of an odom edge is not necessary.
 
+ Options:
+ BundleAdjustment options can be passed as command line arguments exactly as in vanilla colmap exes. Use
+ ./metric_odom_bundle_adjust.cpp -h to see all available options. Options to refine extra params (cam intrinsics) are forcefully
+ ignored in this sample.
+
+ Visualization:
  Will log the optimization process to rerun for visualization purposes. Has wonky feature to log factor costs (by
- * category) during optimization to rerun.
-
- Options to refine extra params (cam intrinsics) currently ignored.
+ category) during optimization to rerun.
+ 
  * @version 0.1
  * @date 2025-01-27
  *
@@ -36,6 +38,7 @@
 #include <Eigen/Core>
 #include <ceres/problem.h>
 #include <colmap/controllers/option_manager.h>
+#include <colmap/estimators/coordinate_frame.h>
 #include <colmap/util/file.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -44,22 +47,34 @@ int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
   std::string input_path;
   std::string output_path;
-  fuhe::rrfuse::RerunFusionVisOptions rr_options;  // rerun visualization options
-  hifuse::HighLevelFusionOptions fusion_options;   // high level fusion option
+  // whether to crop model (from bogus points) before optimization (e.g. remove bogus points that mess up rerun viz)
+  bool pre_crop_points = true;
+  // whether to align model with PCA before optimization (e.g. for better visualization)
+  bool pca_align = true;
+  fuhe::rrfuse::RerunVisualizationOptions rr_options;  // rerun visualization options
+  hifuse::HighLevelFusionOptions fusion_options;       // high level fusion option
 
   colmap::OptionManager col_options;
 
   // arguments for performing high level fusion
   col_options.AddRequiredOption("input_path", &input_path);
   col_options.AddRequiredOption("output_path", &output_path);
-  col_options.AddRequiredOption("Fusion.tum", &fusion_options.tum_file);
+  // Fusion options
+  col_options.AddRequiredOption("Fusion.tum_file", &fusion_options.tum_file);
   col_options.AddDefaultOption("Fusion.cov", &fusion_options.cov);  // scalar covariance value for relative odometry meas (6x6)
   col_options.AddDefaultOption("Fusion.track_residuals", &fusion_options.track_residuals);
-  // rerun options
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);           // whether to log data to rerun viewer
-  col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);  // whether to save logged rerun data to rr file
+
+  // Colmap model preprocessing options
+  col_options.AddDefaultOption("Model.pre_crop_points", &pre_crop_points);
+  col_options.AddDefaultOption("Model.pca_align", &pca_align);
+
+  // Rerun visualization options
+  // whether to log data to rerun viewer
+  col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
+  // whether to save logged rerun data to rr file
+  col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
-  col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
 
   // add vanilla colmap bundle adjustment options that will be used as solver settings
   col_options.AddBundleAdjustmentOptions();
@@ -99,8 +114,23 @@ int main(int argc, char** argv) {
   // -------------------- Read COLMAP model
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   reconstruction->Read(input_path);
-  // FIXME: kick out again
-  fuhe::col_utils::CropFarAwayPoints(reconstruction);
+
+  // align model to groundplane via PCA if toggled (better rerun visualization)
+  if (pca_align) {
+    VLOG(1) << "Aligning model through PCA before optimization!";
+    colmap::Sim3d align;
+    colmap::AlignToPrincipalPlane(reconstruction.get(), &align);
+  } else {
+    VLOG(1) << "Skipping model PCA alignment before optimization!";
+  }
+
+  // crop model to remove bad points that mess up rerun visualization
+  if (pre_crop_points) {
+    VLOG(1) << "Cropping model pts before optimization!";
+    fuhe::col_utils::CropBBoxOutlierPoints(reconstruction);
+  } else {
+    VLOG(1) << "Skipping model pts cropping before optimization!";
+  }
 
   // obtain all images from model in time asceinding order
   const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();
@@ -115,7 +145,7 @@ int main(int argc, char** argv) {
   // -------------------- Create Ceres problem
   // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues
   ceres::Problem ceres_problem;
-  // keep track of imgs added to problem such that appropiate colmap solver options can be generated. besides that it does not
+  // keep track of imgs added to problem such that appropiate colmap solver options can be generated. Besides that it does not
   // influence the system in any way
   colmap::BundleAdjustmentConfig ba_config;
 
@@ -183,17 +213,12 @@ int main(int argc, char** argv) {
     Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * fusion_options.cov;
 
     // -------------------- Inlcude metric relative pose factor in BA
+    // colmap-id-i, colmap-id-j, measured pose of j expressed in i, covariance of relative pose
     fusion_interface.AddBetweenFactor(
         image_edge.OdomEdge()->PrevId(), image_edge.OdomEdge()->CurrId(), T_i_from_j, covarince_i_from_j);
 
     // preparing next iteration
     prev_stamp = curr_img_stamp;
-  }
-
-  // TODO: double check where to place this
-  // clear manually and incrementally registered 3D points that were logged per image
-  if (fusion_interface.GetRerunRec()) {
-    fuhe::rrfuse::ClearAllCamPoints3D(fusion_interface.GetRerunRec(), reconstruction->Images());
   }
 
   // -------------------- Configure Bundle Adjustment for CERES and COLMAP
@@ -203,7 +228,6 @@ int main(int argc, char** argv) {
   // create ceres solver options the same way that colmap would do (e.g. sparse vs dense depending on nr of resiudals)
   ceres::Solver::Options solver_options = col_options.bundle_adjustment->CreateSolverOptions(ba_config, ceres_problem);
   solver_options.logging_type = ceres::LoggingType::PER_MINIMIZER_ITERATION;
-  solver_options.linear_solver_type = ceres::SPARSE_SCHUR;
 
   // -------------------- rerun iteration callback during ceres optim
   // deploy own iteration callback that logs pts and poses to rerun during optimization
@@ -233,7 +257,6 @@ int main(int argc, char** argv) {
   // update colmap poses for every iteration such that rerun can log them during iteration callbacks
   solver_options.update_state_every_iteration = true;
 
-  // TODO: implement residual eval correctly
   // -------------------- Evaluate errors before optimization
   fuhe::ceres_eval_utils::CeresCostEvaluator cost_evaluator(
       ceres_problem, fusion_interface.GetReprojResidualIds(), fusion_interface.GetOdomResidualIds());
@@ -248,7 +271,6 @@ int main(int argc, char** argv) {
   ceres::Solver::Summary summary;
   ceres::Solve(solver_options, &ceres_problem, &summary);
 
-  // TODO: implement residual eval correctly
   // --------------------Metrics after optimization
   if (VLOG_IS_ON(3)) {
     VLOG(3) << "Calc absolute error in graph after optimization!";

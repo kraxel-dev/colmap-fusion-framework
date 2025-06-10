@@ -142,7 +142,7 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
                           FusionGraphBundleAdjustmentOptions& fusion_options,
                           const std::string& tum_file,
-                          fuhe::rrfuse::RerunFusionVisOptions& rr_options);
+                          fuhe::rrfuse::RerunVisualizationOptions& rr_options);
 
   /// Derived to call multiple rounds of derived local bundle adjustment with fusion capabilities.
   void IterativeLocalRefinement(int max_num_refinements,
@@ -193,7 +193,7 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   const std::string tum_file_ = "";                    // path to tum file with odometry data
 
   // rerun visualization options
-  const fuhe::rrfuse::RerunFusionVisOptions rr_options_;
+  const fuhe::rrfuse::RerunVisualizationOptions rr_options_;
   // custom RerunRecorder object if visualization is desired
   std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;
 

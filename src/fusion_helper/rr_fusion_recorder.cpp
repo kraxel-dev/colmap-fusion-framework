@@ -1,11 +1,10 @@
 #include "fusion_helper/rr_fusion_recorder.h"
-
 #include "fusion_helper/rr_fusion_logging.h"
 
 namespace fuhe {
 namespace rrfuse {
 
-RerunFusionRecorder::RerunFusionRecorder(const RerunFusionVisOptions& rr_opts, const colmap::Reconstruction& reconstruction)
+RerunFusionRecorder::RerunFusionRecorder(const RerunVisualizationOptions& rr_opts, const colmap::Reconstruction& reconstruction)
     : options(rr_opts) {
   // -------------------- Set rerun context
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
@@ -43,7 +42,7 @@ std::shared_ptr<rerun::Pinhole> RerunFusionRecorder::GetRerunPinhole() const { r
 
 /// increase time sequence of rerun logger by one
 void RerunFusionRecorder::UpdateRerunTimeStep() {
-  this->time_step++;
+  this->time_step += 1;
   rr_rec->set_time_sequence("step", this->time_step);
 }
 

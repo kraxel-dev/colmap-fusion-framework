@@ -4,7 +4,7 @@
  * @brief Drived versions of colmaps default BundleAdjuster classes to:
  - introduce rerun visualization into colmaps standard bundle adjustment optimization.
  - introduce colmap BundleAdjustment with fusion capabilities of other sensor modalities (e.g. odometry).
- The BA obejcts in this (and the original colmap) header are in charge of building and solving the actual ceres optimization
+ The BA obejcts in this (and the original colmap) header are in charge of building and solving the ceres optimization
  problem. Actual implementations are in the corresponding .cc file.
  * @source: (original colmap repo) src/colmap/estimators/bundle_adjustment.h
  * @version 0.1
@@ -87,7 +87,7 @@ struct FusionGraphBundleAdjustmentOptions {
 std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+    const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
     const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,

@@ -153,9 +153,11 @@ bool fuhe::col_utils::ImagesAndPointsInActiveBA(const colmap::BundleAdjustmentCo
   return true;
 }
 
-void fuhe::col_utils::CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction) {
+void fuhe::col_utils::CropBBoxOutlierPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction,
+                                            const float min_percentile,
+                                            const float max_percentile) {
   VLOG(2) << "Cropping out far away 3d points from colmap model!";
-  auto bbox = reconstruction->ComputeBoundingBox(0.01, 0.75);
+  auto bbox = reconstruction->ComputeBoundingBox(min_percentile, max_percentile);
 
   VLOG(3) << "Bounding Box Corenrs 1 are: " << bbox.first;
   VLOG(3) << "Bounding Box Corenrs 2 are: " << bbox.second;

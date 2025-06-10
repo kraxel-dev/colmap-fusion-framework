@@ -40,7 +40,8 @@ void rrfuse::LogCamPose(const std::shared_ptr<rerun::RecordingStream> rec,
   //              .with_relation(rerun::components::TransformRelation::ParentFromChild)
   //              .with_axis_length(rerun::components::AxisLength(rrfuse::AXIS_LENGTH)));
   // rec->log(cam_name + "/tf_label",
-  //          rerun::Points3D({{0.05f, -0.1f, 0.0f}}).with_labels(rerun::components::Text("cam" + std::to_string(img.ImageId()))));
+  //          rerun::Points3D({{0.05f, -0.1f, 0.0f}}).with_labels(rerun::components::Text("cam" +
+  //          std::to_string(img.ImageId()))));
 
   if (highlight) {
     // log bounding box around camera pose
@@ -71,7 +72,9 @@ void rrfuse::ClearAllCamPoints3D(const std::shared_ptr<rerun::RecordingStream> r
   }
 }
 
-void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec, const colmap::point3D_t& pt3d_id, const Eigen::Vector3d& xyz) {
+void rrfuse::LogPoint3D(const std::shared_ptr<rerun::RecordingStream> rec,
+                        const colmap::point3D_t& pt3d_id,
+                        const Eigen::Vector3d& xyz) {
   std::string pt3d_name = "world/point3d/" + std::to_string(pt3d_id);
   rerun::Position3D pos(xyz.x(), xyz.y(), xyz.z());
 
@@ -95,7 +98,8 @@ void rrfuse::LogPoints3D(const std::shared_ptr<rerun::RecordingStream> rec,
     const Eigen::Vector3f xyz = pt3D.xyz.cast<float>();
     if (ignore_far_away_points) {
       // ignore points that are outside the bounding box of the camera
-      if (std::abs(xyz.x()) > rr_utils::XY_BOUND || std::abs(xyz.y()) > rr_utils::XY_BOUND || std::abs(xyz.z()) > rr_utils::Z_BOUND) {
+      if (std::abs(xyz.x()) > rr_utils::XY_BOUND || std::abs(xyz.y()) > rr_utils::XY_BOUND ||
+          std::abs(xyz.z()) > rr_utils::Z_BOUND) {
         continue;
       }
     }
@@ -113,7 +117,8 @@ void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
                              const bool is_odom_a_relpose) {
   // rerun naming stuff
   std::string pred_cam_name = fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_a_relpose).first;
-  std::string edge_i_pred_j_name = fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_a_relpose).second;
+  std::string edge_i_pred_j_name =
+      fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_a_relpose).second;
 
   colmap::Rigid3d T_odom_w_j;  // absolute pose odom associated with node j with respect to world
 
@@ -161,7 +166,9 @@ void rrfuse::LogOdometryEdge(const std::shared_ptr<rerun::RecordingStream> rec,
 
   // log linestrips connecting the factors
   rec->log(edge_i_pred_j_name, rerun::LineStrips3D(line_strip));
-  //  rerun::LineStrips3D(line_strip).with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
+  // rec->log(edge_i_pred_j_name,
+  //          rerun::LineStrips3D(line_strip)
+  //              .with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
 }
 
 void rrfuse::LogTotalFactorCost(const std::shared_ptr<rerun::RecordingStream> rec,
@@ -201,7 +208,8 @@ void rrfuse::LogActivBundle(const std::shared_ptr<rerun::RecordingStream> rec,
   rrfuse::LogReconstruction(rec, rrpinhole, active_imgs, active_pts3D, highlight_cams);
 }
 
-void rrfuse::ClearActiveBundle(const std::shared_ptr<rerun::RecordingStream> rec, const std::unordered_set<colmap::camera_t>& cam_ids) {
+void rrfuse::ClearActiveBundle(const std::shared_ptr<rerun::RecordingStream> rec,
+                               const std::unordered_set<colmap::camera_t>& cam_ids) {
   // clear rerun 3d points
   rec->log(rr_utils::GetPoints3DName(/*is_subset=*/true), rerun::Points3D::clear_fields());
 
@@ -241,7 +249,8 @@ void rrfuse::LogOdometryEdges(const std::shared_ptr<rerun::RecordingStream> rec,
         colmap::Rigid3d(Eigen::Quaterniond(odom_edge->T_i_from_j().rotation()), odom_edge->T_i_from_j().translation());
     VLOG(5) << "Rerun logging relpose factor with rigid: " << T_ij_rigid;
 
-    rrfuse::LogOdometryEdge(rec, T_ij_rigid, images.at(odom_edge->PrevId()), images.at(odom_edge->CurrId()), log_odom_as_predicted_pose);
+    rrfuse::LogOdometryEdge(
+        rec, T_ij_rigid, images.at(odom_edge->PrevId()), images.at(odom_edge->CurrId()), log_odom_as_predicted_pose);
   }
 }
 

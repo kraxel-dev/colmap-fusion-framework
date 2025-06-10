@@ -82,8 +82,11 @@ bool ImagesAndPointsInActiveBA(const colmap::BundleAdjustmentConfig& ba_config,
                                std::unordered_map<colmap::image_t, colmap::Image>& active_images,
                                std::unordered_map<colmap::point3D_t, colmap::Point3D>& active_points3D);
 
-/// crop out far away 3d points from colmap model by computing bounding box of all points omitting the last percentile
-void CropFarAwayPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction);
+/// crop out bogus 3d points from colmap model by computing bounding box of all points omitting the last percentile. Very handy
+/// for easening rerun visualization.
+void CropBBoxOutlierPoints(const std::shared_ptr<colmap::Reconstruction> reconstruction,
+                           const float min_percentile = 0.01,
+                           const float max_percentile = 0.95);
 
 /**
 * @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required

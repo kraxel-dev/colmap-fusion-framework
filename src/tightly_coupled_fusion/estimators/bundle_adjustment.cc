@@ -132,7 +132,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
    */
   FusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-                            const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+                            const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
                             const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
                             colmap::BundleAdjustmentConfig config,
                             colmap::Reconstruction& reconstruction,
@@ -313,7 +313,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 
  protected:
   const tcf::FusionGraphBundleAdjustmentOptions fusion_options_;  // tum file path, cov mat, etc
-  const fuhe::rrfuse::RerunFusionVisOptions rr_options_;          // rerun visualization options
+  const fuhe::rrfuse::RerunVisualizationOptions rr_options_;          // rerun visualization options
   std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rec_ = nullptr;
   std::shared_ptr<fuhe::MarathonFusionIterCallback> iter_callback_ =
       nullptr;  // custom iteration callback to log data to rerun if toggled
@@ -356,7 +356,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rrfuse::RerunFusionVisOptions& rr_options,
+    const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
     const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,

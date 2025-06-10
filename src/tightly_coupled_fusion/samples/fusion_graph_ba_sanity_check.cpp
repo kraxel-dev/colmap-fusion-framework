@@ -1,8 +1,8 @@
 /**
  * @file fusion_graph_ba_sanity_check.cpp
  * @author kraxel
- * @brief Saniy check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust" (reproj +
- * odom error optimization for the whole reconstruction).
+ * @brief Saniy check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust"
+ * (reproj + odom error optimization for the whole reconstruction).
  * @version 0.1
  * @date 2025-03-12
  *
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
   std::string output_path;
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunFusionVisOptions rr_options;             // rerun visualization options
+  fuhe::rrfuse::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
 
   // classic colmap options
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   reconstruction->Read(input_path);
   // TODO: decide for better generic strategy on kicking bad points
-  fuhe::col_utils::CropFarAwayPoints(reconstruction);
+  fuhe::col_utils::CropBBoxOutlierPoints(reconstruction);
 
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());  // image-ids in time sorted order
 
@@ -101,8 +101,14 @@ int main(int argc, char** argv) {
   VLOG(1) << "Creating fusion bundle adjuster object!";
 
   // bundle adjuster with odometry fusion capabilities and automatic rerun loggung during iters
-  std::unique_ptr<colmap::BundleAdjuster> fusion_bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-      *col_options.bundle_adjustment, fusion_ba_options, rr_options, rr_rc, ba_cfg, *reconstruction.get(), *fusion_graph_data_edges.get());
+  std::unique_ptr<colmap::BundleAdjuster> fusion_bundle_adjuster =
+      tcf::CreateFusionGraphBundleAdjuster(*col_options.bundle_adjustment,
+                                           fusion_ba_options,
+                                           rr_options,
+                                           rr_rc,
+                                           ba_cfg,
+                                           *reconstruction.get(),
+                                           *fusion_graph_data_edges.get());
 
   // -------------------- Solve fusion problem
   VLOG(1) << "Starting to solve bundle adjustment problem!";
