@@ -89,8 +89,21 @@ void CropBBoxOutlierPoints(const std::shared_ptr<colmap::Reconstruction> reconst
                            const float max_percentile = 0.95);
 
 /**
-* @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects required
-by ceres for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for convenience.
+ * @brief Check if a 3D point is inside a bounding box defined by the 3D points of colmap model. Check orignial colmap lib for
+ * details.
+ *
+ * @param point3D pair of id and colmap Point3D object
+ * @param bbox bbox object obtained through native colmap ComputeBoundingBox function.
+ * @return true
+ * @return false
+ */
+const bool IsPointInBBox(const std::pair<colmap::point3D_t, colmap::Point3D>& point3D,
+                         const fuhe::types::ColmapBBox& bbox);
+
+/**
+* @brief From forwarded colmap image, get pointers to image pose (cam_from_world: world pose expressed in cam) objects
+required by ceres for adding image to optimization problem in the factor graph. Takes care of quaternion normalization for
+convenience.
 
 * @param img Reference to colmap image whose pose we want retrieve as paramter for optimization.
 * @param q_c_from_w pointer to first quaternion value (double) in memory

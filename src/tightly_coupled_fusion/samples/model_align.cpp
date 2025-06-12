@@ -16,8 +16,7 @@
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/frame_align_utils.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/rr_fusion_logging.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 int main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////////////////
@@ -27,7 +26,7 @@ int main(int argc, char** argv) {
   std::string input_path;
 
   colmap::OptionManager col_options;                // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;   // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;   // rerun visualization options
   fuhe::align::AlignmentOptions alignment_options;  // colmap reconstruction coordinate alingment options
 
   // classic colmap options
@@ -77,18 +76,14 @@ int main(int argc, char** argv) {
   reconstruction->Read(input_path);
 
   // -------------------- Init rerun if visualization is toggled
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
     // initialize recorder objects when rerun logging is desired
-    VLOG(2) << "Rerun recording toggled.";
-    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *reconstruction.get());
+    VLOG(2) << "Rerun logging toggled.";
+    rr_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, reconstruction);
 
     // log colmap model to rerun
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(reconstruction),
-                                    reconstruction->Points3D());
+    rr_logger->LogFullReconstruction();
   }
 
   // -------------------- Model alignment
@@ -97,12 +92,7 @@ int main(int argc, char** argv) {
 
   // log aligned model to rerun
   if (rr_options.is_log_to_rerun) {
-    // log colmap model to rerun
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(reconstruction),
-                                    reconstruction->Points3D());
+    rr_logger->LogFullReconstruction();
   }
 
   // -------------------- Write newly aligned model and tum file

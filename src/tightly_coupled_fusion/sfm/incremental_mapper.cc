@@ -4,7 +4,7 @@
 #include <colmap/estimators/pose.h>
 #include <colmap/util/file.h>
 #include <colmap/util/misc.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // Incremental Mapper Rerun
@@ -87,12 +87,12 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalMapperRer
     // Adjust the local bundle.
     std::unique_ptr<BundleAdjuster> bundle_adjuster = nullptr;
     // if rerun recorder object was given by user, log optimnization to rerun
-    if (rr_recorder_) {
+    if (rr_logger_) {
       bundle_adjuster = tcf::CreateDefaultBundleAdjusterRerun(
           ba_options,
           std::move(ba_config),
           *this->Reconstruction(),
-          rr_recorder_);  // custom bundle adjuster with capability to log to rerun during optimization
+          rr_logger_);  // custom bundle adjuster with capability to log to rerun during optimization
     } else {              // default bundle adjuster without rerun logging
       bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
     }
@@ -159,8 +159,8 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
 
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
-  if (rr_recorder_) {
-    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Global bundle adjustment!");
+  if (rr_logger_) {
+    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Global bundle adjustment!");
   }
 
   const std::set<image_t>& reg_image_ids = this->Reconstruction()->RegImageIds();
@@ -210,9 +210,9 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
       ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
     }
 
-    if (rr_recorder_) {
+    if (rr_logger_) {
       bundle_adjuster =
-          CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+          CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_logger_);
     } else {
       bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
     }
@@ -267,7 +267,7 @@ void tcf::IncrementalMapperRerun::IterativeGlobalRefinement(int max_num_refineme
 tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
                                                       FusionGraphBundleAdjustmentOptions& fusion_options,
                                                       const std::string& tum_file,
-                                                      fuhe::rrfuse::RerunVisualizationOptions& rr_options)
+                                                      fuhe::rr::RerunVisualizationOptions& rr_options)
     : IncrementalMapper(database_cache), fusion_options_{fusion_options}, tum_file_{tum_file}, rr_options_{rr_options} {
   // whether to allow fusion or not
   is_fusion_mapping_ = fusion_options_.is_mapping_with_fusion;
@@ -334,8 +334,8 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
   THROW_CHECK(options.Check());
   LocalBundleAdjustmentReport report;
 
-  if (rr_recorder_) {
-    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Local bundle adjustment!");
+  if (rr_logger_) {
+    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Local bundle adjustment!");
   }
 
   // Find images that have most 3D points with given image in common.
@@ -430,10 +430,10 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     std::unique_ptr<BundleAdjuster> bundle_adjuster = nullptr;
     // if fusion is deactivated, use default bundle adjuster
     if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_local_ba) {
-      if (rr_recorder_) {
+      if (rr_logger_) {
         // custom bundle adjuster with capability to log to rerun during optimization
         bundle_adjuster =
-            tcf::CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+            tcf::CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_logger_);
       } else {
         // default bundle adjuster without rerun logging
         bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
@@ -443,7 +443,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
       bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(ba_options,
                                                              fusion_options_,
                                                              rr_options_,
-                                                             rr_recorder_,
+                                                             rr_logger_,
                                                              ba_config,
                                                              *this->Reconstruction(),
                                                              *this->FusionGraphDataEdges());
@@ -510,8 +510,8 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
                                                       const colmap::BundleAdjustmentOptions& ba_options) {
   using namespace colmap;
   VLOG(1) << "Adjusting global bundle with fusion capapbilites!";
-  if (rr_recorder_) {
-    fuhe::rrfuse::LogInfo(rr_recorder_->GetRerunRec(), "Global bundle adjustment!");
+  if (rr_logger_) {
+    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Global bundle adjustment!");
   }
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
@@ -570,13 +570,13 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
   if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_global_ba) {
     // default global BA with rerun visualization
     bundle_adjuster = CreateDefaultBundleAdjusterRerun(
-        std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_recorder_);
+        std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_logger_);
   } else {
     // bundle adjuster with odometry fusion capabilities
     bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(custom_ba_options,
                                                            fusion_options_,
                                                            rr_options_,
-                                                           rr_recorder_,
+                                                           rr_logger_,
                                                            ba_config,
                                                            *this->Reconstruction(),
                                                            *this->FusionGraphDataEdges());

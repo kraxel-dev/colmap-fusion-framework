@@ -94,7 +94,7 @@ void tcf::IncrementalFusionPipeline::Reconstruct(const colmap::IncrementalMapper
 
   const std::string tum_file = "";                    // path to tum file with odometry data
   FusionGraphBundleAdjustmentOptions fusion_options;  // options for fusion graph bundle adjustment
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;     // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;     // rerun visualization options
   tcf::IncrementalFusionMapper mapper(this->DatabaseCache(), fusion_options, tum_file, rr_options);
 
   // Is there a sub-model before we start the reconstruction? I.e. the user

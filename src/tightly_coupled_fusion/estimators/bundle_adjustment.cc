@@ -40,13 +40,13 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
    * @param options
    * @param config
    * @param reconstruction
-   * @param rr_recorder
+   * @param rr_sfm_logger
    */
   DefaultBundleAdjusterRerunLogging(colmap::BundleAdjustmentOptions options,
                                     colmap::BundleAdjustmentConfig config,
                                     colmap::Reconstruction& reconstruction,
-                                    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder)
-      : BundleAdjuster(std::move(options), std::move(config)), reconstruction_{reconstruction}, rr_recorder_{rr_recorder} {
+                                    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger)
+      : BundleAdjuster(std::move(options), std::move(config)), reconstruction_{reconstruction}, rr_sfm_logger_{rr_sfm_logger} {
     default_bundle_adjuster_ = colmap::CreateDefaultBundleAdjuster(options_, config_, reconstruction);
   }
 
@@ -64,7 +64,7 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
     ceres::Solver::Options solver_options = options_.CreateSolverOptions(config_, *default_bundle_adjuster_->Problem());
 
     // attach iteration callback for rerun visualization of iterations if toggled
-    if (rr_recorder_->GetRerunRec()) {
+    if (rr_sfm_logger_->GetRerunRec()) {
       VLOG(2) << "Attaching iteration callback to log data to rerun during optimization!";
       this->AddIterationCallbackRerunLogging(solver_options);
     }
@@ -87,7 +87,7 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
 
     // deploy own iteration callback that logs to rerun during optimization
     iter_callback_ = std::make_shared<fuhe::MarathonBundleAdjustIterCallback>(
-        rr_recorder_,
+        rr_sfm_logger_,
         reconstruction_.Images(),
         reconstruction_.Points3D(),
         &config_);  // pass ba_config to only log subset of images and points
@@ -99,7 +99,7 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
 
   std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_ = nullptr;
   std::shared_ptr<fuhe::BundleAdjustmentIterationCallback> iter_callback_ = nullptr;
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger_ = nullptr;
   colmap::Reconstruction& reconstruction_;
 };
 
@@ -123,7 +123,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
    * @param options BA options (global vs local)
    * @param fusion_options options for fusion optimization
    * @param rr_options rerun visualization options
-   * @param rr_recorder custom rerun recorder object to log data to rerun viewer
+   * @param rr_sfm_logger custom rerun sfm logger object to log data to rerun viewer
    * @param config correctly populated ba_config (e.g. which images are contained in problem and which are set const)
    * @param reconstruction full colmap model
    * @param fusion_graph_data_edges (non-filtered) fusion graph data edges (image edges with odometry), entailing the full
@@ -132,15 +132,15 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
    */
   FusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-                            const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
-                            const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
+                            const fuhe::rr::RerunVisualizationOptions& rr_options,
+                            const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
                             colmap::BundleAdjustmentConfig config,
                             colmap::Reconstruction& reconstruction,
                             const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges)
       : BundleAdjuster(std::move(options), std::move(config)),
         fusion_options_{fusion_options},
         rr_options_{rr_options},
-        rr_rec_{rr_recorder},
+        rr_sfm_logger_{rr_sfm_logger},
         reconstruction_{reconstruction} {
     // -------------------- Default Bundle Adjuster creation
     default_bundle_adjuster_ = colmap::CreateDefaultBundleAdjuster(options_, config_, reconstruction_);
@@ -282,7 +282,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     ceres::Solver::Options solver_options = options_.CreateSolverOptions(config_, *problem);
 
     // attach iteration callback for rerun visualization of iterations if toggled
-    if (rr_rec_) {
+    if (rr_sfm_logger_) {
       VLOG(2) << "Attaching fusion iteration callback to log data to rerun during optimization!";
       this->AddFusionIterationCallback(solver_options);
     }
@@ -313,8 +313,8 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 
  protected:
   const tcf::FusionGraphBundleAdjustmentOptions fusion_options_;  // tum file path, cov mat, etc
-  const fuhe::rrfuse::RerunVisualizationOptions rr_options_;          // rerun visualization options
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rec_ = nullptr;
+  const fuhe::rr::RerunVisualizationOptions rr_options_;      // rerun visualization options
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger_ = nullptr;
   std::shared_ptr<fuhe::MarathonFusionIterCallback> iter_callback_ =
       nullptr;  // custom iteration callback to log data to rerun if toggled
 
@@ -338,7 +338,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   void AddFusionIterationCallback(ceres::Solver::Options& solver_options) {
     VLOG(2) << "Deploying rerun iteration callback!";
     // deploy own iteration callback that logs to rerun during optimization
-    iter_callback_ = std::make_shared<fuhe::MarathonFusionIterCallback>(rr_rec_,
+    iter_callback_ = std::make_shared<fuhe::MarathonFusionIterCallback>(rr_sfm_logger_,
                                                                         reconstruction_.Images(),
                                                                         reconstruction_.Points3D(),
                                                                         &config_,
@@ -356,20 +356,20 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
-    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
+    const fuhe::rr::RerunVisualizationOptions& rr_options,
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
     const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges) {
   return std::make_unique<tfc::FusionGraphBundleAdjuster>(
-      std::move(options), fusion_options, rr_options, rr_recorder, std::move(config), reconstruction, fusion_graph_data_edges);
+      std::move(options), fusion_options, rr_options, rr_sfm_logger, std::move(config), reconstruction, fusion_graph_data_edges);
 }
 
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateDefaultBundleAdjusterRerun(
     colmap::BundleAdjustmentOptions options,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
-    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder) {
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger) {
   return std::make_unique<tfc::DefaultBundleAdjusterRerunLogging>(
-      std::move(options), std::move(config), reconstruction, rr_recorder);
+      std::move(options), std::move(config), reconstruction, rr_sfm_logger);
 }

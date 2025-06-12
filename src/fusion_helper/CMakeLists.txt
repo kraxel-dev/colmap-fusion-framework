@@ -10,7 +10,7 @@ set(FUSION_HELPER_SOURCES
     fusion_evaluation_callback.cpp
     frame_align_utils.cpp
     rr_utils.cpp
-    rr_fusion_recorder.cpp
+    rr_sfm_logger.cpp
     rr_fusion_logging.cpp
     odom_edges_manager.cpp
 )

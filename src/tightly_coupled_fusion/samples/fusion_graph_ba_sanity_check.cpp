@@ -14,7 +14,7 @@
 #include "tightly_coupled_fusion/estimators/bundle_adjustment.h"
 #include <colmap/controllers/option_manager.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
@@ -22,14 +22,14 @@ int main(int argc, char** argv) {
   std::string output_path;
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;             // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
 
   // classic colmap options
   col_options.AddRequiredOption("input_path", &input_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);
+  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
@@ -79,7 +79,6 @@ int main(int argc, char** argv) {
 
     // NOTE: no 3d point adding to ba_config required
 
-    // FIXME: analyze weird behavior with fixed pose in more detail
     if (i == 0) {
       VLOG(2) << "Fixing position of image: " << img_id;
       // fix gauge freedom on first image-pose in model
@@ -90,22 +89,21 @@ int main(int argc, char** argv) {
   }
 
   // -------------------- Init rerun if visualization is toggled
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
-    // initialize recorder objects when rerun logging is desired
-    VLOG(1) << "Rerun recording toggled. Attaching Recorder manager to mapper!";
-    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *reconstruction);
+    // initialize rerun sfm logger object when rerun logging is desired
+    VLOG(1) << "Rerun logging toggled. Attaching Sfm Logger to mapper!";
+    rr_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, reconstruction);
   }
 
   // -------------------- Create FusionGraphBundleAdjuster object
   VLOG(1) << "Creating fusion bundle adjuster object!";
-
   // bundle adjuster with odometry fusion capabilities and automatic rerun loggung during iters
   std::unique_ptr<colmap::BundleAdjuster> fusion_bundle_adjuster =
       tcf::CreateFusionGraphBundleAdjuster(*col_options.bundle_adjustment,
                                            fusion_ba_options,
                                            rr_options,
-                                           rr_rc,
+                                           rr_logger,
                                            ba_cfg,
                                            *reconstruction.get(),
                                            *fusion_graph_data_edges.get());

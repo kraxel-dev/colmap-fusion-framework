@@ -157,7 +157,7 @@ void fuhe::col_utils::CropBBoxOutlierPoints(const std::shared_ptr<colmap::Recons
                                             const float min_percentile,
                                             const float max_percentile) {
   VLOG(2) << "Cropping out far away 3d points from colmap model!";
-  auto bbox = reconstruction->ComputeBoundingBox(min_percentile, max_percentile);
+  fuhe::types::ColmapBBox bbox = reconstruction->ComputeBoundingBox(min_percentile, max_percentile);
 
   VLOG(3) << "Bounding Box Corenrs 1 are: " << bbox.first;
   VLOG(3) << "Bounding Box Corenrs 2 are: " << bbox.second;
@@ -165,8 +165,7 @@ void fuhe::col_utils::CropBBoxOutlierPoints(const std::shared_ptr<colmap::Recons
   // collect point ids for deletion
   std::vector<colmap::point3D_t> for_del;
   for (const auto& point3D : reconstruction->Points3D()) {
-    if (!((point3D.second.xyz.array() >= bbox.first.array()).all() &&
-          (point3D.second.xyz.array() <= bbox.second.array()).all())) {
+    if (!(IsPointInBBox(point3D, bbox))) {
       VLOG(4) << "Bogus 3d point detected! Prepare deletion of id: " << point3D.first;
       VLOG(4) << "Bogus 3d Position: \n" << point3D.second.xyz;
       // NOTE: Do not delete point while iterating
@@ -181,6 +180,16 @@ void fuhe::col_utils::CropBBoxOutlierPoints(const std::shared_ptr<colmap::Recons
   }
 }
 
+const bool fuhe::col_utils::IsPointInBBox(const std::pair<colmap::point3D_t, colmap::Point3D>& point3D,
+                                          const fuhe::types::ColmapBBox& bbox) {
+  // point is outside bbox
+  if (!((point3D.second.xyz.array() >= bbox.first.array()).all() && (point3D.second.xyz.array() <= bbox.second.array()).all())) {
+    return false;
+  }
+
+  // point is inside bbox
+  return true;
+}
 void fuhe::col_utils::GetPointersToPose(colmap::Image& img, double*& q_c_from_w, double*& t_c_from_w) {
   // -------------------- Recover pointers to image poses from colmap model
   // recover image pose from colmap model

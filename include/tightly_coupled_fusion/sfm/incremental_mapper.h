@@ -77,14 +77,15 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
                                  const colmap::IncrementalTriangulator::Options& tri_options,
                                  bool normalize_reconstruction = true);
 
-  /// Attach RerunRecorder object to mapper. Required if rerun logging is desired.
-  inline void AttachRerunRecorder(const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder>& rr_recorder) {
-    rr_recorder_ = rr_recorder;
+  /// Attach RerunSfmLogger object to mapper. Required if rerun logging is desired.
+  inline void AttachRerunSfmLogger(const std::shared_ptr<fuhe::rr::RerunSfmLogger>& rr_sfm_logger) {
+    rr_logger_ = rr_sfm_logger;
   }
-  inline std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> RerunRecorder() const { return rr_recorder_; }
+  inline std::shared_ptr<fuhe::rr::RerunSfmLogger> RerunSfmLogger() const { return rr_logger_; }
 
  protected:
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;
+  // FIXME: fix sfm logger and member name
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger_ = nullptr;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,7 +143,7 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
                           FusionGraphBundleAdjustmentOptions& fusion_options,
                           const std::string& tum_file,
-                          fuhe::rrfuse::RerunVisualizationOptions& rr_options);
+                          fuhe::rr::RerunVisualizationOptions& rr_options);
 
   /// Derived to call multiple rounds of derived local bundle adjustment with fusion capabilities.
   void IterativeLocalRefinement(int max_num_refinements,
@@ -181,21 +182,19 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   };
   inline const std::shared_ptr<fuhe::edges::MapOfImageEdges> FusionGraphDataEdges() const { return fusion_graph_data_edges_; }
 
-  /// Attach RerunRecorder object to mapper. Required if rerun logging is desired.
-  inline void AttachRerunRecorder(const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder>& rr_recorder) {
-    rr_recorder_ = rr_recorder;
-  }
-  inline std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> RerunRecorder() const { return rr_recorder_; }
+  /// Attach RerunSfmLogger object to mapper. Required if rerun logging is desired.
+  inline void AttachRerunSfmLogger(const std::shared_ptr<fuhe::rr::RerunSfmLogger>& rr_logger) { rr_logger_ = rr_logger; }
+  inline std::shared_ptr<fuhe::rr::RerunSfmLogger> RerunSfmLogger() const { return rr_logger_; }
 
  protected:
-  bool is_fusion_mapping_ = true;                      // if not, switch to default vision only ba in whole mapping process
+  bool is_fusion_mapping_ = true;                      // if not, switch to default vision-only-ba in whole mapping process
   FusionGraphBundleAdjustmentOptions fusion_options_;  // options for fusion graph bundle adjustment
   const std::string tum_file_ = "";                    // path to tum file with odometry data
 
   // rerun visualization options
-  const fuhe::rrfuse::RerunVisualizationOptions rr_options_;
-  // custom RerunRecorder object if visualization is desired
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder_ = nullptr;
+  const fuhe::rr::RerunVisualizationOptions rr_options_;
+  // custom RerunSfmLogger object if rerun visualization is desired
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger_ = nullptr;
 
   // time sorted image node sequence with odometry edges constraining images
   std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges_ = nullptr;

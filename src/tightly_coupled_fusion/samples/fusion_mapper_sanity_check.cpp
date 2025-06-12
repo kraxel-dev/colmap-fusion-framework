@@ -19,7 +19,7 @@
 #include <colmap/scene/database_cache.h>
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 /**
  * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
   std::string output_path;
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;             // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
   fuhe::align::AlignmentOptions alignment_options;            // colmap reconstruction coordinate alingment options
 
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("db_path", &db_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);
+  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   // custom fusion options
@@ -120,12 +120,12 @@ int main(int argc, char** argv) {
   fusion_mapper.BeginReconstruction(reconstruction);
 
   // -------------------- Init rerun if visualization is toggled
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
-    // initialize recorder objects when rerun logging is desired
-    VLOG(1) << "Rerun recording toggled. Attaching Recorder manager to mapper!";
-    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *fusion_mapper.Reconstruction());
-    fusion_mapper.AttachRerunRecorder(rr_rc);
+    // initialize rerun sfm logger objects when rerun logging is desired
+    VLOG(1) << "Rerun recording toggled. Attaching sfm logger to mapper!";
+    rr_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, fusion_mapper.Reconstruction());
+    fusion_mapper.AttachRerunSfmLogger(rr_logger);
   }
 
   // -------------------- Define order of images for active reconstructing
@@ -168,18 +168,12 @@ int main(int argc, char** argv) {
   fusion_mapper.RegisterInitialImagePair(mapper_opts, tvg, id_1, id_2);  // lock in
 
   // -------------------- Initial Pair Rerun visualization
+  // log initial pair to rerun
   if (rr_options.is_log_to_rerun) {
-    // initialize recorder objects when rerun logging is desired
-    rr_rc->UpdateRerunTimeStep();
-
-    // log initial pair to rerun
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
-                                    fusion_mapper.Reconstruction()->Points3D());
+    rr_logger->LogFullReconstruction();
   }
 
-  // -------------------- One round of global bundle adjustment for the inital pair
+  // -------------------- Global bundle adjustment for the inital pair
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
   fusion_mapper.AdjustGlobalBundle(mapper_opts, incr_pipieline_opts->GlobalBundleAdjustment());
   fusion_mapper.Reconstruction()->Normalize();
@@ -188,15 +182,9 @@ int main(int argc, char** argv) {
   init_filter_mapper_opts.filter_min_tri_angle = init_filter_mapper_opts.init_min_tri_angle * 1.5;
   fusion_mapper.FilterPoints(init_filter_mapper_opts);
 
+  // log bundle adjusted initial pair to rerun
   if (rr_options.is_log_to_rerun) {
-    // initialize recorder objects when rerun logging is desired
-    rr_rc->UpdateRerunTimeStep();
-
-    // log initial pair to rerun
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
-                                    fusion_mapper.Reconstruction()->Points3D());
+    rr_logger->LogFullReconstruction();
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -224,8 +212,8 @@ int main(int argc, char** argv) {
     }
 
     // text log to rerun
-    if (rr_options.is_log_to_rerun) {
-      fuhe::rrfuse::LogInfo(rr_rc->GetRerunRec(), "Registered image: " + std::to_string(next_image_id));
+    if (rr_logger) {
+      rr_logger->LogInfoMsg("Registered image: " + std::to_string(next_image_id));
     }
 
     // triangulate new points and run a couple rounds of local BA
@@ -238,19 +226,13 @@ int main(int argc, char** argv) {
       fuhe::align::PerformAlignmentStrategies(reconstruction, alignment_options);
       // text log to rerun
       if (rr_options.is_log_to_rerun) {
-        fuhe::rrfuse::LogInfo(rr_rc->GetRerunRec(), "Performed coordinate frame alignment strategies on colmap model!");
+        rr_logger->LogInfoMsg("Performed coordinate frame alignment strategies on colmap model!");
       }
     }
 
-    // -------------------- Rerun visualization of newly registered image
-    if (rr_options.is_log_to_rerun) {
-      rr_rc->UpdateRerunTimeStep();
-
-      // log newly registered image to rerun
-      fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                      rr_rc->GetRerunPinhole(),
-                                      fuhe::col_utils::RegisteredImages(fusion_mapper.Reconstruction()),
-                                      fusion_mapper.Reconstruction()->Points3D());
+    // rerun visualization of newly registered image
+    if (rr_logger) {
+      rr_logger->LogFullReconstruction();
     }
 
     // TODO: bring in again once we have sorted out correct image path

@@ -20,7 +20,7 @@
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/scene/reconstruction.h>
 #include <fusion_helper/fusion_iteration_callback.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 // -------------------- Custom implementation
 
@@ -87,8 +87,8 @@ struct FusionGraphBundleAdjustmentOptions {
 std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rrfuse::RerunVisualizationOptions& rr_options,
-    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder,
+    const fuhe::rr::RerunVisualizationOptions& rr_options,
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
     const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges);
@@ -107,6 +107,6 @@ std::unique_ptr<colmap::BundleAdjuster> CreateDefaultBundleAdjusterRerun(
     colmap::BundleAdjustmentOptions options,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
-    const std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_recorder);
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger);
 
 }  // namespace tcf

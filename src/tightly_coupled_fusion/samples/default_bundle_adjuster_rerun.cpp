@@ -15,7 +15,7 @@
 #include <colmap/estimators/coordinate_frame.h>
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   bool pca_align = true;
 
   colmap::OptionManager col_options;               // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;  // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;  // rerun visualization options
 
   // classic colmap options
   col_options.AddRequiredOption("input_path", &input_path);
@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Model.pre_crop_points", &pre_crop_points);
   col_options.AddDefaultOption("Model.pca_align", &pca_align);
   // custom rerun options
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);
-  col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
+  col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
@@ -60,16 +60,14 @@ int main(int argc, char** argv) {
   fuhe::types::MapOfImageIdsSec img_ids_sorted = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
 
   // -------------------- Init rerun if visualization is toggled
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
     // initialize recorder objects when rerun logging is desired
     VLOG(1) << "Rerun recording toggled. Initializing recorder object!";
-    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *reconstruction.get());
+    rr_sfm_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, reconstruction);
 
     // write initial reconstruction to rerun
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(
-        rr_rc->GetRerunRec(), rr_rc->GetRerunPinhole(), reconstruction->Images(), reconstruction->Points3D());
+    rr_sfm_logger->LogFullReconstruction();
   }
 
   // -------------------- Model preprocessing
@@ -82,7 +80,7 @@ int main(int argc, char** argv) {
   } else {
     VLOG(1) << "Skipping model PCA alignment before optimization!";
   }
-  
+
   // crop model to remove bad points that mess up rerun viz
   if (pre_crop_points) {
     VLOG(1) << "Cropping model pts before optimization!";
@@ -93,9 +91,7 @@ int main(int argc, char** argv) {
 
   // write updated reconstruction to rerun
   if (rr_options.is_log_to_rerun && (pre_crop_points || pca_align)) {
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(
-        rr_rc->GetRerunRec(), rr_rc->GetRerunPinhole(), reconstruction->Images(), reconstruction->Points3D());
+    rr_sfm_logger->LogFullReconstruction();
   }
 
   // -------------------- Tune BA config to decide which img to consider and/or are constant in problem
@@ -110,9 +106,8 @@ int main(int argc, char** argv) {
     // NOTE: no 3d point adding to ba_config required. Points are selected automatically by colmap based on the images selected
     // in the default bundle adjuster.
 
-    // FIXME: analyze weird behavior with fixed pose in more detail
     if (i == 0) {
-      VLOG(2) << "Fixing position of image: " << img_id;
+      VLOG(2) << "Fixing pose of image: " << img_id;
       // fix gauge freedom on first image-pose in model
       ba_cfg.SetConstantCamPose(img_id);
     }
@@ -125,7 +120,7 @@ int main(int argc, char** argv) {
 
   // vanilla bundle adjuster with rerun visualization
   std::unique_ptr<colmap::BundleAdjuster> default_ba =
-      tcf::CreateDefaultBundleAdjusterRerun(*col_options.bundle_adjustment, ba_cfg, *reconstruction.get(), rr_rc);
+      tcf::CreateDefaultBundleAdjusterRerun(*col_options.bundle_adjustment, ba_cfg, *reconstruction.get(), rr_sfm_logger);
 
   // -------------------- Solve fusion problem
   VLOG(1) << "Starting to solve bundle adjustment problem!";

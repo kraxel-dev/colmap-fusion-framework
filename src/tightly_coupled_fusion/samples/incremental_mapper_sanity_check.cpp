@@ -1,10 +1,10 @@
 /**
  * @file incremental_mapper_sanity_check.cpp
  * @author kraxel
- * @brief Sanity check for the vanilla IncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper (described
- * in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch without fusion capabilities. Order of
- * images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as initial pair for mapping. Camera
- * intrinsics are fixed.
+ * @brief Sanity check for the vanilla IncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
+ * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch without fusion
+ * capabilities. Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as
+ * initial pair for mapping. Camera intrinsics are fixed.
  * @version 0.1
  * @date 2025-03-24
  *
@@ -19,7 +19,7 @@
 #include <colmap/scene/database_cache.h>
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/rr_fusion_recorder.h>
+#include <fusion_helper/rr_sfm_logger.h>
 
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
@@ -27,14 +27,14 @@ int main(int argc, char** argv) {
   std::string output_path;
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;             // rerun visualization options
+  fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
 
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);
+  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
@@ -69,12 +69,12 @@ int main(int argc, char** argv) {
   mapper.BeginReconstruction(reconstruction);
 
   // -------------------- Init rerun if visualization is toggled
-  std::shared_ptr<fuhe::rrfuse::RerunFusionRecorder> rr_rc = nullptr;
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
     // initialize recorder objects when rerun logging is desired
     VLOG(1) << "Rerun recording toggled. Attaching Recorder manager to mapper!";
-    rr_rc = std::make_shared<fuhe::rrfuse::RerunFusionRecorder>(rr_options, *mapper.Reconstruction());
-    mapper.AttachRerunRecorder(rr_rc);
+    rr_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, mapper.Reconstruction());
+    mapper.AttachRerunSfmLogger(rr_logger);
   }
 
   // -------------------- Define order of images for active reconstructing
@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
   mapper_opts.init_max_forward_motion = 1.0;  // essential matrix z motion
 
   // -------------------- Force Select intial image pair
-  colmap::TwoViewGeometry tvg;                                       // Essential matrix and (filtered matches) between initial image pair
-  colmap::image_t id_1 = img_ids_sorted.begin()->second;             // very first image in tajectory sequence
+  colmap::TwoViewGeometry tvg;                            // Essential matrix and (filtered matches) between initial image pair
+  colmap::image_t id_1 = img_ids_sorted.begin()->second;  // very first image in tajectory sequence
   colmap::image_t id_2 = std::next(img_ids_sorted.begin())->second;  // second image in sequence
 
   // -------------------- Force register selected intial image pair
@@ -115,14 +115,8 @@ int main(int argc, char** argv) {
 
   // -------------------- Initial Pair Rerun visualization
   if (rr_options.is_log_to_rerun) {
-    // initialize recorder objects when rerun logging is desired
-    rr_rc->UpdateRerunTimeStep();
-
     // log initial pair to rerun
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(mapper.Reconstruction()),
-                                    mapper.Reconstruction()->Points3D());
+    rr_logger->LogFullReconstruction();
   }
   // -------------------- One round of global bundle adjustment for the inital pair
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
@@ -130,13 +124,9 @@ int main(int argc, char** argv) {
   // mapper.FilterPoints(mapper_opts);
   mapper.Reconstruction()->Normalize(/*fixed_scale=*/true);
 
-  if (rr_rc) {
-    // log bundle adjusted initial pair to rerun
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(mapper.Reconstruction()),
-                                    mapper.Reconstruction()->Points3D());
+  // log bundle adjusted initial pair to rerun
+  if (rr_logger) {
+    rr_logger->LogFullReconstruction();
   }
 
   // -------------------- Iterate over all time sorted images to register them
@@ -160,13 +150,9 @@ int main(int argc, char** argv) {
     VLOG(2) << "Triangulating new points for image " << img_id;
     mapper.TriangulateImage(incr_pipieline_opts->Triangulation(), img_id);
 
-    // log newly registered img to rerun
-    if (rr_rc) {
-      rr_rc->UpdateRerunTimeStep();
-      fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                      rr_rc->GetRerunPinhole(),
-                                      fuhe::col_utils::RegisteredImages(mapper.Reconstruction()),
-                                      mapper.Reconstruction()->Points3D());
+    // log newly registered img and triangulated points to rerun
+    if (rr_logger) {
+      rr_logger->LogFullReconstruction();
     }
 
     if (stamp - prev_stamp > fusion_ba_options.time_between_local_ba) {
@@ -192,12 +178,8 @@ int main(int argc, char** argv) {
                                    incr_pipieline_opts->Triangulation(),
                                    /*normalize */ false);
   // log final model to rerun
-  if (rr_rc) {
-    rr_rc->UpdateRerunTimeStep();
-    fuhe::rrfuse::LogReconstruction(rr_rc->GetRerunRec(),
-                                    rr_rc->GetRerunPinhole(),
-                                    fuhe::col_utils::RegisteredImages(mapper.Reconstruction()),
-                                    mapper.Reconstruction()->Points3D());
+  if (rr_logger) {
+    rr_logger->LogFullReconstruction();
   }
 
   // -------------------- Finalize

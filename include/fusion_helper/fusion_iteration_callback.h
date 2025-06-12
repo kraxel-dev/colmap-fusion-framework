@@ -3,7 +3,7 @@
 #include "fusion_helper/col_utils.h"
 #include "fusion_helper/fusion_residuals_tracker.h"
 #include "fusion_helper/rr_fusion_logging.h"
-#include "fusion_helper/rr_fusion_recorder.h"
+#include "fusion_helper/rr_sfm_logger.h"
 #include "fusion_helper/rr_utils.h"
 #include <ceres/ceres.h>
 #include <ceres/iteration_callback.h>
@@ -67,7 +67,7 @@ class MarathonBundleAdjustIterCallback : public BundleAdjustmentIterationCallbac
    * @param ba_config visualize only a subset in rerun considered by BA problem. Requires correctly populated BA config (normaly
    * done by colmap reconstruction process).
    */
-  MarathonBundleAdjustIterCallback(const std::shared_ptr<rrfuse::RerunFusionRecorder> rr_recorder,
+  MarathonBundleAdjustIterCallback(const std::shared_ptr<rr::RerunSfmLogger> rr_recorder,
                                    const std::unordered_map<colmap::image_t, colmap::Image>& images,
                                    const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                                    const colmap::BundleAdjustmentConfig* ba_config)
@@ -102,7 +102,7 @@ class MarathonBundleAdjustIterCallback : public BundleAdjustmentIterationCallbac
  */
 class MarathonFusionIterCallback : public MarathonBundleAdjustIterCallback {
  public:
-  MarathonFusionIterCallback(const std::shared_ptr<rrfuse::RerunFusionRecorder> rr_recorder,
+  MarathonFusionIterCallback(const std::shared_ptr<rr::RerunSfmLogger> rr_recorder,
                              const std::unordered_map<colmap::image_t, colmap::Image>& images,
                              const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D,
                              const colmap::BundleAdjustmentConfig* ba_config,

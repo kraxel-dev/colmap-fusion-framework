@@ -17,7 +17,7 @@
  Visualization:
  Will log the optimization process to rerun for visualization purposes. Has wonky feature to log factor costs (by
  category) during optimization to rerun.
- 
+
  * @version 0.1
  * @date 2025-01-27
  *
@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
   bool pre_crop_points = true;
   // whether to align model with PCA before optimization (e.g. for better visualization)
   bool pca_align = true;
-  fuhe::rrfuse::RerunVisualizationOptions rr_options;  // rerun visualization options
-  hifuse::HighLevelFusionOptions fusion_options;       // high level fusion option
+  fuhe::rr::RerunVisualizationOptions rr_options;  // rerun visualization options
+  hifuse::HighLevelFusionOptions fusion_options;   // high level fusion option
 
   colmap::OptionManager col_options;
 
