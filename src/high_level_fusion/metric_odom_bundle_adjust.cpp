@@ -47,8 +47,6 @@ int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
   std::string input_path;
   std::string output_path;
-  // whether to crop model (from bogus points) before optimization (e.g. remove bogus points that mess up rerun viz)
-  bool pre_crop_points = true;
   // whether to align model with PCA before optimization (e.g. for better visualization)
   bool pca_align = true;
   fuhe::rr::RerunVisualizationOptions rr_options;  // rerun visualization options
@@ -64,8 +62,6 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Fusion.cov", &fusion_options.cov);  // scalar covariance value for relative odometry meas (6x6)
   col_options.AddDefaultOption("Fusion.track_residuals", &fusion_options.track_residuals);
 
-  // Colmap model preprocessing options
-  col_options.AddDefaultOption("Model.pre_crop_points", &pre_crop_points);
   col_options.AddDefaultOption("Model.pca_align", &pca_align);
 
   // Rerun visualization options
@@ -124,14 +120,6 @@ int main(int argc, char** argv) {
     VLOG(1) << "Skipping model PCA alignment before optimization!";
   }
 
-  // crop model to remove bad points that mess up rerun visualization
-  if (pre_crop_points) {
-    VLOG(1) << "Cropping model pts before optimization!";
-    fuhe::col_utils::CropBBoxOutlierPoints(reconstruction);
-  } else {
-    VLOG(1) << "Skipping model pts cropping before optimization!";
-  }
-
   // obtain all images from model in time asceinding order
   const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
@@ -151,18 +139,20 @@ int main(int argc, char** argv) {
 
   // -------------------- Create fusion interface object
   // this acts as managing object to construct the fusion graph ceres problem
-  hifuse::FusionGraphInterface fusion_interface(reconstruction,
-                                                ceres_problem,
-                                                fusion_options.track_residuals,
-                                                rr_options.is_log_to_rerun,
-                                                rr_options.is_save_rerun_to_disk,
-                                                /*recording_path=*/output_path);
+  hifuse::FusionGraphInterface fusion_interface(reconstruction, ceres_problem, fusion_options.track_residuals);
 
+  // streaming sfm and fusion bundle adjustment process to rerun
+  std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger = nullptr;
   if (rr_options.is_log_to_rerun) {
-    fuhe::rrfuse::LogReconstruction(fusion_interface.GetRerunRec(),
-                                    fusion_interface.GetRerunPinhole(),
-                                    reconstruction->Images(),
-                                    reconstruction->Points3D());
+    VLOG(1) << "Rerun recording toggled. Instantiating sfm logger!";
+    rr_sfm_logger = std::make_shared<fuhe::rr::RerunSfmLogger>(rr_options, reconstruction);
+
+    // establish model bbox from 3d points of initial pair to filter out pts in rerun that would cause mayhem in the viewer
+    if (rr_options.is_ignore_pts_beyond_model_bbox) {
+      rr_sfm_logger->UpdateModelBBox();
+    }
+
+    rr_sfm_logger->LogFullReconstruction();
   }
 
   // -------------------- Iterate over COLMAP model to build factor graph problem
@@ -231,16 +221,11 @@ int main(int argc, char** argv) {
 
   // -------------------- rerun iteration callback during ceres optim
   // deploy own iteration callback that logs pts and poses to rerun during optimization
-  std::shared_ptr<fuhe::FusionIterationCallback> callback = nullptr;
+  std::shared_ptr<fuhe::iter_callbacks::FusionGraphIterCallback> callback = nullptr;
   if (rr_options.is_log_to_rerun) {
     VLOG(2) << "Deploying rerun iteration callback!";
-    callback = std::make_shared<fuhe::FusionIterationCallback>(fusion_interface.GetRerunRec(),
-                                                               fusion_interface.GetRerunPinhole(),
-                                                               fusion_interface.GetReconstruction()->Images(),
-                                                               fusion_interface.GetReconstruction()->Points3D(),
-                                                               data_graph_edges,
-                                                               rr_options.draw_rerun_odom_as_predicted_poses,
-                                                               fusion_interface.GetResidualsTracker());
+    callback = std::make_shared<fuhe::iter_callbacks::FusionGraphIterCallback>(
+        rr_sfm_logger, data_graph_edges, fusion_interface.GetResidualsTracker());
     solver_options.callbacks.push_back(callback.get());
   }
 

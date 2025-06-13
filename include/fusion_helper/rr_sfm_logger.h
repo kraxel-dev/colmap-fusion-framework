@@ -1,8 +1,9 @@
 /**
  * @file rr_sfm_logger.h
  * @author kraxel
- * @brief Helper class in charge of rerun viewer initialization and logging of colmap models, bundle adjustment and fusion
- * graph optimization process to rerun.
+ * @brief Convenience classes in charge of rerun viewer initialization and logging colmap data (imgs, 3d points or whole
+ * reconstruction), bundle adjustment and fusion graph optimization process to rerun. Most exciting when used during active ceres
+ * optimization step in conjunction with the ceres iteration callback classese of this repo .
  * @version 0.1
  * @date 2025-03-13
  *
@@ -11,7 +12,7 @@
  */
 #pragma once
 
-#include "fusion_helper/rr_utils.h"
+#include "fusion_helper/odom_edges_manager.h"
 #include "fusion_helper/types.h"
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/geometry/rigid3.h>
@@ -28,7 +29,7 @@ struct RerunVisualizationOptions {
   // enable saving rerun logged data to disk as rrd file. Note that real-time logging deactivates with this.
   bool is_save_rerun_to_disk = false;
   std::string recording_path = "";
-  float img_plane_dist = 0.2f;  // controls size of cam pinhole in rerun viewer //FIXME: CURRENTLY NOT USED please kick
+  float img_plane_dist = 0.2f;  // controls size of cam pinhole in rerun viewer
 
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   bool draw_rerun_odom_as_predicted_poses = true;
@@ -39,6 +40,8 @@ struct RerunVisualizationOptions {
 
   // whether to show camera labels in rerun viewer. Might clutter scene.
   bool is_show_cam_labels = false;
+  // whether to show odometry edge between images. Might clutter scene.
+  bool is_show_edge_labels = false;
 
   // whether to ignore 3d points in rerun viewer that are outside model bounding box computed from the majority of the 3d points.
   // Ideal to get rid of bogus pts that mess up the rerun viz
@@ -68,6 +71,12 @@ class RerunSfmLogger {
   // FIXME: write Brief
   // @source:
   // https://github.com/colmap/glomap/commit/5115de482dc0a72b5c6d01d39da3524b7a296608#diff-2139378b2a5608827fa60ae83cfc220b18a3c68e7972248aeb715da8b60594fc
+
+  /**
+   * @brief Log the full COLMAP reconstruction (all 3d pts and registered images) from the model that you have attached to this
+   * logger object.
+   *
+   */
   void LogFullReconstruction();
 
   /**
@@ -88,9 +97,11 @@ class RerunSfmLogger {
   void ClearActiveBundle();
 
   /**
-   * @brief Update the bounding box of the model based on the 3D points of the colmap reconstruction. With an BBox object, rerun
-   * can ignore 3D points that are beyond the model bounding box in the viewer. This is useful to get rid of bogus points. Better
-   * to only use this before an Bundle Adjustment call, therefore let ceres iteration callbacks handle this one.
+   * @brief Interanlly updates the bounding box of the attached COLMAP model based on its 3D points. With an BBox object, rerun
+   * will ignore 3D points that are beyond the model bounding box in the viewer. Must be toggled from rerun options. Useful to
+   * get rid of bogus points. Do not forget to call this method regularily during active mapping, otherwise new points will be
+   * cut by an old BBox. Better to only use this before an Bundle Adjustment call, therefore let ceres iteration callbacks handle
+   * this one.
    *
    */
   void UpdateModelBBox();
@@ -129,6 +140,7 @@ class RerunSfmLogger {
    * @return std::shared_ptr<colmap::Reconstruction>
    */
   std::shared_ptr<colmap::Reconstruction> Reconstruction() const;
+  RerunVisualizationOptions RerunOptions() const;
 
  protected:
   const RerunVisualizationOptions rr_options_;
@@ -151,6 +163,99 @@ class RerunSfmLogger {
    *
    */
   void UpdateRerunTimeStep();
+};
+
+/**
+ * @brief Composition-based Rerun Logger class that (additionally to what a RerunSfmLogger already streams to rerun), given the
+ * odometry edges for the BA fusion, streams odometry edges (from an external odom source) between 2 image poses of a COLMAP
+ * model. Handy to understand the BA + odom fusion process better. Ideally, instantiation of this object should be handled by
+ * ceres iterartion callbacks and not be used otherwise.
+ *
+ */
+class RerunFusionGraphLogger {
+ public:
+  /**
+   * @brief Construct a new Rerun Fusion Graph Logger object
+   *
+   * @param rr_sfm_logger Already active instance of an rerun sfm logger (should hold the COLMAP reconstruction)
+   * @param active_fusion_graph_edges Graph nodes holding the odometry edges. Edges need to already be prefiltered by an upstream
+   * instance (e.g. filter through ba_config)
+   */
+  RerunFusionGraphLogger(std::shared_ptr<RerunSfmLogger> rr_sfm_logger,
+                         const fuhe::edges::MapOfImageEdges& active_fusion_graph_edges)
+      : rr_sfm_logger_{rr_sfm_logger}, active_fusion_graph_edges_{active_fusion_graph_edges} {
+    if (!rr_sfm_logger_) {
+      LOG(ERROR) << "Rerun Fusion Graph Logger was provided an invalid Sfm Logger. The Colmap model and the fusion optimization "
+                    "process cannot be streamed to rerun like this!";
+    }
+  };
+
+  /**
+   * @brief Call to SfmLogger member's LogFullReconstruction()
+   *
+   */
+  void LogFullReconstruction();
+
+  /**
+   * @brief Call to SfmLogger member's LogActivBundle(const colmap::BundleAdjustmentConfig* ba_config)
+   *
+   * @param ba_config bundle adjustment config that contains the active images and points3D in the current BA problem
+   */
+  void LogActivBundle(const colmap::BundleAdjustmentConfig* ba_config);
+
+  /**
+   * @brief Log all relative poses of external odometry as predicted poses as seen from node i for all nodes i j. Note that valid
+   * and filtered Fusion Graph Edges (passed during object constrction) are required to call this method.
+   *
+   */
+  void LogOdometryEdges();
+
+  /**
+   * @brief  Draw all external odometry measurements as absolute poses and visually constrain the absolute colmap image poses
+   * with them as edge.
+   *
+   */
+  void LogOdometryEdgesAsTrajectory();
+
+  /**
+   * @brief Clear all odometry edges streamed to rerun previously
+   *
+   */
+  void ClearAllOdometryEdges();
+
+  inline std::shared_ptr<RerunSfmLogger> GetSfmLogger() const { return rr_sfm_logger_; }
+  inline std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return rr_sfm_logger_->GetRerunRec(); }
+  inline RerunVisualizationOptions RerunOptions() const { return rr_sfm_logger_->RerunOptions(); }
+  inline std::shared_ptr<colmap::Reconstruction> Reconstruction() const { return rr_sfm_logger_->Reconstruction(); }
+
+ protected:
+  std::shared_ptr<RerunSfmLogger> rr_sfm_logger_ = nullptr;
+  fuhe::edges::MapOfImageEdges active_fusion_graph_edges_;
+
+  /**
+   * @brief Log odometry edge constraining to colmap nodes i j as linestrip and the pose of the odometry measruement to highlight
+   * them as factor graph edge. Pose can be drawn as relative increment (seen from source image i) or as absolute pose with
+   * respect to some coord frame. When choosing to draw odometry reading as absolute pose, user must provide the correct absolute
+   * pose himself. Linestrip drawing of edges works automatically for both cases.
+   *
+   * @param T_ij_odom
+   * @param img_i id of colmap cam pose i (source) that the odom image edges should constrain
+   * @param img_j id of colmap cam pose j (dest) that the odom image edges should constrain
+   * @param is_odom_as_pred_pose if forwarded odom pose T_ij_odom can be understood as relative pose of j w.r.t to i. If not, an
+   * absolute pose is assumed.
+   */
+  void LogOdometryEdge(const colmap::Rigid3d& T_ij_odom,
+                       const colmap::Image& img_i,
+                       const colmap::Image& img_j,
+                       const bool is_odom_as_pred_pose = true);
+
+  /**
+   * @brief Create 3D arrows that represent a pose in 3D space. Draw it ontop a rerun 3D transform instead of using the
+   * transforms own axis to avoid the pesky autoscale of the tf axis when going back in time in the rr viewer.
+   *
+   * @return rerun::Arrows3D
+   */
+  rerun::Arrows3D FrameAxis();
 };
 
 }  // namespace rr

@@ -102,11 +102,10 @@ int main(int argc, char** argv) {
   std::unique_ptr<colmap::BundleAdjuster> fusion_bundle_adjuster =
       tcf::CreateFusionGraphBundleAdjuster(*col_options.bundle_adjustment,
                                            fusion_ba_options,
-                                           rr_options,
-                                           rr_logger,
                                            ba_cfg,
                                            *reconstruction.get(),
-                                           *fusion_graph_data_edges.get());
+                                           *fusion_graph_data_edges.get(),
+                                           rr_logger);
 
   // -------------------- Solve fusion problem
   VLOG(1) << "Starting to solve bundle adjustment problem!";

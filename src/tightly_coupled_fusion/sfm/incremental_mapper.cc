@@ -1,5 +1,6 @@
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 
+#include "fusion_helper/col_utils.h"
 #include "fusion_helper/io.h"
 #include <colmap/estimators/pose.h>
 #include <colmap/util/file.h>
@@ -93,7 +94,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalMapperRer
           std::move(ba_config),
           *this->Reconstruction(),
           rr_logger_);  // custom bundle adjuster with capability to log to rerun during optimization
-    } else {              // default bundle adjuster without rerun logging
+    } else {            // default bundle adjuster without rerun logging
       bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
     }
     const ceres::Solver::Summary summary = bundle_adjuster->Solve();
@@ -160,7 +161,7 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
   if (rr_logger_) {
-    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Global bundle adjustment!");
+    rr_logger_->LogInfoMsg("Global bundle adjustment!");
   }
 
   const std::set<image_t>& reg_image_ids = this->Reconstruction()->RegImageIds();
@@ -211,8 +212,7 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
     }
 
     if (rr_logger_) {
-      bundle_adjuster =
-          CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_logger_);
+      bundle_adjuster = CreateDefaultBundleAdjusterRerun(ba_options, std::move(ba_config), *this->Reconstruction(), rr_logger_);
     } else {
       bundle_adjuster = CreateDefaultBundleAdjuster(ba_options, std::move(ba_config), *this->Reconstruction());
     }
@@ -335,7 +335,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
   LocalBundleAdjustmentReport report;
 
   if (rr_logger_) {
-    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Local bundle adjustment!");
+    rr_logger_->LogInfoMsg("Local bundle adjustment!");
   }
 
   // Find images that have most 3D points with given image in common.
@@ -440,13 +440,8 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
       }
     } else {
       // custom bundle adjuster with fusion capabilities
-      bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(ba_options,
-                                                             fusion_options_,
-                                                             rr_options_,
-                                                             rr_logger_,
-                                                             ba_config,
-                                                             *this->Reconstruction(),
-                                                             *this->FusionGraphDataEdges());
+      bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
+          ba_options, fusion_options_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
     }
 
     const ceres::Solver::Summary summary = bundle_adjuster->Solve();
@@ -511,7 +506,7 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
   using namespace colmap;
   VLOG(1) << "Adjusting global bundle with fusion capapbilites!";
   if (rr_logger_) {
-    fuhe::rrfuse::LogInfo(rr_logger_->GetRerunRec(), "Global bundle adjustment!");
+    rr_logger_->LogInfoMsg("Global bundle adjustment!");
   }
   THROW_CHECK_NOTNULL(this->Reconstruction());
 
@@ -573,13 +568,8 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
         std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_logger_);
   } else {
     // bundle adjuster with odometry fusion capabilities
-    bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(custom_ba_options,
-                                                           fusion_options_,
-                                                           rr_options_,
-                                                           rr_logger_,
-                                                           ba_config,
-                                                           *this->Reconstruction(),
-                                                           *this->FusionGraphDataEdges());
+    bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
+        custom_ba_options, fusion_options_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
   }
 
   return bundle_adjuster->Solve().termination_type != ceres::FAILURE;

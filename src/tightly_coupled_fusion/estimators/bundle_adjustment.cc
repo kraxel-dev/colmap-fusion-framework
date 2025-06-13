@@ -28,8 +28,8 @@ namespace tfc {  // namespace tfc
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * @brief Exact same behavior as DefaultBundelAdjuster but with rerun logging during optimization. Can be used in both local and
- * global BA of colmaps native (standard behavior) incremental mapping process.
+ * @brief Exact same behavior as DefaultBundelAdjuster but streams BA (shifting pts and cam-poses) process during optimization to
+ * rerun viewer. Can be used in both local and global BA of colmaps native (standard behavior) incremental mapping process.
  *
  */
 class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
@@ -86,10 +86,8 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
     VLOG(2) << "Deploying rerun iteration callback!";
 
     // deploy own iteration callback that logs to rerun during optimization
-    iter_callback_ = std::make_shared<fuhe::MarathonBundleAdjustIterCallback>(
+    iter_callback_ = std::make_shared<fuhe::iter_callbacks::ColmapBundleAdjusterIterCallback>(
         rr_sfm_logger_,
-        reconstruction_.Images(),
-        reconstruction_.Points3D(),
         &config_);  // pass ba_config to only log subset of images and points
 
     // only with real value updates can rerun log during the optimization process
@@ -98,7 +96,7 @@ class DefaultBundleAdjusterRerunLogging : public colmap::BundleAdjuster {
   }
 
   std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_ = nullptr;
-  std::shared_ptr<fuhe::BundleAdjustmentIterationCallback> iter_callback_ = nullptr;
+  std::shared_ptr<fuhe::iter_callbacks::ColmapBundleAdjusterIterCallback> iter_callback_ = nullptr;
   std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger_ = nullptr;
   colmap::Reconstruction& reconstruction_;
 };
@@ -122,24 +120,22 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
    *
    * @param options BA options (global vs local)
    * @param fusion_options options for fusion optimization
-   * @param rr_options rerun visualization options
-   * @param rr_sfm_logger custom rerun sfm logger object to log data to rerun viewer
    * @param config correctly populated ba_config (e.g. which images are contained in problem and which are set const)
    * @param reconstruction full colmap model
    * @param fusion_graph_data_edges (non-filtered) fusion graph data edges (image edges with odometry), entailing the full
    * reconstruction (even not yet registered images), that add relative pose constraints to the ceres optimization. Will be
    * filtered internally to only keep edges that are active in the current BA problem.
+   * @param rr_sfm_logger custom rerun sfm logger object to log data to rerun viewer. Please provide nullptr if streaming to
+   * rerun is not desired
    */
   FusionGraphBundleAdjuster(colmap::BundleAdjustmentOptions options,
                             const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-                            const fuhe::rr::RerunVisualizationOptions& rr_options,
-                            const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
                             colmap::BundleAdjustmentConfig config,
                             colmap::Reconstruction& reconstruction,
-                            const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges)
+                            const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges,
+                            const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger = nullptr)
       : BundleAdjuster(std::move(options), std::move(config)),
         fusion_options_{fusion_options},
-        rr_options_{rr_options},
         rr_sfm_logger_{rr_sfm_logger},
         reconstruction_{reconstruction} {
     // -------------------- Default Bundle Adjuster creation
@@ -164,8 +160,6 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 
       // Define covariance of relative motion.
       Eigen::Matrix<double, 6, 6> covarince_i_from_j = img_edge.OdomEdge()->CovMat_ij() * fusion_options_.cov;
-      //   // weight non local z-axis motion and rotation in relative odometry // TODO: think about motion axis weighting
-      //   fuhe::cov_utils::WeightPoseCovNonMotionDirection(covarince_i_from_j, non_motion_weighting);
 
       // register metric relative pose factor in BA
       this->AddOdomToProblem(
@@ -174,6 +168,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     }
     VLOG(2) << "Added nr of between factors: " << between_factor_counter;
 
+    // -------------------- Force certain ceres state params to constant
     // fix cam poses deemed as constant for this bundle. Necessary since default BA does not actually set the ceres
     // param block as constant during init.
     for (const colmap::image_t image_id : config_.Images()) {
@@ -223,31 +218,31 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     // -------------------- Create between factor and add to problem
     // convert relative eigen pose to colmap format
     const colmap::Rigid3d T_ij_rigid = colmap::Rigid3d(Eigen::Quaterniond(i_from_j.rotation()), i_from_j.translation());
-
     VLOG(3) << "Creating metric relative odom cost function from img id: " << img_id_i << " to id: " << img_id_j;
     ceres::CostFunction* cost_func = nullptr;
 
     // decide whether to also estimate scale from measurement or not
     if (fusion_options_.brute_force_scale_recovery) {
+      // -------------------- Brute force scale
       // create ceres relative pose factor weighted by its covariance
       cost_func = colmap::CovarianceWeightedCostFunctor<colmap::RelativePosePriorCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
 
       VLOG(4) << "Adding residual block to ceres graph!";
-      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: q_i, t_i, q_j,
-      // t_j
+      // register odom-between factor in ceres graph. order of params: q_i, t_i, q_j, t_j
       this->Problem()->AddResidualBlock(cost_func, nullptr, q_i, t_i, q_j, t_j);
     } else {
+      // -------------------- Scale aware cost factor
       // also estimates scale between sfm model and measurements
       cost_func =
           colmap::CovarianceWeightedCostFunctor<fuhe::cost::ScaleAwareRelativePoseCostFunctor>::Create(cov_i_from_j, T_ij_rigid);
 
+      // wrap loss function around scale aware cost factor
       if (fusion_options_.use_robust_loss_on_scale_estimation && !scale_estimation_loss_func_) {
         scale_estimation_loss_func_ = std::make_unique<ceres::CauchyLoss>(fusion_options_.scale_estimation_loss_factor);
       }
 
       VLOG(4) << "Adding residual block to ceres graph!";
-      // register odom between factor in ceres graph and directly retrieve id of residual block. order of params: scale, q_i,
-      // t_i, q_j, t_j
+      // register odom between factor in ceres graph. order of params: scale, q_i, t_i, q_j, t_j
       this->Problem()->AddResidualBlock(cost_func, scale_estimation_loss_func_.get(), model_scale_.get(), q_i, t_i, q_j, t_j);
       VLOG(3) << "Scale estimation in relative pose factor included!";
     }
@@ -262,7 +257,6 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     }
   }
 
-  /// Obtain ceres problem
   std::shared_ptr<ceres::Problem>& Problem() override { return default_bundle_adjuster_->Problem(); };
 
   /**
@@ -312,11 +306,12 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   };
 
  protected:
-  const tcf::FusionGraphBundleAdjustmentOptions fusion_options_;  // tum file path, cov mat, etc
-  const fuhe::rr::RerunVisualizationOptions rr_options_;      // rerun visualization options
+  // options such as tum file path, cov mat, etc
+  const tcf::FusionGraphBundleAdjustmentOptions fusion_options_;
+  // rerun logger object for streaming the BA process to rerun. can be nullptr if streaming is not toggled
   std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger_ = nullptr;
-  std::shared_ptr<fuhe::MarathonFusionIterCallback> iter_callback_ =
-      nullptr;  // custom iteration callback to log data to rerun if toggled
+  // custom iteration callback to log data to rerun if toggled
+  std::shared_ptr<fuhe::iter_callbacks::ColmapFusionBAIterCallback> iter_callback_ = nullptr;
 
   // time sorted image sequence with odometry edges constraining images (if availabe). Already subsetted to entail only images
   // active in current BA.
@@ -328,7 +323,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   std::unique_ptr<ceres::LossFunction> scale_estimation_loss_func_ = nullptr;
 
   colmap::Reconstruction& reconstruction_;
-  std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_;
+  std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_;  // composition
 
   /**
    * @brief Attach iteration callback that logs visualization data to rerun during optimization
@@ -338,16 +333,11 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   void AddFusionIterationCallback(ceres::Solver::Options& solver_options) {
     VLOG(2) << "Deploying rerun iteration callback!";
     // deploy own iteration callback that logs to rerun during optimization
-    iter_callback_ = std::make_shared<fuhe::MarathonFusionIterCallback>(rr_sfm_logger_,
-                                                                        reconstruction_.Images(),
-                                                                        reconstruction_.Points3D(),
-                                                                        &config_,
-                                                                        active_fusion_graph_edges_,
-                                                                        rr_options_.draw_rerun_odom_as_predicted_poses,
-                                                                        rr_options_.is_highlight_active_cams);
+    iter_callback_ =
+        std::make_shared<fuhe::iter_callbacks::ColmapFusionBAIterCallback>(rr_sfm_logger_, &config_, active_fusion_graph_edges_);
+
     // only with real value updates can rerun log during the optimization process
     solver_options.update_state_every_iteration = true;
-
     solver_options.callbacks.push_back(iter_callback_.get());
   }
 };
@@ -356,13 +346,12 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rr::RerunVisualizationOptions& rr_options,
-    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
-    const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges) {
+    const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges,
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger) {
   return std::make_unique<tfc::FusionGraphBundleAdjuster>(
-      std::move(options), fusion_options, rr_options, rr_sfm_logger, std::move(config), reconstruction, fusion_graph_data_edges);
+      std::move(options), fusion_options, std::move(config), reconstruction, fusion_graph_data_edges, rr_sfm_logger);
 }
 
 std::unique_ptr<colmap::BundleAdjuster> tcf::CreateDefaultBundleAdjusterRerun(

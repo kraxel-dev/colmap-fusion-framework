@@ -74,9 +74,8 @@ struct FusionGraphBundleAdjustmentOptions {
  *
  * @param options BA options (global vs local)
  * @param fusion_options options for fusion enhanced BA
- * @param rr_options rerun visaulization options
- * @param rr_recorder custom rerun recorder object
- * @param config pre-populated config that states which images and points will be considered in ceres for building the factor
+ * @param rr_sfm_logger custom rerun sfm logger object. Please provide nullptr if streaming to rerun is not desired
+ * @param config pre-populated ba_config that states which images and points will be considered in ceres for building the factor
  * graph
  * @param reconstruction full colmap reconstruction
  * @param fusion_graph_data_edges full (non-filtered) fusion graph data edges (image edges with odometry) that adds relative pose
@@ -87,11 +86,10 @@ struct FusionGraphBundleAdjustmentOptions {
 std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(
     colmap::BundleAdjustmentOptions options,
     const tcf::FusionGraphBundleAdjustmentOptions& fusion_options,
-    const fuhe::rr::RerunVisualizationOptions& rr_options,
-    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
-    const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges);
+    const fuhe::edges::MapOfImageEdges& fusion_graph_data_edges,
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger = nullptr);
 
 /**
  * @brief Create a Default Bundle Adjuster with capabilities to stream optimization process to rerun.
@@ -100,13 +98,14 @@ std::unique_ptr<colmap::BundleAdjuster> CreateFusionGraphBundleAdjuster(
  * @param config pre-populated config that states which images and points will be considered in ceres for building the factor
  * graph
  * @param reconstruction rerun visaulization options
- * @param rr_recorder custom rerun recorder object
+ * @param rr_sfm_logger custom rerun sfm logger object. Please provide nullptr if streaming to rerun is not desired
+
  * @return std::unique_ptr<colmap::BundleAdjuster>
  */
 std::unique_ptr<colmap::BundleAdjuster> CreateDefaultBundleAdjusterRerun(
     colmap::BundleAdjustmentOptions options,
     colmap::BundleAdjustmentConfig config,
     colmap::Reconstruction& reconstruction,
-    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger);
+    const std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_sfm_logger = nullptr);
 
 }  // namespace tcf

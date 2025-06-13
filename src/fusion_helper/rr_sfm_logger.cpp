@@ -1,9 +1,14 @@
 #include "fusion_helper/rr_sfm_logger.h"
 
 #include "fusion_helper/col_utils.h"
+#include "fusion_helper/rr_utils.h"
 
 namespace fuhe {
 namespace rr {
+
+////////////////////////////////////////////////////////////////////////////////
+// Rerun Sfm Logger
+////////////////////////////////////////////////////////////////////////////////
 
 RerunSfmLogger::RerunSfmLogger(const RerunVisualizationOptions& rr_opts, std::shared_ptr<colmap::Reconstruction> reconstruction)
     : rr_options_{rr_opts}, reconstruction_{reconstruction} {
@@ -71,11 +76,11 @@ void RerunSfmLogger::LogActivBundle(const colmap::BundleAdjustmentConfig* ba_con
   // -------------------- Registered images
   // log all registered images
   for (auto& [_, img] : active_imgs) {
-    this->LogCamPose(img);
+    this->LogCamPose(img, /*highlight=*/true);
   }
 
   // -------------------- Tracks
-  this->LogPoints3D(active_pts3D);
+  this->LogPoints3D(active_pts3D, /*is_subset=*/true);
 }
 
 void RerunSfmLogger::ClearActiveBundle() {
@@ -126,9 +131,13 @@ void RerunSfmLogger::LogCamPose(const colmap::Image& img, const bool highlight) 
 }
 
 void RerunSfmLogger::UpdateModelBBox() {
+  VLOG(2) << "Updating to reonstruction bounding box given its current 3d points. If toggled in Options, points outside of new "
+             "BBox will be omitted in rerun viewer!";
+
   // compute new model bbox based on its 3d Points. Note the lower and upper bound of omitted percentile.
   const fuhe::types::ColmapBBox bbox =
       this->Reconstruction()->ComputeBoundingBox(rr_options_.model_bbox_lb, rr_options_.model_bbox_ub);
+  VLOG(3) << "Model Bbox size is: " << bbox.first << " and " << bbox.second;
 
   if (!model_bbox_) {
     model_bbox_ = std::make_shared<fuhe::types::ColmapBBox>(bbox);
@@ -143,11 +152,15 @@ void RerunSfmLogger::LogCamPose(const colmap::image_t& id, const bool highlight)
 
 std::shared_ptr<colmap::Reconstruction> RerunSfmLogger::Reconstruction() const { return reconstruction_; }
 
+RerunVisualizationOptions RerunSfmLogger::RerunOptions() const { return rr_options_; }
+
 void RerunSfmLogger::LogPoints3D(const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D, const bool is_subset) {
   // clear old rerun 3d points
   this->GetRerunRec()->log(rr_utils::GetPoints3DName(is_subset), rerun::Points3D::clear_fields());
 
   std::vector<rerun::Position3D> points;
+  int n_skipped = 0;
+
   // log all 3d points
   for (auto& pt3D : points3D) {
     // Should actually be `track.observations.size() < options_.min_num_view_per_track`.
@@ -156,7 +169,8 @@ void RerunSfmLogger::LogPoints3D(const std::unordered_map<colmap::point3D_t, col
 
     // ignore points that are outside the bounding box of colmap model
     if (rr_options_.is_ignore_pts_beyond_model_bbox) {
-      if (model_bbox_ && col_utils::IsPointInBBox(pt3D, *model_bbox_.get())) {
+      if (model_bbox_ && !col_utils::IsPointInBBox(pt3D, *model_bbox_.get())) {
+        n_skipped++;
         continue;
       }
     }
@@ -167,11 +181,181 @@ void RerunSfmLogger::LogPoints3D(const std::unordered_map<colmap::point3D_t, col
   }
 
   this->GetRerunRec()->log(rr_utils::GetPoints3DName(is_subset), rerun::Points3D(points));
+
+  if (n_skipped > 0) {
+    VLOG(3) << "Skipped total of " << n_skipped << " points for rerun streaming cause they're beyond model BB!";
+  }
 }
 
 void RerunSfmLogger::LogInfoMsg(const std::string& msg) {
   this->GetRerunRec()->log("logs", rerun::TextLog(msg).with_level(rerun::TextLogLevel::Info));
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Fusion Graph Logger
+////////////////////////////////////////////////////////////////////////////////
+
+void RerunFusionGraphLogger::LogFullReconstruction() { GetSfmLogger()->LogFullReconstruction(); }
+
+void RerunFusionGraphLogger::LogActivBundle(const colmap::BundleAdjustmentConfig* ba_config) {
+  GetSfmLogger()->LogActivBundle(ba_config);
+}
+
+void RerunFusionGraphLogger::LogOdometryEdges() {
+  const bool log_odom_as_predicted_pose = true;  // do not log odometry measurement as absolute pose
+  // -------------------- Edges
+  const auto& reg_images = col_utils::RegisteredImages(GetSfmLogger()->Reconstruction());
+
+  // iterate over all graph nodes and
+  for (auto& [_, img_edge] : active_fusion_graph_edges_) {
+    // skip image if not entailed by COLMAP model (e.g. not yet registered during reconstr). Note that an upstream instance
+    // should have already filtered the odom edges through a valid ba_config to only inlcude edges of currently active BA. This
+    // following check is just a last-resort safety measure.
+    if (reg_images.find(img_edge.CurrId()) == reg_images.end()) {
+      continue;
+    }
+
+    // skip image without odometry constraint
+    if (!img_edge.OdomEdge()) {
+      continue;
+    }
+
+    auto odom_edge = img_edge.OdomEdge();
+
+    // skip relative poses whose source node is not entailed in selected reg_images
+    if (reg_images.find(odom_edge->PrevId()) == reg_images.end()) {
+      continue;
+    }
+
+    // obtain relative pose from odometry edge
+    const colmap::Rigid3d T_ij_rigid =
+        colmap::Rigid3d(Eigen::Quaterniond(odom_edge->T_i_from_j().rotation()), odom_edge->T_i_from_j().translation());
+    VLOG(5) << "Rerun logging relpose factor with rigid: " << T_ij_rigid;
+
+    // -------------------- Log Edge to Rerun
+    this->LogOdometryEdge(
+        T_ij_rigid, reg_images.at(odom_edge->PrevId()), reg_images.at(odom_edge->CurrId()), /*is_odom_as_pred_pose=*/true);
+  }
+}
+
+void RerunFusionGraphLogger::LogOdometryEdgesAsTrajectory() {
+  // absolute odometry pose, incremented per interation with each consecutive relpose
+  colmap::Rigid3d T_world_from_odom = colmap::Rigid3d();
+
+  std::vector<rerun::Vec3D> line_segments;  // vector containg xyz points of line semgents
+  bool is_init = true;                      // for fetching origin absolute pose
+
+  // -------------------- Edges
+  // iterate over all active fusion graph edges
+  for (auto& [_, edge] : active_fusion_graph_edges_) {
+    // -------------------- Safety checks
+    // skip if no viable odometry edge availabe for this image
+    if (!edge.OdomEdge()) {
+      continue;
+    }
+
+    auto odom_edge = edge.OdomEdge();
+
+    // -------------------- Init condition
+    if (is_init) {
+      // grabbing first colmap pose (i) of valid odom edge as origin of tum trajectory
+      T_world_from_odom = colmap::Inverse(this->Reconstruction()->Image(edge.PrevId()).CamFromWorld());
+
+      const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
+      // line strip connecting odometry poses
+      line_segments.push_back(t_i);  // node i as origin
+
+      is_init = false;
+    }
+
+    // -------------------- Increment curr edge onto existing trajectory
+    const colmap::Rigid3d T_ij_rigid =
+        colmap::Rigid3d(Eigen::Quaterniond(odom_edge->T_i_from_j().rotation()), odom_edge->T_i_from_j().translation());
+
+    // increment rel pose to obtain absolute pose for current node
+    T_world_from_odom = T_world_from_odom * T_ij_rigid;
+
+    // stream absolute odom pose, connected to associated colmap cam poses to rerun
+    this->LogOdometryEdge(T_world_from_odom,
+                          this->Reconstruction()->Image(odom_edge->PrevId()),
+                          this->Reconstruction()->Image(odom_edge->CurrId()),
+                          /*is_odom_as_pred_pose=*/false);
+
+    // extend line strip connecting odometry poses
+    const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(T_world_from_odom, false).first;  // pos of j img in world
+    line_segments.push_back(t_j);                                                            // node i as origin
+  }
+
+  rerun::LineStrip3D line_strip(line_segments);
+  this->GetRerunRec()->log("world/odometry", rerun::LineStrips3D(line_strip).with_labels(rerun::components::Text("Odometry")));
+}
+
+void RerunFusionGraphLogger::ClearAllOdometryEdges() {
+  // just brute force clear the whole entity path
+  this->GetRerunRec()->log(rr_utils::GetSourceFrameNameOdomEdges(/*is_relative_pose=*/true), rerun::archetypes::Clear(true));
+  this->GetRerunRec()->log(rr_utils::GetSourceFrameNameOdomEdges(/*is_relative_pose=*/false), rerun::archetypes::Clear(true));
+}
+
+void RerunFusionGraphLogger::LogOdometryEdge(const colmap::Rigid3d& T_ij_odom,
+                                             const colmap::Image& img_i,
+                                             const colmap::Image& img_j,
+                                             const bool is_odom_as_pred_pose) {
+  // rerun naming stuff
+  std::string pred_cam_name =
+      fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_as_pred_pose).first;
+  std::string edge_i_pred_j_name =
+      fuhe::rr_utils::GetEntityNamesOdomEdge(img_i.ImageId(), img_j.ImageId(), is_odom_as_pred_pose).second;
+
+  // absolute pose odom (that is associated with node j) w.r.t world
+  colmap::Rigid3d T_odom_w_j;
+
+  // if odom pose is provided as relative pose between i and j (typical case)
+  if (is_odom_as_pred_pose) {
+    T_odom_w_j = colmap::Inverse(img_i.CamFromWorld()) * T_ij_odom;  // T_w_j_predicted = T_w_from_i * T_odometry_i_from_j
+  } else {
+    // if odom pose is provided as absolute pose (case only for logging)
+    T_odom_w_j = T_ij_odom;
+  }
+
+  // obtain absolute poses of colmap nodes
+  const rerun::Vec3D t_i = fuhe::rr_utils::ToRerunPose3D(colmap::Inverse(img_i.CamFromWorld())).first;
+  const rerun::Vec3D t_j = fuhe::rr_utils::ToRerunPose3D(colmap::Inverse(img_j.CamFromWorld())).first;
+  // convert odom pose to rerun type
+  std::pair<rerun::Vec3D, rerun::Mat3x3> T_ij_pred = fuhe::rr_utils::ToRerunPose3D(T_odom_w_j);
+
+  // line strip highlighting the edges between states and predicted pose
+  std::vector<rerun::Vec3D> line_segments;   // vector containg xyz points of line semgents
+  line_segments.push_back(t_i);              // origin in zero (parent entity is i cam pose)
+  line_segments.push_back(T_ij_pred.first);  // pass predicted pose as control point
+  line_segments.push_back(t_j);              // end line strip in pose of image j
+  rerun::LineStrip3D line_strip(line_segments);
+
+  // -------------------- log predicted camera pose to rerun.
+  // transform without visible axis to propagate correct pose
+  this->GetRerunRec()->log(pred_cam_name, rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second));
+  // draw coord frame axis onto predicted pose for visiblity
+  this->GetRerunRec()->log(pred_cam_name + "/axis-frame", this->FrameAxis());
+
+  // add a point to slap a label to the predicted image pose
+  if (GetSfmLogger()->RerunOptions().is_show_edge_labels) {
+    this->GetRerunRec()->log(
+        pred_cam_name + "/axis-frame/pt",
+        rerun::Points3D({{0.05f, 0.2f, -0.2f}})
+            .with_labels(rerun::components::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
+  }
+
+  // log linestrips connecting the factors
+  this->GetRerunRec()->log(edge_i_pred_j_name, rerun::LineStrips3D(line_strip));
+  // FIXME: kick edge label here if predicted cam label performs better
+  // GetRerunRec()->log(edge_i_pred_j_name,
+  //          rerun::LineStrips3D(line_strip)
+  //              .with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
+}
+
+rerun::Arrows3D RerunFusionGraphLogger::FrameAxis() {
+  const float axis_len_odom = GetSfmLogger()->RerunOptions().img_plane_dist * 0.63f;  // TODO: magic number fix in future
+  return rerun::Arrows3D::from_vectors({{axis_len_odom, 0.0, 0.0}, {0.0, axis_len_odom, 0.0}, {0.0, 0.0, axis_len_odom}})
+      .with_colors({{255, 0, 0}, {0, 255, 0}, {0, 0, 255}});
+}
 }  // namespace rr
 }  // namespace fuhe

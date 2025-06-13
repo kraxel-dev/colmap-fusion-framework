@@ -24,7 +24,6 @@
 #include <colmap/exe/sfm.h>
 #include <fusion_helper/fusion_residuals_tracker.h>
 #include <fusion_helper/types.h>
-#include <rerun.hpp>
 
 namespace hifuse {  // high-level fusion
 
@@ -57,10 +56,7 @@ class FusionGraphInterface {
  public:
   FusionGraphInterface(const std::shared_ptr<colmap::Reconstruction> reconstruction,
                        ceres::Problem& ceres_graph,
-                       const bool track_residuals,
-                       const bool log_to_rerun = true,
-                       const bool save_rerun_recording = false,
-                       const std::string recording_path = "");
+                       const bool track_residuals);
   ~FusionGraphInterface() = default;
 
   /**
@@ -92,29 +88,15 @@ class FusionGraphInterface {
                         const Eigen::Isometry3d& i_from_j,
                         const Eigen::Matrix<double, 6, 6> cov_i_from_j);
 
-  /// update colmap image poses and 3d points in rerun in one swoop
-  void UpdateWholeReconstroctionRerun();
-
   inline const std::shared_ptr<colmap::Reconstruction> GetReconstruction() { return this->reconstruction; }
-
-  inline std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return this->rr_rec; }
-  inline std::shared_ptr<rerun::Pinhole> GetRerunPinhole() const { return this->rr_pinhole; }
 
   inline std::vector<std::vector<ceres::ResidualBlockId>> GetReprojResidualIds() const { return this->reproj_residual_ids; }
   inline std::vector<ceres::ResidualBlockId> GetOdomResidualIds() const { return this->odom_residual_ids; }
 
-  /// nullptr if residual tracking is deactivated by user
+  /// returns nullptr if residual tracking is deactivated by user
   inline const std::shared_ptr<fuhe::FusionResidualsTracker> GetResidualsTracker() const { return residuals_tracker; }
 
- private:
-  bool is_log_to_rerun = true;  // flag to enable logging and visualization of graph construction and optimization to rerun
-  bool is_save_rerun_to_disk = false;  // enable saving rerun logged data to disk as rrd file
-  std::string recording_path = "";
-  std::shared_ptr<rerun::RecordingStream> rr_rec = nullptr;  // rerun logger and viewer object
-  std::shared_ptr<rerun::Pinhole> rr_pinhole = nullptr;      // rerun pinhole model representing the camera used in colmap model
-  std::shared_ptr<rerun::Pinhole> rr_pinhole_pred =
-      nullptr;  // rerun pinhole model representing the predicted position through odometry
-
+ protected:
   // NOTE: acceppt ceres problem only as reference
   ceres::Problem& ceres_graph;                                   // ceres problem that acts as factor graph
   const std::shared_ptr<colmap::Reconstruction> reconstruction;  // colmap model to be used for factor graph construction
@@ -126,8 +108,6 @@ class FusionGraphInterface {
   std::vector<std::vector<ceres::ResidualBlockId>> reproj_residual_ids;
   // ceres ids for registerd odom factors such that we can perform residual evaluation
   std::vector<ceres::ResidualBlockId> odom_residual_ids;
-
-  void InitRerunViewer();  // FIXME: swap out with new fusion logger class
 };
 
 }  // namespace hifuse

@@ -75,6 +75,8 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  col_options.AddDefaultOption("Rerun.model_bbox_lower_bound", &rr_options.model_bbox_lb);
+  col_options.AddDefaultOption("Rerun.model_bbox_upper_bound", &rr_options.model_bbox_ub);
   // custom fusion options
   col_options.AddDefaultOption("Fusion.is_mapping_with_fusion", &fusion_ba_options.is_mapping_with_fusion);
   col_options.AddDefaultOption("Fusion.tum_file", &fusion_ba_options.tum_file);
@@ -170,6 +172,11 @@ int main(int argc, char** argv) {
   // -------------------- Initial Pair Rerun visualization
   // log initial pair to rerun
   if (rr_options.is_log_to_rerun) {
+    // establish model bbox from 3d points of initial pair to filter out pts in rerun that would cause mayhem in the viewer
+    if (rr_options.is_ignore_pts_beyond_model_bbox) {
+      rr_logger->UpdateModelBBox();
+    }
+
     rr_logger->LogFullReconstruction();
   }
 

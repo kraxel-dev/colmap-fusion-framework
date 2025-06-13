@@ -24,12 +24,15 @@ std::pair<rerun::Vec3D, rerun::Mat3x3> fuhe::rr_utils::ToRerunPose3D(const colma
 }
 
 rerun::Arrows3D fuhe::rr_utils::FrameAxis() {
-  return rerun::Arrows3D::from_vectors(
-             {{rr_utils::AXIS_LENGTH_ODOM, 0.0, 0.0}, {0.0, rr_utils::AXIS_LENGTH_ODOM, 0.0}, {0.0, 0.0, rr_utils::AXIS_LENGTH_ODOM}})
+  return rerun::Arrows3D::from_vectors({{rr_utils::AXIS_LENGTH_ODOM, 0.0, 0.0},
+                                        {0.0, rr_utils::AXIS_LENGTH_ODOM, 0.0},
+                                        {0.0, 0.0, rr_utils::AXIS_LENGTH_ODOM}})
       .with_colors({{255, 0, 0}, {0, 255, 0}, {0, 0, 255}});
 }
 
-const std::string fuhe::rr_utils::GetCamPosesName(const colmap::image_t img_id) { return "world/cams/cam" + std::to_string(img_id); }
+const std::string fuhe::rr_utils::GetCamPosesName(const colmap::image_t img_id) {
+  return "world/cams/cam" + std::to_string(img_id);
+}
 
 const std::string fuhe::rr_utils::GetPoints3DName(const bool is_subset) {
   const std::string pts3d_name = (is_subset) ? "world/pts_3D_local_bundle" : "world/pts_3D";
@@ -43,9 +46,16 @@ std::string fuhe::rr_utils::GetLabelNameEdge(const colmap::image_t img_id_i, con
 std::pair<std::string, std::string> fuhe::rr_utils::GetEntityNamesOdomEdge(const colmap::image_t img_id_i,
                                                                            const colmap::image_t img_id_j,
                                                                            const bool is_relative_pose) {
+  const std::string source_frame = GetSourceFrameNameOdomEdges(is_relative_pose);
+
+  std::string odom_pose_name = source_frame + "/cam_" + std::to_string(img_id_j);
+  std::string edge_i_pred_j_name = source_frame + "/" + rr_utils::GetLabelNameEdge(img_id_i, img_id_j);
+
+  return std::pair<std::string, std::string>(odom_pose_name, edge_i_pred_j_name);
+}
+
+std::string fuhe::rr_utils::GetSourceFrameNameOdomEdges(const bool is_relative_pose) {
   std::string source_frame = "world";
-  std::string odom_pose_name = "";
-  std::string edge_i_pred_j_name = "";
 
   // easy way in viewer to toggle between odometry view (absolute poses vs predicted ones)
   if (is_relative_pose) {
@@ -54,8 +64,5 @@ std::pair<std::string, std::string> fuhe::rr_utils::GetEntityNamesOdomEdge(const
     source_frame += "/00_absolute_odom_poses";
   }
 
-  odom_pose_name = source_frame + "/cam_" + std::to_string(img_id_j);
-  edge_i_pred_j_name = source_frame + "/" + rr_utils::GetLabelNameEdge(img_id_i, img_id_j);
-
-  return std::pair<std::string, std::string>(odom_pose_name, edge_i_pred_j_name);
+  return source_frame;
 }
