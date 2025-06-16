@@ -135,6 +135,14 @@ class RerunSfmLogger {
   void LogInfoMsg(const std::string& msg);
 
   /**
+   * @brief Streams the total ceres cost of a factor type for current iterations to rerun.
+   *
+   * @param factor_type
+   * @param total_cost
+   */
+  void LogTotalFactorCost(const std::string& factor_type, const double total_cost);
+
+  /**
    * @brief Getter for attached colmap reconstruction.
    *
    * @return std::shared_ptr<colmap::Reconstruction>
@@ -222,6 +230,14 @@ class RerunFusionGraphLogger {
    *
    */
   void ClearAllOdometryEdges();
+
+  /**
+   * @brief Streams the total ceres cost of a factor type for current iterations to rerun.
+   *
+   * @param factor_type
+   * @param total_cost
+   */
+  void LogTotalFactorCost(const std::string& factor_type, const double total_cost);
 
   inline std::shared_ptr<RerunSfmLogger> GetSfmLogger() const { return rr_sfm_logger_; }
   inline std::shared_ptr<rerun::RecordingStream> GetRerunRec() const { return rr_sfm_logger_->GetRerunRec(); }

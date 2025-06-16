@@ -83,6 +83,14 @@ class FusionGraphIterCallback : public BundleAdjustmentIterationCallback {
   }
 
   ceres::CallbackReturnType operator()(const ceres::IterationSummary& summary) {
+    // update model BBox every n-th iter so that 3d points are not omitted during growing scale through fusion
+    const int n_update = 7;
+    if (summary.iteration % n_update == 0) {
+      if (rr_fusion_logger_->RerunOptions().is_ignore_pts_beyond_model_bbox) {
+        rr_fusion_logger_->GetSfmLogger()->UpdateModelBBox();
+      }
+    }
+
     // --------------------  visualize full reconstruction for this iteration
     rr_fusion_logger_->LogFullReconstruction();
 
@@ -99,18 +107,15 @@ class FusionGraphIterCallback : public BundleAdjustmentIterationCallback {
     }
 
     // -------------------- track total factor costs in rerun plots if toggled on
-    // FIXME: rewrite cost tracking
-    // // if (this->tracked_residuals && summary.iteration > 1) {
-    // if (this->tracked_residuals) {
-    //   // skip total reprojection cost if its way larger than total graph error  to avoid rerun plotting problems
-    //   const double reproj_cost = this->tracked_residuals->GetTotalReprojCost();
-    //   if (reproj_cost < 6 * summary.cost) {
-    //     rrfuse::LogTotalFactorCost(this->rr_rec_, "reproj", reproj_cost);
-    //   }
-
-    //   rrfuse::LogTotalFactorCost(this->rr_rec_, "odom", this->tracked_residuals->GetTotalOdomCost());
-    //   rrfuse::LogTotalFactorCost(this->rr_rec_, "graph", summary.cost);
-    // }
+    if (this->tracked_residuals) {
+      const double reproj_cost = this->tracked_residuals->GetTotalReprojCost();
+      // skip total reprojection cost if its way larger than total graph error to avoid rerun plotting problems
+      if (reproj_cost < 6 * summary.cost) {
+        rr_fusion_logger_->LogTotalFactorCost("reproj", reproj_cost);
+      }
+      rr_fusion_logger_->LogTotalFactorCost("odom", this->tracked_residuals->GetTotalOdomCost());
+      rr_fusion_logger_->LogTotalFactorCost("graph", summary.cost);
+    }
     return ceres::SOLVER_CONTINUE;
   }
 

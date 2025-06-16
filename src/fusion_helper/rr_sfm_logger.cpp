@@ -191,6 +191,11 @@ void RerunSfmLogger::LogInfoMsg(const std::string& msg) {
   this->GetRerunRec()->log("logs", rerun::TextLog(msg).with_level(rerun::TextLogLevel::Info));
 }
 
+void RerunSfmLogger::LogTotalFactorCost(const std::string& factor_type, const double total_cost) {
+  std::string cost_name = "total_" + factor_type + "_cost";
+  this->GetRerunRec()->log(cost_name, rerun::Scalar(total_cost));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Fusion Graph Logger
 ////////////////////////////////////////////////////////////////////////////////
@@ -294,6 +299,10 @@ void RerunFusionGraphLogger::ClearAllOdometryEdges() {
   // just brute force clear the whole entity path
   this->GetRerunRec()->log(rr_utils::GetSourceFrameNameOdomEdges(/*is_relative_pose=*/true), rerun::archetypes::Clear(true));
   this->GetRerunRec()->log(rr_utils::GetSourceFrameNameOdomEdges(/*is_relative_pose=*/false), rerun::archetypes::Clear(true));
+}
+
+void RerunFusionGraphLogger::LogTotalFactorCost(const std::string& factor_type, const double total_cost) {
+  this->GetSfmLogger()->LogTotalFactorCost(factor_type, total_cost);
 }
 
 void RerunFusionGraphLogger::LogOdometryEdge(const colmap::Rigid3d& T_ij_odom,
