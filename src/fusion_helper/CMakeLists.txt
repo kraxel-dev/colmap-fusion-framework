@@ -11,7 +11,6 @@ set(FUSION_HELPER_SOURCES
     frame_align_utils.cpp
     rr_utils.cpp
     rr_sfm_logger.cpp
-    rr_fusion_logging.cpp
     odom_edges_manager.cpp
 )
 add_library(fusion_helper ${FUSION_HELPER_SOURCES})  # automatically exposed for other subdirs to use

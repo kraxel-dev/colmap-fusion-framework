@@ -23,10 +23,8 @@ std::pair<rerun::Vec3D, rerun::Mat3x3> fuhe::rr_utils::ToRerunPose3D(const colma
   return std::pair<rerun::Vec3D, rerun::Mat3x3>(rerun::Vec3D(t.data()), rerun::Mat3x3(R.data()));
 }
 
-rerun::Arrows3D fuhe::rr_utils::FrameAxis() {
-  return rerun::Arrows3D::from_vectors({{rr_utils::AXIS_LENGTH_ODOM, 0.0, 0.0},
-                                        {0.0, rr_utils::AXIS_LENGTH_ODOM, 0.0},
-                                        {0.0, 0.0, rr_utils::AXIS_LENGTH_ODOM}})
+rerun::Arrows3D fuhe::rr_utils::FrameAxis(const float axis_len) {
+  return rerun::Arrows3D::from_vectors({{axis_len, 0.0, 0.0}, {0.0, axis_len, 0.0}, {0.0, 0.0, axis_len}})
       .with_colors({{255, 0, 0}, {0, 255, 0}, {0, 0, 255}});
 }
 

@@ -12,11 +12,13 @@ namespace rr {
 
 RerunSfmLogger::RerunSfmLogger(const RerunVisualizationOptions& rr_opts, std::shared_ptr<colmap::Reconstruction> reconstruction)
     : rr_options_{rr_opts}, reconstruction_{reconstruction} {
+  // -------------------- Options parsing
+  frame_axis_len_ = rr_options_.img_plane_dist * 0.63f;  // length of frame axis for poses
+
   // -------------------- Set rerun context
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
   rr_rec_ = std::make_shared<rerun::RecordingStream>("bundle", "shared");
   this->GetRerunRec()->spawn().exit_on_failure();
-
   this->GetRerunRec()->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an z-up-axis
 
   // -------------------- Save rerun recording to disk if specified
@@ -153,6 +155,8 @@ void RerunSfmLogger::LogCamPose(const colmap::image_t& id, const bool highlight)
 std::shared_ptr<colmap::Reconstruction> RerunSfmLogger::Reconstruction() const { return reconstruction_; }
 
 RerunVisualizationOptions RerunSfmLogger::RerunOptions() const { return rr_options_; }
+
+const float RerunSfmLogger::GetFrameAxisLen() const { return frame_axis_len_; }
 
 void RerunSfmLogger::LogPoints3D(const std::unordered_map<colmap::point3D_t, colmap::Point3D>& points3D, const bool is_subset) {
   // clear old rerun 3d points
@@ -343,7 +347,7 @@ void RerunFusionGraphLogger::LogOdometryEdge(const colmap::Rigid3d& T_ij_odom,
   // transform without visible axis to propagate correct pose
   this->GetRerunRec()->log(pred_cam_name, rerun::Transform3D::from_translation_mat3x3(T_ij_pred.first, T_ij_pred.second));
   // draw coord frame axis onto predicted pose for visiblity
-  this->GetRerunRec()->log(pred_cam_name + "/axis-frame", this->FrameAxis());
+  this->GetRerunRec()->log(pred_cam_name + "/axis-frame", rr_utils::FrameAxis(GetSfmLogger()->GetFrameAxisLen()));
 
   // add a point to slap a label to the predicted image pose
   if (GetSfmLogger()->RerunOptions().is_show_edge_labels) {
@@ -361,10 +365,5 @@ void RerunFusionGraphLogger::LogOdometryEdge(const colmap::Rigid3d& T_ij_odom,
   //              .with_labels(rerun::Text(fuhe::rr_utils::GetLabelNameEdge(img_i.ImageId(), img_j.ImageId()))));
 }
 
-rerun::Arrows3D RerunFusionGraphLogger::FrameAxis() {
-  const float axis_len_odom = GetSfmLogger()->RerunOptions().img_plane_dist * 0.63f;  // TODO: magic number fix in future
-  return rerun::Arrows3D::from_vectors({{axis_len_odom, 0.0, 0.0}, {0.0, axis_len_odom, 0.0}, {0.0, 0.0, axis_len_odom}})
-      .with_colors({{255, 0, 0}, {0, 255, 0}, {0, 0, 255}});
-}
 }  // namespace rr
 }  // namespace fuhe

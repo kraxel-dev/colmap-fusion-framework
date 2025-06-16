@@ -149,6 +149,7 @@ class RerunSfmLogger {
    */
   std::shared_ptr<colmap::Reconstruction> Reconstruction() const;
   RerunVisualizationOptions RerunOptions() const;
+  const float GetFrameAxisLen() const;
 
  protected:
   const RerunVisualizationOptions rr_options_;
@@ -159,6 +160,9 @@ class RerunSfmLogger {
   std::shared_ptr<rerun::Pinhole> rr_pinhole_ = nullptr;
   // time step of rerun recording stream. Used to log data in chronological order.
   int time_step_ = 0;
+
+  // length of frame axis for poses in rerun viewer
+  float frame_axis_len_ = 0.3f;
 
   // colmap reconstruction to log data from
   std::shared_ptr<colmap::Reconstruction> reconstruction_ = nullptr;
@@ -264,14 +268,6 @@ class RerunFusionGraphLogger {
                        const colmap::Image& img_i,
                        const colmap::Image& img_j,
                        const bool is_odom_as_pred_pose = true);
-
-  /**
-   * @brief Create 3D arrows that represent a pose in 3D space. Draw it ontop a rerun 3D transform instead of using the
-   * transforms own axis to avoid the pesky autoscale of the tf axis when going back in time in the rr viewer.
-   *
-   * @return rerun::Arrows3D
-   */
-  rerun::Arrows3D FrameAxis();
 };
 
 }  // namespace rr
