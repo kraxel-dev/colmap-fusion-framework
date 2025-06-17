@@ -12,6 +12,7 @@
  *
  */
 
+#include "fusion_helper/frame_align_utils.h"
 #include "tightly_coupled_fusion/estimators/bundle_adjustment.h"
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 #include <colmap/controllers/incremental_pipeline.h>
@@ -51,6 +52,7 @@ int main(int argc, char** argv) {
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
+  fuhe::align::AlignmentOptions alignment_options;            // colmap reconstruction coordinate alingment options
 
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
@@ -63,8 +65,11 @@ int main(int argc, char** argv) {
   // custom init optiosn
   col_options.AddDefaultOption("Init.n_init_pair_skip", &n_init_pair_skip);
   // custom ba options
-  col_options.AddDefaultOption("time_diff_local_ba",
+  col_options.AddDefaultOption("time_diff_local_ba",                       // FIXME: change to Model. or Mapping.
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
+  // custom frame alignment options
+  col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
+  col_options.AddDefaultOption("FrameAlign.pca_align", &alignment_options.pca_align);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
@@ -177,8 +182,9 @@ int main(int argc, char** argv) {
   double prev_stamp = 0;
   size_t ba_prev_num_reg_images = reconstruction->NumRegImages();
   size_t ba_prev_num_points = reconstruction->NumPoints3D();
+  bool normalize = true;
   for (const auto& [stamp, img_id] : img_ids_sorted) {
-    // -------------------- Contiued registration
+    // -------------------- Continued registration
     // skip inital pair
     if (img_id == id_1 || img_id == id_2) {
       prev_stamp = stamp;  // store stamps from initial pair for time compare
@@ -201,7 +207,20 @@ int main(int argc, char** argv) {
       rr_logger->LogFullReconstruction();
     }
 
-    // -------------------- local and global BAs
+    // -------------------- Frame alingment
+    // perform colmap model coordinate frame alignment (once) if condition are met
+    if (fuhe::align::CheckRunAlignment(reconstruction->NumRegImages(), alignment_options)) {
+      // pca alignment, forcing 1st cam pose to a specfici intial value, etc. read frame_align_utils.h for more info
+      fuhe::align::PerformAlignmentStrategies(reconstruction, alignment_options);
+      // enough of model normalization after each global BA
+      normalize = false;
+      // text log to rerun
+      if (rr_options.is_log_to_rerun) {
+        rr_logger->LogInfoMsg("Performed coordinate frame alignment strategies on colmap model!");
+      }
+    }
+
+    // -------------------- Local and global BAs
     // perform local or global BA only if enough time has passed between current image and last employed BA image
     if (stamp - prev_stamp < fusion_ba_options.time_between_local_ba) {
       VLOG(2) << "Time dff for new local BA not yet reached. Diff to last local BA only " << stamp - prev_stamp
@@ -209,7 +228,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    // -------------------- iterative Local BAs
+    // -------------------- Iterative Local BAs
     VLOG(2) << "More than " << fusion_ba_options.time_between_local_ba
             << " seconds passed between images. Trigger iterative local refinmenent!";
 
@@ -221,7 +240,7 @@ int main(int argc, char** argv) {
                                     img_id);
     prev_stamp = stamp;
 
-    // -------------------- iterative global BAs
+    // -------------------- Iterative global BAs
     if (CheckRunGlobalRefinement(*reconstruction, *incr_pipieline_opts, ba_prev_num_reg_images, ba_prev_num_points) &&
         reconstruction->NumRegImages() > mapper_opts.local_ba_num_images) {
       VLOG(2) << "Enough imgs registered since last global BA. Global bundle adjustments toggled!";
@@ -230,7 +249,7 @@ int main(int argc, char** argv) {
                                        mapper_opts,
                                        incr_pipieline_opts->GlobalBundleAdjustment(),
                                        incr_pipieline_opts->Triangulation(),
-                                       /*normalize (if fusion is toggled off)*/ true);
+                                       /*normalize (if fusion is toggled off)*/ normalize);
       ba_prev_num_points = reconstruction->NumPoints3D();
       ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
@@ -243,7 +262,7 @@ int main(int argc, char** argv) {
                                    mapper_opts,
                                    incr_pipieline_opts->GlobalBundleAdjustment(),
                                    incr_pipieline_opts->Triangulation(),
-                                   /*normalize */ false);
+                                   /*normalize */ normalize);
   // log final model to rerun
   if (rr_logger) {
     rr_logger->LogFullReconstruction();

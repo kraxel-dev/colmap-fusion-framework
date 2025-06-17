@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////////////////
   // Parse COLMAP and ceres options and inputs
   ////////////////////////////////////////////////////////////////////////////////
-  std::string db_path;  // database path
-  std::string output_path;
+  std::string db_path;      // database path
+  std::string output_path;  // output path for fully reconstructed model
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options

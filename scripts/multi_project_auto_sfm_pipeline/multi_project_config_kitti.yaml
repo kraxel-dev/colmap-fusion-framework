@@ -1,0 +1,17 @@
+# yaml for auto reconstructions of multiple colmap models. This config defines which folders a colmap reconstruction should run on
+
+reconstruction_quality: low # quality settings {low, medium, high, extreme}
+
+# path to the project ini file containing the colmap settings. Pleas strip the hardocded input and db paths. Will be applied to all workspaces. 
+project_ini: ./cfg/project_kitti_low_q_easy_init.ini
+
+# workspace folder a reconstruction should be run on. each workspace should contain a subfolder "images" with the images to be reconstructed.
+workspaces:
+  x7:
+    ws_path: "~/transfer/eval/kitti/07/sparse7x"
+  x5:
+    ws_path: "~/transfer/eval/kitti/07/sparse5x"
+  x3:
+    ws_path: "~/transfer/eval/kitti/07/sparse3x"
+  x1:
+    ws_path: "~/transfer/eval/kitti/07"

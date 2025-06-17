@@ -1,3 +1,6 @@
+"""Reconstruct multiple independent projects with COLMAP given a .yaml of specified folders. Each folder needs to contain an /images subfolder. That's basically it."""
+
+import argparse
 import os, subprocess, yaml, subprocess, sys, configparser
 from pathlib import Path
 
@@ -158,7 +161,6 @@ def sequentially_match_imgs(cmd_args: ColmapCmdArgs, ini_config: dict):
     run_cmd(command, matcher)
 
 
-
 def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
     """Execute cli command to reconstruct the model using COLMAP's mapper module.
 
@@ -259,11 +261,38 @@ def run_cmd(command, type):
             process.stdout.close()
 
 
+def parse_args():
+    DESC = (
+        "Reconstruct multiple independent projects with COLMAP given a .yaml of specified folders. "
+        "Each folder needs to contain an /images subfolder. That's basically it."
+    )
+
+    parser = argparse.ArgumentParser(
+        DESC, formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "-y",
+        "--yaml",
+        type=str,
+        default="./multi_project_config.yaml",
+        help="Relative path to yaml config telling which folders to perform reconstruction and which .ini to use as COLMAP params.",
+    )
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
 
+    # --- CLI
+    args = parse_args()
+
     # --- load yaml configuration file
-    # Yaml mainly contains the paths to the workspaces so that the actual settings from parms.ini can be applied generically to all workspaces
-    cfg_path = get_curr_pyscript_dir() / "multi_project_config.yaml"
+    # yaml mainly contains the paths to the workspaces so that the actual settings from parms.ini can be applied generically to all workspaces
+    cfg_path = (get_curr_pyscript_dir() / args.yaml).expanduser().resolve()
+    if not cfg_path.suffix.lower() in (".yaml", ".yml"):
+        print(f"Multi project .yaml config {cfg_path} does not exist. Exiting!")
+        sys.exit(1)
+
     print(f"Loading configuration from {cfg_path}")
     with open(str(cfg_path), "r") as file:
         cfg = yaml.safe_load(file)

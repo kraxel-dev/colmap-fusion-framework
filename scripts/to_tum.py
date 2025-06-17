@@ -1,4 +1,4 @@
-""" Forward colmap model (images.txt) to convert image poses to tum trajectory.
+"""Forward colmap model (images.txt) to convert image poses to tum trajectory.
 """
 import numpy as np
 import pandas as pd
