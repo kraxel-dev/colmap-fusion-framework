@@ -297,6 +297,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
             colmap::Sim3d(*model_scale_.get(), Eigen::Quaterniond::Identity(), Eigen::Vector3d::Zero());
         // apply scale
         reconstruction_.Transform(real_world_scale);
+        is_scale_applied_ = true;
       } else {
         VLOG(2) << "Estimated scale diff of " << *model_scale_.get() << " between colmap model and rel poses can be neglected.";
       }
@@ -321,6 +322,8 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   std::shared_ptr<double> model_scale_ = std::make_shared<double>(1.0);
   // cauchy loss if robust loss for scale estim is desired
   std::unique_ptr<ceres::LossFunction> scale_estimation_loss_func_ = nullptr;
+  // whether this ba instance has applied its estimated scale onto the colmap model
+  bool is_scale_applied_ = false;
 
   colmap::Reconstruction& reconstruction_;
   std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_;  // composition

@@ -170,6 +170,14 @@ class ColmapBundleAdjusterIterCallback : public ceres::IterationCallback {
   }
 
   ceres::CallbackReturnType operator()(const ceres::IterationSummary& summary) override {
+    // update model BBox every n-th iter so that 3d points are not omitted during growing scale through fusion
+    const int n_update = 7;
+    if (summary.iteration % n_update == 0) {
+      if (rr_sfm_logger_->RerunOptions().is_ignore_pts_beyond_model_bbox) {
+        rr_sfm_logger_->UpdateModelBBox();
+      }
+    }
+
     // log only images and points3D that are active in current BA problem
     rr_sfm_logger_->LogActivBundle(ba_config_);
 

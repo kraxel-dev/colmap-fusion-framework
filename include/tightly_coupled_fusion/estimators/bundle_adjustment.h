@@ -49,9 +49,10 @@ struct FusionGraphBundleAdjustmentOptions {
   bool fusion_in_global_ba = true;
 
   // whether to estimate real world scale between colmap model and odometry as part of ceres optimization or brute force the
-  // scale through enforcing the odometry measurements. If brute force is toggled make sure to reduce measurement covariance to
-  // enforce the relative odometry sacle onto the camera poses.
-  bool brute_force_scale_recovery = false;
+  // scale through enforcing the odometry measurements. If true, scale-aware optim will always be deployed (e.g. during fuion
+  // mapping process). If brute force is toggled make sure to reduce measurement covariance to enforce the relative odometry
+  // sacle onto the camera poses.
+  bool brute_force_scale_recovery = true;
   // estimated scale diff between colmap model and rel pose measurements abve this value will be ignored
   double scale_diff_thresh = 0.92;
   // Cauchy loss on ceres scale parameter estimatinon. only valid if not brute force scale recovery

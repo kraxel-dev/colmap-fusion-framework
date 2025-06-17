@@ -213,7 +213,7 @@ def reoncstruct_model(cmd_args: ColmapCmdArgs, ini_config: dict):
 
 
 def is_blacklisted(cmd_flag: str) -> bool:
-    """Check if a command line flag is blacklisted based on manually selected criteria."""
+    """Check if a command line flag is blacklisted based on manually defined hitman list."""
     # "--ImageReader.camera_mask_path" should not be parsed from project.ini file as it is generically handled for each ws through this python script
     blacklist = {
         "--ImageReader.camera_mask_path",

@@ -22,6 +22,10 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalMapperRer
   THROW_CHECK(options.Check());
   LocalBundleAdjustmentReport report;
 
+  if (rr_logger_) {
+    rr_logger_->LogInfoMsg("Local bundle adjustment!");
+  }
+
   // Find images that have most 3D points with given image in common.
   const std::vector<image_t> local_bundle = FindLocalBundle(options, image_id);
 
@@ -208,6 +212,7 @@ bool tcf::IncrementalMapperRerun::AdjustGlobalBundle(const Options& options, con
     auto reg_image_ids_it = reg_image_ids.begin();
     ba_config.SetConstantCamPose(*(reg_image_ids_it++));  // 1st image
     if (!options.fix_existing_images || !this->ExistingImageIds().count(*reg_image_ids_it)) {
+      VLOG(3) << "Fixing translation of cam id: " << *reg_image_ids_it << " to fix 7DoF in BA!";
       ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
     }
 
@@ -247,7 +252,7 @@ void tcf::IncrementalMapperRerun::IterativeGlobalRefinement(int max_num_refineme
     if (normalize_reconstruction && !options.use_prior_position) {
       // Normalize scene for numerical stability and
       // to avoid large scale changes in the viewer.
-      this->Reconstruction()->Normalize(/*fixed_scale=*/true);
+      this->Reconstruction()->Normalize();
     }
     size_t num_changed_observations = CompleteAndMergeTracks(tri_options);
     num_changed_observations += FilterPoints(options);
@@ -265,15 +270,20 @@ void tcf::IncrementalMapperRerun::IterativeGlobalRefinement(int max_num_refineme
 ////////////////////////////////////////////////////////////////////////////////
 
 tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
-                                                      FusionGraphBundleAdjustmentOptions& fusion_options,
+                                                      FusionGraphBundleAdjustmentOptions& ba_fusion_options,
+                                                      FusionMapperOptions& fusion_mapper_options,
                                                       const std::string& tum_file,
                                                       fuhe::rr::RerunVisualizationOptions& rr_options)
-    : IncrementalMapper(database_cache), fusion_options_{fusion_options}, tum_file_{tum_file}, rr_options_{rr_options} {
+    : IncrementalMapper(database_cache),
+      ba_fusion_options_{ba_fusion_options},
+      fusion_mapper_options_{fusion_mapper_options},
+      tum_file_{tum_file},
+      rr_options_{rr_options} {
   // whether to allow fusion or not
-  is_fusion_mapping_ = fusion_options_.is_mapping_with_fusion;
+  is_fusion_mapping_ = ba_fusion_options_.is_mapping_with_fusion;  // FIXME: move this opt to mapper opts
 
   if (is_fusion_mapping_) {
-    VLOG(1) << "Fusion mapping toggled! Tum file path: " << tum_file_;
+    VLOG(1) << "Fusion mapping toggled! Tum file path: " << tum_file_;  // TODO: decide for tum file var
     if (tum_file_.empty() || !colmap::ExistsFile(tum_file_)) {
       LOG(ERROR) << "Fusion is toggled but provided tum file path for metric poses is either faulty or non-existent! Please "
                     "double check your paths!";
@@ -374,7 +384,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     }
 
     // Fix 7 DOF to avoid scale/rotation/translation drift in bundle adjustment.
-    if (fusion_options_.fix_first_cam_pose) {
+    if (ba_fusion_options_.fix_first_cam_pose) {
       if (local_bundle.size() == 1) {
         ba_config.SetConstantCamPose(local_bundle[0]);
         ba_config.SetConstantCamPositions(image_id, {0});
@@ -403,7 +413,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
         ba_config.SetConstantCamPose(image_id1);
         if (!options.fix_existing_images || !ExistingImageIds().count(image_id2)) {
           // do not fix position of 2nd image if scale should be ajusted during optim (desired in fusion)
-          if (fusion_options_.fix_second_cam_position) {
+          if (ba_fusion_options_.fix_second_cam_position) {
             VLOG(2) << "Tagging position of image " << image_id2 << " as fixed in ba_config of upcoming local bundle!";
             ba_config.SetConstantCamPositions(image_id2, {0});  // 2nd image
           }
@@ -426,10 +436,22 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
       }
     }
 
-    // Adjust the local bundle.
+    // Prepare the local bundle.
     std::unique_ptr<BundleAdjuster> bundle_adjuster = nullptr;
+    FusionGraphBundleAdjustmentOptions ba_fuse_opts = ba_fusion_options_;
+    // small check whether scale estimation should be perfomed during beginning of mapping. Does nothing if brute force is
+    // deactivated anyways in ba fusion options.
+    if (fusion_mapper_options_.estimate_scale_on_init_ba && (this->scale_estimated_once_ == false)) {
+      // set brute force scale to false for this one occasion to use the scale-aware const functor.
+      ba_fuse_opts.brute_force_scale_recovery = false;
+      VLOG(2) << "Scale estimation through odometry toggled for current BA to recover inital scale for the reconstruction!";
+      // FIXME: safety check whether the BA really did have odom edges to estimate scale
+      scale_estimated_once_ = true;
+    }
+
+    // Adjust the local bundle.
     // if fusion is deactivated, use default bundle adjuster
-    if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_local_ba) {
+    if (!ba_fusion_options_.is_mapping_with_fusion || !ba_fusion_options_.fusion_in_local_ba) {
       if (rr_logger_) {
         // custom bundle adjuster with capability to log to rerun during optimization
         bundle_adjuster =
@@ -441,7 +463,7 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     } else {
       // custom bundle adjuster with fusion capabilities
       bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-          ba_options, fusion_options_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
+          ba_options, ba_fuse_opts, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
     }
 
     const ceres::Solver::Summary summary = bundle_adjuster->Solve();
@@ -549,27 +571,27 @@ bool tcf::IncrementalFusionMapper::AdjustGlobalBundle(const Options& options,
   std::unique_ptr<BundleAdjuster> bundle_adjuster;
 
   // fix pose of 1st image and optionally 2nd image
-  if (fusion_options_.fix_first_cam_pose) {
+  if (ba_fusion_options_.fix_first_cam_pose) {
     // Fix 7-DOFs of the bundle adjustment problem.
     auto reg_image_ids_it = reg_image_ids.begin();
     VLOG(2) << "Tagging pose of image " << *reg_image_ids_it << " as fixed in ba_config for upcoming global bundle!";
     ba_config.SetConstantCamPose(*(reg_image_ids_it++));  // 1st image
     if (!options.fix_existing_images || !this->ExistingImageIds().count(*reg_image_ids_it)) {
       // do not fix position of 2nd image if scale should be ajusted during optim (desired in fusion)
-      if (fusion_options_.fix_second_cam_position) {
+      if (ba_fusion_options_.fix_second_cam_position) {
         ba_config.SetConstantCamPositions(*reg_image_ids_it, {0});  // 2nd image
       }
     }
   }
 
-  if (!fusion_options_.is_mapping_with_fusion || !fusion_options_.fusion_in_global_ba) {
+  if (!ba_fusion_options_.is_mapping_with_fusion || !ba_fusion_options_.fusion_in_global_ba) {
     // default global BA with rerun visualization
     bundle_adjuster = CreateDefaultBundleAdjusterRerun(
         std::move(custom_ba_options), std::move(ba_config), *this->Reconstruction(), rr_logger_);
   } else {
     // bundle adjuster with odometry fusion capabilities
     bundle_adjuster = tcf::CreateFusionGraphBundleAdjuster(
-        custom_ba_options, fusion_options_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
+        custom_ba_options, ba_fusion_options_, ba_config, *this->Reconstruction(), *this->FusionGraphDataEdges(), rr_logger_);
   }
 
   return bundle_adjuster->Solve().termination_type != ceres::FAILURE;

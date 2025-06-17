@@ -21,10 +21,32 @@
 #include <fusion_helper/io.h>
 #include <fusion_helper/rr_sfm_logger.h>
 
+/**
+ * @brief Whether to run global refinement after current img registration. Taken from incremental_pipeline.cc in orig colmap
+ * repo.
+ *
+ * @param reconstruction
+ * @param incr_pipieline_opts
+ * @param ba_prev_num_reg_images
+ * @param ba_prev_num_points
+ * @return true
+ * @return false
+ */
+bool CheckRunGlobalRefinement(const colmap::Reconstruction& reconstruction,
+                              const colmap::IncrementalPipelineOptions& incr_pipieline_opts,
+                              const size_t ba_prev_num_reg_images,
+                              const size_t ba_prev_num_points) {
+  return reconstruction.NumRegImages() >= incr_pipieline_opts.ba_global_images_ratio * ba_prev_num_reg_images ||
+         reconstruction.NumRegImages() >= incr_pipieline_opts.ba_global_images_freq + ba_prev_num_reg_images ||
+         reconstruction.NumPoints3D() >= incr_pipieline_opts.ba_global_points_ratio * ba_prev_num_points ||
+         reconstruction.NumPoints3D() >= incr_pipieline_opts.ba_global_points_freq + ba_prev_num_points;
+}
+
 int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
   std::string db_path;  // database path
   std::string output_path;
+  int n_init_pair_skip = 0;  // nr of imgs after first one to skip before selecting 2nd init img
 
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
@@ -38,7 +60,9 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
-  // custom fusion options
+  // custom init optiosn
+  col_options.AddDefaultOption("Init.n_init_pair_skip", &n_init_pair_skip);
+  // custom ba options
   col_options.AddDefaultOption("time_diff_local_ba",
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
 
@@ -95,22 +119,37 @@ int main(int argc, char** argv) {
   mapper_opts.init_max_forward_motion = 1.0;  // essential matrix z motion
 
   // -------------------- Force Select intial image pair
-  colmap::TwoViewGeometry tvg;                            // Essential matrix and (filtered matches) between initial image pair
-  colmap::image_t id_1 = img_ids_sorted.begin()->second;  // very first image in tajectory sequence
-  colmap::image_t id_2 = std::next(img_ids_sorted.begin())->second;  // second image in sequence
+  colmap::TwoViewGeometry tvg;  // Essential matrix and (filtered matches) between initial image pair
+  auto img_id_iter = img_ids_sorted.begin();
+  colmap::image_t id_1 = img_id_iter->second;  // very first image in tajectory sequence
+  // skip a couple of imgs as second init img if specified
+  for (int i = 0; i < n_init_pair_skip; i++) {
+    img_id_iter++;
+  }
+  colmap::image_t id_2 = img_id_iter->second;  // second image to take for init triangulation
 
-  // -------------------- Force register selected intial image pair
   VLOG(2) << "Trying to force 1st and 2nd image as initial pair of new reconstruction!";
   VLOG(2) << "Ids : " << id_1 << " and " << id_2;
-  // try to force first and second image of whole sequence as initial pair
-  bool init_succes = mapper.EstimateInitialTwoViewGeometry(mapper_opts, tvg, id_1, id_2);
-  fuhe::col_utils::PrintTwoViewStatistics(tvg);
-  if (!init_succes) {
-    LOG(FATAL) << "Could not find initial image pair for reconstruction!";
-    return 1;
+
+  int init_attempts = 0;
+  // try to force first and second image (or n-th if skipped) of whole sequence as initial pair
+  while (!mapper.EstimateInitialTwoViewGeometry(mapper_opts, tvg, id_1, id_2)) {
+    fuhe::col_utils::PrintTwoViewStatistics(tvg);
+    init_attempts++;
+    img_id_iter++;
+    id_2 = img_id_iter->second;
+    VLOG(2) << "Attempt failed. Increasing id for 2nd image and trying again!";
+    VLOG(2) << "Ids : " << id_1 << " and " << id_2;
+
+    if (init_attempts > reconstruction->NumImages() / 2) {
+      LOG(FATAL) << "Could not find initial image pair for reconstruction!";
+      return 1;
+    }
   }
 
+  // -------------------- Force register selected intial image pair
   VLOG(1) << "Initial Pair found with ids: " << id_1 << " and " << id_2;
+  fuhe::col_utils::PrintTwoViewStatistics(tvg);
   mapper.RegisterInitialImagePair(mapper_opts, tvg, id_1, id_2);  // lock in
 
   // -------------------- Initial Pair Rerun visualization
@@ -121,8 +160,12 @@ int main(int argc, char** argv) {
   // -------------------- One round of global bundle adjustment for the inital pair
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
   mapper.AdjustGlobalBundle(mapper_opts, incr_pipieline_opts->GlobalBundleAdjustment());
-  // mapper.FilterPoints(mapper_opts);
-  mapper.Reconstruction()->Normalize(/*fixed_scale=*/true);
+
+  mapper.Reconstruction()->Normalize();
+  // for first global ba use separate set of 3d point filtering options due to low triangulation angle in init
+  colmap::IncrementalMapper::Options init_filter_mapper_opts = mapper_opts;
+  init_filter_mapper_opts.filter_min_tri_angle = init_filter_mapper_opts.init_min_tri_angle * 1.5;
+  mapper.FilterPoints(init_filter_mapper_opts);
 
   // log bundle adjusted initial pair to rerun
   if (rr_logger) {
@@ -132,7 +175,10 @@ int main(int argc, char** argv) {
   // -------------------- Iterate over all time sorted images to register them
   VLOG(1) << "Begin reconstruction process!";
   double prev_stamp = 0;
+  size_t ba_prev_num_reg_images = reconstruction->NumRegImages();
+  size_t ba_prev_num_points = reconstruction->NumPoints3D();
   for (const auto& [stamp, img_id] : img_ids_sorted) {
+    // -------------------- Contiued registration
     // skip inital pair
     if (img_id == id_1 || img_id == id_2) {
       prev_stamp = stamp;  // store stamps from initial pair for time compare
@@ -155,17 +201,38 @@ int main(int argc, char** argv) {
       rr_logger->LogFullReconstruction();
     }
 
-    if (stamp - prev_stamp > fusion_ba_options.time_between_local_ba) {
-      VLOG(2) << "More than " << fusion_ba_options.time_between_local_ba
-              << " seconds passed between images. Trigger iterative local refinmenent!";
+    // -------------------- local and global BAs
+    // perform local or global BA only if enough time has passed between current image and last employed BA image
+    if (stamp - prev_stamp < fusion_ba_options.time_between_local_ba) {
+      VLOG(2) << "Time dff for new local BA not yet reached. Diff to last local BA only " << stamp - prev_stamp
+              << ". Skipping local and potential global BA!";
+      continue;
+    }
 
-      mapper.IterativeLocalRefinement(incr_pipieline_opts->ba_local_max_refinements,
-                                      incr_pipieline_opts->ba_local_max_refinement_change,
-                                      mapper_opts,
-                                      incr_pipieline_opts->LocalBundleAdjustment(),
-                                      incr_pipieline_opts->Triangulation(),
-                                      img_id);
-      prev_stamp = stamp;
+    // -------------------- iterative Local BAs
+    VLOG(2) << "More than " << fusion_ba_options.time_between_local_ba
+            << " seconds passed between images. Trigger iterative local refinmenent!";
+
+    mapper.IterativeLocalRefinement(incr_pipieline_opts->ba_local_max_refinements,
+                                    incr_pipieline_opts->ba_local_max_refinement_change,
+                                    mapper_opts,
+                                    incr_pipieline_opts->LocalBundleAdjustment(),
+                                    incr_pipieline_opts->Triangulation(),
+                                    img_id);
+    prev_stamp = stamp;
+
+    // -------------------- iterative global BAs
+    if (CheckRunGlobalRefinement(*reconstruction, *incr_pipieline_opts, ba_prev_num_reg_images, ba_prev_num_points) &&
+        reconstruction->NumRegImages() > mapper_opts.local_ba_num_images) {
+      VLOG(2) << "Enough imgs registered since last global BA. Global bundle adjustments toggled!";
+      mapper.IterativeGlobalRefinement(incr_pipieline_opts->ba_global_max_refinements,
+                                       incr_pipieline_opts->ba_global_max_refinement_change,
+                                       mapper_opts,
+                                       incr_pipieline_opts->GlobalBundleAdjustment(),
+                                       incr_pipieline_opts->Triangulation(),
+                                       /*normalize (if fusion is toggled off)*/ true);
+      ba_prev_num_points = reconstruction->NumPoints3D();
+      ba_prev_num_reg_images = reconstruction->NumRegImages();
     }
   }
 

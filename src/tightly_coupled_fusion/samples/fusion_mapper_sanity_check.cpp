@@ -67,6 +67,7 @@ int main(int argc, char** argv) {
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
   fuhe::align::AlignmentOptions alignment_options;            // colmap reconstruction coordinate alingment options
+  tcf::IncrementalFusionMapper::FusionMapperOptions fusion_mapper_options;  // options regarding the whole fusion mapping process
 
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
@@ -90,6 +91,8 @@ int main(int argc, char** argv) {
                                &fusion_ba_options.use_robust_loss_on_scale_estimation);
   col_options.AddDefaultOption("Fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
   col_options.AddDefaultOption("Fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
+  // custom fusion mapping opts
+  col_options.AddDefaultOption("FusionMapper.estimate_scale_on_init", &fusion_mapper_options.estimate_scale_on_init_ba);
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
   col_options.AddDefaultOption("FrameAlign.rotate_init_motion_onto_global_x_axis",
@@ -114,8 +117,9 @@ int main(int argc, char** argv) {
   // -------------------- Read database cache and init fusion Mapper object
   colmap::Database db = colmap::Database(db_path);
   std::shared_ptr<colmap::DatabaseCache> db_cache = colmap::DatabaseCache::Create(db, 0, false, {});
+  // fusion mapper object (the star of the show)
   tcf::IncrementalFusionMapper fusion_mapper(
-      db_cache, fusion_ba_options, fusion_ba_options.tum_file, rr_options);  // fusion mapper object
+      db_cache, fusion_ba_options, fusion_mapper_options, fusion_ba_options.tum_file, rr_options);
   // create empty reconstruction
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   VLOG(1) << "Begin reconstruction!";
@@ -214,7 +218,7 @@ int main(int argc, char** argv) {
     VLOG(2) << "Registering image " << next_image_id;
     if (!fusion_mapper.RegisterNextImage(mapper_opts, next_image_id)) {
       LOG(ERROR) << "Registration of current image failed! Stopping mapping process!";
-      // break if registration fails TODO: make more robust and allow to try other images for reg before failing
+      // break if registration fails //FIXME: make more robust and allow to try other images for reg before failing
       break;
     }
 

@@ -39,7 +39,8 @@ void WriteSnapshot(const colmap::Reconstruction& reconstruction, const std::stri
   LOG(INFO) << "Creating snapshot";
   // Get the current timestamp in milliseconds.
   const size_t timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
   // Write reconstruction to unique path with current timestamp.
   const std::string path = colmap::JoinPaths(snapshot_path, colmap::StringPrintf("%010d", timestamp));
   colmap::CreateDirIfNotExists(path);
@@ -92,10 +93,11 @@ void tcf::IncrementalFusionPipeline::Reconstruct(const colmap::IncrementalMapper
 
   using namespace colmap;
 
-  const std::string tum_file = "";                    // path to tum file with odometry data
-  FusionGraphBundleAdjustmentOptions fusion_options;  // options for fusion graph bundle adjustment
-  fuhe::rr::RerunVisualizationOptions rr_options;     // rerun visualization options
-  tcf::IncrementalFusionMapper mapper(this->DatabaseCache(), fusion_options, tum_file, rr_options);
+  const std::string tum_file = "";                       // path to tum file with odometry data
+  FusionGraphBundleAdjustmentOptions ba_fusion_options;  // options for fusion graph bundle adjustment
+  fuhe::rr::RerunVisualizationOptions rr_options;        // rerun visualization options
+  tcf::IncrementalFusionMapper::FusionMapperOptions fusion_mapper_options;
+  tcf::IncrementalFusionMapper mapper(this->DatabaseCache(), ba_fusion_options, fusion_mapper_options, tum_file, rr_options);
 
   // Is there a sub-model before we start the reconstruction? I.e. the user
   // has imported an existing reconstruction.
@@ -147,7 +149,8 @@ void tcf::IncrementalFusionPipeline::Reconstruct(const colmap::IncrementalMapper
         // minimum model size so that we can reconstruct small image
         // collections. Always keep the first reconstruction, independent of
         // size.
-        const size_t min_model_size = std::min<size_t>(0.8 * this->DatabaseCache()->NumImages(), this->Options()->min_model_size);
+        const size_t min_model_size =
+            std::min<size_t>(0.8 * this->DatabaseCache()->NumImages(), this->Options()->min_model_size);
         if ((this->Options()->multiple_models && this->ReconstructionManager()->Size() > 1 &&
              reconstruction->NumRegImages() < min_model_size) ||
             reconstruction->NumRegImages() == 0) {
@@ -243,7 +246,8 @@ colmap::IncrementalPipeline::Status tcf::IncrementalFusionPipeline::ReconstructS
         // If initial pair fails to continue for some time,
         // abort and try different initial pair.
         const size_t kMinNumInitialRegTrials = 30;
-        if (reg_trial >= kMinNumInitialRegTrials && reconstruction->NumRegImages() < static_cast<size_t>(this->Options()->min_model_size)) {
+        if (reg_trial >= kMinNumInitialRegTrials &&
+            reconstruction->NumRegImages() < static_cast<size_t>(this->Options()->min_model_size)) {
           break;
         }
       }
@@ -327,7 +331,8 @@ colmap::IncrementalPipeline::Status tcf::IncrementalFusionPipeline::InitializeRe
       LOG(INFO) << StringPrintf("=> Initial image pair #%d and #%d do not exist.", image_id1, image_id2);
       return Status::BAD_INITIAL_PAIR;
     }
-    const bool provided_init_success = mapper.EstimateInitialTwoViewGeometry(mapper_options, two_view_geometry, image_id1, image_id2);
+    const bool provided_init_success =
+        mapper.EstimateInitialTwoViewGeometry(mapper_options, two_view_geometry, image_id1, image_id2);
     if (!provided_init_success) {
       LOG(INFO) << "Provided pair is insuitable for intialization.";
       return Status::BAD_INITIAL_PAIR;

@@ -94,11 +94,10 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
 
 /**
  * @brief Derived incremental mapper to extend colmaps default mapping behavior with sensor fusion (e.g. relative odometry
-constraints) capabilities. The fusion is integrated into the local and global Bundle Adjustemnt steps of the mapping process.
-
-The incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch and the fusion
-mapper mirrors this. Order of images processed for mapping is decided externally (either manually or by incremental_pipeline
-class). You can either use this class in your own script to perform incremental mapping from scratch or have a look at the
+constraints) capabilities. The fusion is integrated into the local and global Bundle Adjustemnt steps of the mapping process. The
+incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch and the fusion mapper
+mirrors this. Order of images processed for mapping is decided externally (either manually or by incremental_pipeline class). You
+can either use this class in your own script to perform incremental mapping from scratch or have a look at the
 incremental_pipeline class in original colmap lib, that acts as an wrapper to perform the mapping duties you see in the default
 colmap gui.
 
@@ -131,17 +130,30 @@ colmap gui.
 class IncrementalFusionMapper : public colmap::IncrementalMapper {
  public:
   /**
+   * @brief Additional options regarding incremental fusion mapping process (extending the default incremental mapper options)
+   *
+   */
+  struct FusionMapperOptions {
+    // at very first local BA, recover scale through scale-aware relative pose cost-functor once (when available) and only do
+    // brute force scale recovery afterwards. Only takes effect if BruteForce Scaler recovery in FusionBA options is toggled.
+    // Otherwise scale will alway be part of the cost-functor
+    bool estimate_scale_on_init_ba = true;
+  };
+
+  /**
    * @brief Construct a new Incremental Fusion Mapper object. Fusion graph edges containing the odometry edges are created from
    * the given database cache during object construction.
    *
    * @param database_cache colmap database cache containing images, features and matches that will be same as parent.
-   * @param fusion_options options for fusion graph bundle adjustment.
+   * @param ba_fusion_options options for fusion graph bundle adjustment.
+   * @param fusion_mapper_options options for the whole fusion mapping process
    * @param tum_file Mandatory path to tum file with absolute pose odometry data utilized for fusion. Required if mapper with
    * odometry fusion capabilities is desired.
    * @param rr_options rerun visualization options.
    */
   IncrementalFusionMapper(std::shared_ptr<const colmap::DatabaseCache> database_cache,
-                          FusionGraphBundleAdjustmentOptions& fusion_options,
+                          FusionGraphBundleAdjustmentOptions& ba_fusion_options,
+                          FusionMapperOptions& fusion_mapper_options,
                           const std::string& tum_file,
                           fuhe::rr::RerunVisualizationOptions& rr_options);
 
@@ -187,20 +199,24 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
   inline std::shared_ptr<fuhe::rr::RerunSfmLogger> RerunSfmLogger() const { return rr_logger_; }
 
  protected:
-  bool is_fusion_mapping_ = true;                      // if not, switch to default vision-only-ba in whole mapping process
-  FusionGraphBundleAdjustmentOptions fusion_options_;  // options for fusion graph bundle adjustment
-  const std::string tum_file_ = "";                    // path to tum file with odometry data
+  bool is_fusion_mapping_ = true;                         // if not, switch to default vision-only-ba in whole mapping process
+  FusionGraphBundleAdjustmentOptions ba_fusion_options_;  // options for fusion graph bundle adjustment
+  FusionMapperOptions fusion_mapper_options_;             // options for the whole fusion mapping process
+  const std::string tum_file_ = "";                       // path to tum file with odometry data
 
   // rerun visualization options
   const fuhe::rr::RerunVisualizationOptions rr_options_;
   // custom RerunSfmLogger object if rerun visualization is desired
   std::shared_ptr<fuhe::rr::RerunSfmLogger> rr_logger_ = nullptr;
 
-  // time sorted image node sequence with odometry edges constraining images
+  // time sorted image node sequence with odometry edges constraining its image pairs
   std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges_ = nullptr;
 
   // whether model alignment via pca was performed once
   bool aligned_model_with_pca_once_ = false;
+  // whether scale estimation between sfm model and odom was performed once through scale-aware cost functor. do this at first
+  // fusion and only do brute force scale recovery after
+  bool scale_estimated_once_ = false;
 };
 
 }  // namespace tcf
