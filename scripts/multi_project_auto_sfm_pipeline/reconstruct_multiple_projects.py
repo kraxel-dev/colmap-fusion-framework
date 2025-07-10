@@ -44,6 +44,9 @@ class ColmapCmdArgs:
         self.database_path = CmdArg(
             "--database_path", ws_path / f"db_{quality}_q.db"
         )
+        self.camera_mask_path = CmdArg(
+            "--ImageReader.camera_mask_path", ws_path / "mask/img_mask.png")
+        # NOTE : everything below is depracated and should be set in the project.ini file
         self.quality = CmdArg("--quality", quality)
 
         # --- camera and feature extratcion params
@@ -53,9 +56,6 @@ class ColmapCmdArgs:
         self.camera_params = CmdArg(
             "--ImageReader.camera_params",
             "501.4757919305817, 501.4757919305817, 421.7953735163109, 167.65799492501083",
-        )
-        self.camera_mask_path = CmdArg(
-            "--ImageReader.camera_mask_path", ws_path / "mask/img_mask.png"
         )
 
         # --- sequential matcher params
@@ -316,8 +316,11 @@ if __name__ == "__main__":
         section: dict(ini_config.items(section)) for section in ini_config.sections()
     }  # dict containing colmap params from project.ini
 
-    # --- iterate over all workspaces for reconstruction
+    
+    # --- obtain absolute path of all workspaces chosen for reconstruction
+    abs_ws_paths = []
     for ws in cfg["workspaces"]:
+        # --- obtain absolute workspace path from ws name in yaml config
         ws_path = Path(cfg["workspaces"][ws]["ws_path"]).expanduser().resolve()
         print(f"Preparing workspace at path {ws_path}")
 
@@ -327,6 +330,12 @@ if __name__ == "__main__":
                 f"Workspace path {ws_path} does not exist. Skipping reconstruction."
             )
             continue
+        
+        abs_ws_paths.append(ws_path)
+
+    # --- iterate over all workspaces for feature extraction 
+    for ws_path in abs_ws_paths:
+        print(f"Preparing workspace at path {ws_path} for feature extraction")
 
         # --- prepare command line arguments for colmap reconstruction
         col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
@@ -335,9 +344,23 @@ if __name__ == "__main__":
         extract_features(col_args, ini_dict)
         # extract_features(col_args)
 
+    # --- iterate over all workspaces for sequential image matching 
+    for ws_path in abs_ws_paths:
+        print(f"Preparing workspace at path {ws_path} for sequential image matching")
+        
+        # --- prepare command line arguments for colmap reconstruction
+        col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
+
         # --- sequentially match images on curr ws
         sequentially_match_imgs(col_args, ini_dict)
         # sequentially_match_imgs(col_args)
+        
+    # --- iterate over all workspaces for feature reconstruction
+    for ws_path in abs_ws_paths:
+        print(f"Preparing workspace at path {ws_path} for reconstruction")
+
+        # --- prepare command line arguments for colmap reconstruction
+        col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
 
         # --- reconstruct model for current workspace
         reoncstruct_model(col_args, ini_dict)
