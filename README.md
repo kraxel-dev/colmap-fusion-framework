@@ -13,9 +13,9 @@ Prototyping platform for COLMAP 3D reconstruction enhanced with multi-modal sens
    2. Visualizes the odometry edges between your camera poses during fusion
    3. Deploy the logger into COLMAP's incremental reconstruction to see whats happening in between mapping
 2. Ceres iteration callbacks -> [include/fusion_helper/fusion_iteration_callback.h](include/fusion_helper/fusion_iteration_callback.h):
-   1. Iter callbacks that stream the bundle adjustment process of your COLMAP model to your rerun viewer
-   2. Iter callbacks that highlight local and global BA during incremental reconstruction in the rerun viewer
-   3. Iter callbacks that stream the fusion BA process (both high-level and tightly-coupled) to rerun viewer
+   1. Stream your COLMAP model's bundle adjustment process directly to rerun viewer
+   2. Highlight local and global BA during incremental reconstruction in the rerun viewer
+   3. Stream the fusion BA process (both high-level and tightly-coupled) to rerun viewer
 3. A variety of cost functions
    1. Covariance Weighted Reprojection Error
 

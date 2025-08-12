@@ -1,5 +1,5 @@
 /**
- * @file fusion_mapper_sanity_check.cpp
+ * @file run_fusion_mapper.cpp
  * @author kraxel
  * @brief Sanity check for the FusionIncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
  * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch with fusion

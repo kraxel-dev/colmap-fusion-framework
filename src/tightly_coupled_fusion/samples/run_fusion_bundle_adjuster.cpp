@@ -1,5 +1,5 @@
 /**
- * @file fusion_graph_ba_sanity_check.cpp
+ * @file run_fusion_bundle_adjuster.cpp
  * @author kraxel
  * @brief Saniy check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust"
  * (reproj + odom error optimization for the whole reconstruction).
@@ -29,10 +29,10 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("input_path", &input_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
-  col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
-  col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
-  col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
+  col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
+  col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
   // deactivate bb around active camposes in rerun since all images are active in this sanity check
   rr_options.is_highlight_active_cams = false;
   // classic colmap BA solver options

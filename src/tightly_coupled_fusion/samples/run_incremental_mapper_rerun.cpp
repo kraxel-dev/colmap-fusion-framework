@@ -1,5 +1,5 @@
 /**
- * @file incremental_mapper_sanity_check.cpp
+ * @file run_incremental_mapper_rerun.cpp
  * @author kraxel
  * @brief Sanity check for the vanilla IncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
  * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch without fusion
@@ -59,10 +59,10 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("db_path", &db_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
-  col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
-  col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
-  col_options.AddDefaultOption("rerun_img_plane_dist", &rr_options.img_plane_dist);
+  col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);  
+  col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
   // custom init optiosn
   col_options.AddDefaultOption("Init.n_init_pair_skip", &n_init_pair_skip);
   // custom ba options

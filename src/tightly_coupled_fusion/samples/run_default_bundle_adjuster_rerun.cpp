@@ -1,5 +1,5 @@
 /**
- * @file default_bundle_adjuster_rerun.cpp
+ * @file run_default_bundle_adjuster_rerun.cpp
  * @author kraxel
  * @brief Small sample of how to use the default colmap Bundle Adjuster with extra rerun visualization on a fully
  * reconstructed model. The rerun visualization loggs each iteration of the BA (all points and poses of model) process. Also acts
@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
   // custom rerun options
   col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
 
   // classic colmap BA solver options
   col_options.AddBundleAdjustmentOptions();
