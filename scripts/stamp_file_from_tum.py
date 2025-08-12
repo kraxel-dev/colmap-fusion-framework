@@ -1,5 +1,6 @@
 """Create timestamp file (required by "SE3_Pose_Interp" python package) from a tum file. Use this ideally on the colmap cam trajectory tum,
-as other sensors will be matched towards the images.
+as other sensors will be matched towards the images. Can upsample original timestamps by a specified factor. This easens downstream evaluation
+tasks given slow ground truth data.
 
 https://github.com/MichaelGrupp/evo/blob/9f77be90cad46abf76fbe3fe1baf3b39b86569c1/evo/core/trajectory.py#L393
 https://github.com/rancheng/SE3_Pose_Interp/blob/master/gen_timestamp.py
@@ -30,6 +31,13 @@ def parse_args():
         required=True,
         help="file path to .tum containing the timestamps and absolute poses. Ideally the cam traj is used as tum, as other sensors match to the images",
     )
+    parser.add_argument(
+        "-u",
+        "--upsample",
+        type=int,
+        default=3,
+        help="Number of interpolation points between true stamps (default: 3). If 0 or negative, no upsampling is performed.",
+    )
     args = parser.parse_args()
     return args
 
@@ -42,19 +50,35 @@ if __name__ == "__main__":
     tum = Path(args.input).resolve()
 
     # generate output tum file path
-    out_stamps = tum.parent / "cam_timestamps.txt"
+    out_stamps = tum.parent / "upscaled_stamps.txt"
     print(f"Extracting stamps of {tum} and saving to {out_stamps}")
 
     # read tum file with evo interface
     traj = file_interface.read_tum_trajectory_file(tum)
 
-    with open(out_stamps, "a") as ts_f:
+    orig_timestamps = traj.timestamps
+    upsample_n = args.upsample
+    upsampled_timestamps = []
+    # upsample timestamps if requested
+    if upsample_n and upsample_n > 0:
+        for i in range(len(orig_timestamps) - 1):
+            t0 = orig_timestamps[i]
+            t1 = orig_timestamps[i + 1]
+            upsampled_timestamps.append(t0)
+            for j in range(1, upsample_n + 1):
+                interp = t0 + (t1 - t0) * (j / (upsample_n + 1))
+                upsampled_timestamps.append(interp)
+        if len(orig_timestamps) > 2:
+            upsampled_timestamps.append(orig_timestamps[-1])
+        print(f"Upsampling enabled: {upsample_n} points between each true stamp.")
+    else:
+        upsampled_timestamps = list(orig_timestamps)
+        print("No upsampling performed (upsample param <= 0).")
 
-        for idx, ts in enumerate(traj.timestamps):
-            # zero padding infront of index
+    with open(out_stamps, "w") as ts_f:
+        for idx, ts in enumerate(upsampled_timestamps):
             index_str = "%06d" % idx
-            # write idx and tstamp to txt
             line_txt = index_str + " " + str(ts) + "\n"
             ts_f.write(line_txt)
 
-    print(f"Done!")
+    print(f"Done! Output {len(upsampled_timestamps)} timestamps.")

@@ -7,6 +7,7 @@ Taken from: https://github.com/MichaelGrupp/evo/blob/master/contrib/kitti_poses_
 
 from evo.core.trajectory import PoseTrajectory3D
 from evo.tools import file_interface
+import argparse
 import numpy as np
 
 DESC = "Combine KITTI poses and timestamps files to a TUM trajectory file. Stolen from evo contrib folder."
@@ -30,7 +31,6 @@ def kitti_poses_and_timestamps_to_trajectory(poses_file, timestamp_file):
 
 
 if __name__ == "__main__":
-    import argparse
 
     parser = argparse.ArgumentParser(description=DESC)
     parser.add_argument("poses_file", help="pose path file in KITTI format")

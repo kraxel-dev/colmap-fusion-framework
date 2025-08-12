@@ -1,5 +1,5 @@
 """Convert image poses from colmap model (images.txt) to to tum trajectory.
-Interal time stamp is dictated from image file name and assumed to be nsec (integer).
+Internal time stamps are dictated from image-file-name and assumed to be nsec (integer).
 
 """
 

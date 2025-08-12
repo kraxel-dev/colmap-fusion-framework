@@ -1,7 +1,7 @@
 /**
  * @file run_fusion_bundle_adjuster.cpp
  * @author kraxel
- * @brief Saniy check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust"
+ * @brief Sanity check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust"
  * (reproj + odom error optimization for the whole reconstruction).
  * @version 0.1
  * @date 2025-03-12
