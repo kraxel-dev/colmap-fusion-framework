@@ -4,9 +4,6 @@ cmake_minimum_required(VERSION 3.16)
 set(TIGHTLY_COUPLED_FUSION_SOURCES
     estimators/bundle_adjustment.cc
     sfm/incremental_mapper.cc
-    controllers/incremental_fusion_pipeline.cc
-    ui/main_window.cc
-    exe/gui.cc
 )
 add_library(tightly_coupled_fusion ${TIGHTLY_COUPLED_FUSION_SOURCES})
 target_include_directories(tightly_coupled_fusion PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -23,8 +20,3 @@ add_executable(incremental_mapper_sanity_check samples/incremental_mapper_sanity
 target_link_libraries(incremental_mapper_sanity_check tightly_coupled_fusion)
 add_executable(fusion_mapper_sanity_check samples/fusion_mapper_sanity_check.cpp)
 target_link_libraries(fusion_mapper_sanity_check tightly_coupled_fusion)
-
-# add modified exe from original colmap to call gui with custom code of this repo
-# FIXME: bring back when close to finish
-# add_executable(colfu exe/colmap.cc)
-# target_link_libraries(colfu tightly_coupled_fusion)
