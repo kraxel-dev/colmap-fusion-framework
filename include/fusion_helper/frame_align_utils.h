@@ -1,8 +1,9 @@
 /**
  * @file frame_align_utils.h
  * @author kraxel
- * @brief collection of helper tools to perform colmap model frame and coordinate transformations given use-cases like trajectory
- * evaluation. Can be used as pos-processing step or during active reconstruction.
+ * @brief collection of helper tools to perform colmap model frame and coordinate transformations, given use-cases like
+ * trajectory evaluation. Handy during active reconstruction or as post-processing step to bring models into a non-bogus global
+ * frame (e.g. align vehicle motion to the x-y plane).
  * @version 0.1
  * @date 2025-05-12
  *
@@ -20,7 +21,7 @@ namespace align {
 struct AlignmentOptions {
   // perform all alignment duties listed below on colmap model once when specified amount of images were registered. Set to 0 if
   // alignment is not desired (any alignment will be ignored)
-  uint n_reg_for_alignment = 24;
+  uint n_reg_for_alignment = 12;
 
   // align colmap reconstruction through PCA to the axes along the motion. This works well to find xy plane for vehicle data
   // (that didnt endlessly drive up a parking garage ramp) but will probably less useful on drone data.
@@ -32,13 +33,13 @@ struct AlignmentOptions {
   // instead of coordinate origin. In other words, your first image pose should be aligned to the extrinsic calibration of your
   // mounted cam with respect to your vechicle. NOTE: if given bad extrinsics, the direction of the resulting colmap trajectory
   // will be off or tilted.
-  bool align_first_cam_to_specific_pose = true;
-  double specified_x = 1.58;        // w.r.t global world frame
-  double specified_y = 0.06;        // w.r.t global world frame
-  double specified_z = 1.566;       // w.r.t global world frame
-  double specified_roll = 0.0;      // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
+  bool align_first_cam_to_specific_pose = false;
+  double specified_x = 1.58;         // w.r.t global world frame
+  double specified_y = 0.06;         // w.r.t global world frame
+  double specified_z = 1.566;        // w.r.t global world frame
+  double specified_roll = 0.0;       // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   double specified_pitch = -0.1705;  // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
-  double specified_yaw = 0.0;       // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
+  double specified_yaw = 0.0;        // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   // apply final rotation of camera center onto the optical lense frame (from x forward to z forward y down)
   bool auto_rot_into_optical = true;
 
@@ -65,7 +66,8 @@ void AlignFirstPoseToSpecified(const std::shared_ptr<colmap::Reconstruction> rec
                                const colmap::image_t& id1,
                                const AlignmentOptions& align_opts);
 
-/// perform all coordinate frame alignment strategies on a colmap model specified by alignment options
+/// perform all coordinate frame alignment strategies on a colmap model specified by alignment options. Use CheckRunAlignment()
+/// before calling this function.
 void PerformAlignmentStrategies(const std::shared_ptr<colmap::Reconstruction> reconstruction,
                                 const AlignmentOptions& align_opts);
 

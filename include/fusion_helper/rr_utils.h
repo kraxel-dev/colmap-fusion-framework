@@ -19,7 +19,7 @@ namespace fuhe {
 namespace rr_utils {
 
 /**
- * @brief Obtain rerun loggalbe pose from colmap camera pose.
+ * @brief Obtain rerun loggable pose from colmap camera pose.
  *
  * @param T 6DoF colmap pose.
  * @param inv invert the forwarded pose. Handy since colmap poses are world w.r.t camera per default.
