@@ -1,3 +1,14 @@
+/**
+ * @file incremental_mapper.cc
+ * @author kraxel
+ * @brief refer to header file.
+ * @source: (original colmap repo) src/colmap/sfm/incremental_mapper.cc
+ * @version 0.1
+ * @date 2025-05-12
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 
 #include "fusion_helper/col_utils.h"

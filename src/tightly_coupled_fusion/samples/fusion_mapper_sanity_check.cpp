@@ -73,9 +73,9 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("db_path", &db_path);
   col_options.AddRequiredOption("output_path", &output_path);
   // custom rerun option
-  col_options.AddDefaultOption("rerun", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
-  col_options.AddDefaultOption("save_rrd", &rr_options.is_save_rerun_to_disk);
-  col_options.AddDefaultOption("rerun_odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);  // FIXME: change to flage to Rerun.log
+  col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("Rerun.model_bbox_lower_bound", &rr_options.model_bbox_lb);
   col_options.AddDefaultOption("Rerun.model_bbox_upper_bound", &rr_options.model_bbox_ub);
   // custom fusion options
@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("FusionMapper.estimate_scale_on_init", &fusion_mapper_options.estimate_scale_on_init_ba);
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
+  col_options.AddDefaultOption("FrameAlign.force_first_pose_to_specified", &alignment_options.align_first_cam_to_specific_pose);
   col_options.AddDefaultOption("FrameAlign.rotate_init_motion_onto_global_x_axis",
                                &alignment_options.rotate_init_motion_onto_global_x_axis);
 

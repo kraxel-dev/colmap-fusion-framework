@@ -4,7 +4,8 @@
  * @brief Sanity check for the vanilla IncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
  * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch without fusion
  * capabilities. Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as
- * initial pair for mapping. Camera intrinsics are fixed.
+ * initial pair for mapping. Camera intrinsics are fixed. If model alignment is applied, normalization of the model in each
+ * global BA will be turned off.
  * @version 0.1
  * @date 2025-03-24
  *
@@ -89,9 +90,8 @@ int main(int argc, char** argv) {
 
   // -------------------- Read database cache and init fusion Mapper object
   colmap::Database db = colmap::Database(db_path);
-  std::shared_ptr<colmap::DatabaseCache> db_cache = colmap::DatabaseCache::Create(db, 0, false, {});
-  // colmap::IncrementalMapper mapper(db_cache);  // vanilla mapper object
-  tcf::IncrementalMapperRerun mapper(db_cache);  //
+  std::shared_ptr<colmap::DatabaseCache> db_cache = colmap::DatabaseCache::Create(db, 0, false, /*image_names=*/{});
+  tcf::IncrementalMapperRerun mapper(db_cache);  // vanilla mapper object with rerun capabilities
   // create empty reconstruction
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   VLOG(1) << "Begin reconstruction!";
