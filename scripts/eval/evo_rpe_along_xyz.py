@@ -1,4 +1,8 @@
-"""EVO's Relative Pose Error (RPE) along XYZ axes independantly. Plot and save as EVO results for further analysis.
+"""EVO's Relative Pose Error (RPE) along XYZ axes independantly. Can distinguish between translation (m) and rotation (rad) error.
+Plots and saves as EVO results for further analysis.
+
+This script was written in a haste. For the future, directly code in the evo repo
+to avoid duplicating the steps that already exists.
 
 https://github.com/MichaelGrupp/evo/blob/master/evo/core/metrics.py#L158
 https://github.com/MichaelGrupp/evo/blob/master/notebooks/metrics.py_API_Documentation.ipynb
@@ -15,7 +19,7 @@ import matplotlib.pyplot as plt
 from evo.core import metrics
 
 from evo.core.metrics import PoseRelation, PathPair, RPE
-from evo.core.units import Unit, ANGLE_UNITS, LENGTH_UNITS, METER_SCALE_FACTORS
+from evo.core.units import Unit
 
 from evo.tools import file_interface
 from evo.core import sync
@@ -66,14 +70,30 @@ class RPESingleAxis(RPE):
                 return
 
             print(f"Calculating error along xyz axes!")
-            self.error_x = np.array([E_i[0, 3] for E_i in self.E])
-            self.error_y = np.array([E_i[1, 3] for E_i in self.E])
-            self.error_z = np.array([E_i[2, 3] for E_i in self.E])
+            if self.pose_relation == PoseRelation.translation_part:
+                # https://github.com/MichaelGrupp/evo/blob/463e3d99462b6b9ad675d1bbdf47b03d8faef6ab/evo/core/metrics.py#L326
+                self.error_x = np.array([E_i[0, 3] for E_i in self.E])
+                self.error_y = np.array([E_i[1, 3] for E_i in self.E])
+                self.error_z = np.array([E_i[2, 3] for E_i in self.E])
+            else:
+                # https://github.com/MichaelGrupp/evo/blob/463e3d99462b6b9ad675d1bbdf47b03d8faef6ab/evo/core/metrics.py#L340
+                from evo.core import lie_algebra as lie
+
+                # error as angle axis in LIE algebra
+                self.error_x = np.array(
+                    [lie.so3_log(E_i[:3, :3])[0] for E_i in self.E]
+                )
+                self.error_y = np.array(
+                    [lie.so3_log(E_i[:3, :3])[1] for E_i in self.E]
+                )
+                self.error_z = np.array(
+                    [lie.so3_log(E_i[:3, :3])[2] for E_i in self.E]
+                )
 
 
 def plot_rpe_along_axis(rpe_sax, seconds_from_start, axis="x"):
     """Plot the RPE along a specific axis.
-    [evo/notebooks/metrics.py\_API\_Documentation.ipynb at master · MichaelGrupp/evo · GitHub](https://github.com/MichaelGrupp/evo/blob/master/notebooks/metrics.py_API_Documentation.ipynb)
+    https://github.com/MichaelGrupp/evo/blob/master/notebooks/metrics.py_API_Documentation.ipynb
 
     Args:
         rpe_sax RPE_metric: single axis RPE metric object with error and statistics
@@ -118,6 +138,8 @@ def prepare_rpe_results(
     Returns:
         evo results:
     """
+    # traj label in results plot. must have unique name (each traj and also unit (m vs rad)) otherwise multiple results
+    # cannot be plotted together in EVO res
     traj_est_name_axis = traj_est_name + "_" + axis
     res = rpe.get_result("gt", traj_est_name_axis)
 
@@ -163,46 +185,68 @@ DESC = (
 def parse_args():
     parser = argparse.ArgumentParser(description=DESC)
     parser.add_argument(
-        "-r",
-        "--ref",
-        required=True,
-        help="gt .tum trajectory",
+        "ref",
+        help="Reference (ground truth) .tum trajectory file.",
+    )
+    parser.add_argument(
+        "est",
+        help="Estimated trajectory .tum file to compare against the reference.",
+    )
+    parser.add_argument(
+        "-d",
+        "--delta",
+        default=10,
+        type=int,
+        help="delta increments for RPE calculation (e.g. 9 frames, 9 meters, etc.). Example: specifying 9 frames means "
+        "that a sections of 9 poses each (of the estimated traj) will be used for RPE.",
     )
     parser.add_argument(
         "-e",
-        "--est",
-        required=True,
-        help="Estimated trajectory .tum file to compare against the reference.",
+        "--error_unit",
+        default="t",
+        help="RPE error measured by (t) (translation) or (r) (rotation rad). Default: t.",
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
 
-    # args = parse_args()
+    args = parse_args()
 
-    # ref_file = "/home/azuo/transfer/eval/sq1in/lidar_traj_as_bl_sq1in_interp.tum"
-    # est_file = "/home/azuo/transfer/eval/sq1in/radar_traj_as_bl_sq1in.tum"
-    ref_file = "/home/azuo/transfer/eval/sq3in/lidar_traj_as_bl_sq3in.tum"
-    est_file = "/home/azuo/transfer/eval/sq3in/radar_traj_as_bl_sq3in.tum"
-    est_name = "radar_traj_as_bl_sq3in.tum"
-    parent_dir = Path(ref_file).resolve().parent
+    ref_file = args.ref
+    est_file = args.est
+    est_name = (Path(est_file).resolve().stem).__str__()
+
+    parent_dir = Path(est_file).resolve().parent
 
     traj_ref = file_interface.read_tum_trajectory_file(ref_file)
     traj_est = file_interface.read_tum_trajectory_file(est_file)
+    print(f"GT trajectory: {traj_ref}")
+    print(f"est trajectory: {traj_est}")
 
-    max_diff = 0.1
-    traj_ref, traj_est = sync.associate_trajectories(traj_ref, traj_est, max_diff)
+    # sync trajectories to
+    max_diff = 0.01
+    traj_est, traj_ref = sync.associate_trajectories(traj_est, traj_ref, max_diff)
+    print(f"After sync:")
+    print(f"GT trajectory: {traj_ref}")
+    print(f"est trajectory: {traj_est}")
     data = (traj_ref, traj_est)
 
     # --- RPE params
     pose_relation = metrics.PoseRelation.translation_part
-    # pose_relation == PoseRelation.rotation_angle_rad
+    if args.error_unit == "t":
+        pose_relation = metrics.PoseRelation.translation_part
+    elif args.error_unit == "r":
+        pose_relation = PoseRelation.rotation_angle_rad
+    else:
+        print(
+            f"Error: Unknown error unit {args.error_unit}. Use 't' for translation or 'r' for rotation. Defaulting to translation."
+        )
 
+    # ideally your total frame count should add up to 1 secs
+    delta = args.delta  # calc RPE per x (frames, meters, deg, rad)
     # delta_unit = Unit.meters  # (frames, meters, deg, rad)
     delta_unit = Unit.frames  # (frames, meters, deg, rad)
-    delta = 9  # calc RPE per x (frames, meters, deg, rad)
 
     # all pairs mode
     all_pairs = False  # activate
@@ -227,16 +271,17 @@ if __name__ == "__main__":
     rpe_x = copy.deepcopy(rpe_metric)
     rpe_y = copy.deepcopy(rpe_metric)
     rpe_z = copy.deepcopy(rpe_metric)
-    rpe_x.error, rpe_y.error, rpe_z.error = (
-        rpe_metric.error_x,
-        rpe_metric.error_y,
-        rpe_metric.error_z,
-    )
-    stats_x, stats_y, stats_z = (
-        rpe_x.get_all_statistics(),
-        rpe_y.get_all_statistics(),
-        rpe_z.get_all_statistics(),
-    )
+    rpe_x.error = copy.deepcopy(rpe_metric.error_x)
+    rpe_y.error = copy.deepcopy(rpe_metric.error_y)
+    rpe_z.error = copy.deepcopy(rpe_metric.error_z)
+    
+    stats_x = rpe_x.get_all_statistics()
+    stats_y = rpe_y.get_all_statistics()
+    stats_z = rpe_z.get_all_statistics()
+    
+    print(f"Total of {len(rpe_x.error)} RPE errors along X axis.")
+    print(f"Total of {len(rpe_y.error)} RPE errors along Y axis.")
+    print(f"Total of {len(rpe_z.error)} RPE errors along Z axis.")
 
     # --- reduced trajectory
     # important: restrict data to delta ids for plot
@@ -251,7 +296,6 @@ if __name__ == "__main__":
     )
 
     # --- plot error along XYZ axes
-
     plot_rpe_along_axis(rpe_x, seconds_from_start, axis="X")
     plot_rpe_along_axis(rpe_y, seconds_from_start, axis="Y")
     plot_rpe_along_axis(rpe_z, seconds_from_start, axis="Z")
@@ -259,13 +303,13 @@ if __name__ == "__main__":
 
     # --- obtain results
     x_res = prepare_rpe_results(
-        rpe_x, traj_ref_plot, traj_est_plot, traj_est_name=est_name, axis="x"
+        rpe_x, traj_ref_plot, traj_est_plot, est_name, axis="x"
     )
     y_res = prepare_rpe_results(
-        rpe_y, traj_ref_plot, traj_est_plot, traj_est_name=est_name, axis="y"
+        rpe_y, traj_ref_plot, traj_est_plot, est_name, axis="y"
     )
     z_res = prepare_rpe_results(
-        rpe_z, traj_ref_plot, traj_est_plot, traj_est_name=est_name, axis="z"
+        rpe_z, traj_ref_plot, traj_est_plot, est_name, axis="z"
     )
 
     save_rpe_results(x_res, parent_dir, "x", unit_str=rpe_metric.unit.value)

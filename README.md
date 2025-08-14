@@ -18,6 +18,8 @@ Prototyping platform for COLMAP 3D reconstruction enhanced with multi-modal sens
    3. Stream the fusion BA process (both high-level and tightly-coupled) to rerun viewer
 3. A variety of cost functions
    1. Covariance Weighted Reprojection Error
+4. Helper scripts:
+   1. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction)
 
 ### High Level Fusion
 

@@ -14,7 +14,7 @@ Format of timestamps.txt file:
 """
 
 from pathlib import Path
-import sys, argparse
+import argparse
 from evo.tools import file_interface
 
 DESC = (
@@ -35,7 +35,7 @@ def parse_args():
         "-u",
         "--upsample",
         type=int,
-        default=3,
+        default=0,
         help="Number of interpolation points between true stamps (default: 3). If 0 or negative, no upsampling is performed.",
     )
     args = parser.parse_args()
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     tum = Path(args.input).resolve()
 
     # generate output tum file path
-    out_stamps = tum.parent / "upscaled_stamps.txt"
+    out_stamps = tum.parent / "upsampled_stamps.txt"
     print(f"Extracting stamps of {tum} and saving to {out_stamps}")
 
     # read tum file with evo interface
