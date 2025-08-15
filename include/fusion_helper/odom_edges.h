@@ -1,3 +1,15 @@
+/**
+ * @file odom_edges.h
+ * @author kraxel
+ * @brief Utils and data structures to create the odometry edges (6DoF rel poses) between consecutive images in a colmap model.
+ * Odom edges are used for fusion Bundle Adjustment and fusion mapping. Also contains the main graph of sequential image edges
+ * through which the BA will iterate over to build the fusion optimization problem.
+ * @version 0.1
+ * @date 2025-08-15
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #pragma once
 
 #include <memory>
@@ -144,31 +156,6 @@ std::shared_ptr<fuhe::edges::MapOfImageEdges> CreateSequentialImageEdgesPtr(
 /// BA.
 fuhe::edges::MapOfImageEdges SubsetActiveEdges(const colmap::BundleAdjustmentConfig& ba_config,
                                                const fuhe::edges::MapOfImageEdges& sequential_image_edges);
-// FIXME: remove class if obslote
-// FIXME: rename file if class gets killed
-/**
- * @brief Structure that holds the mapping between relative odometry from external sensor sources and the colmap poses / nodes
- * that they constrain
- *
- */
-class OdomEdgesManager {
- public:
-  /// Build the data structure that holds the mapping between relative odometry from external sensor sources and the colmap
-  /// images
-  static fuhe::edges::MapOfOdomEdges CreateOdomEdgesBetweenImages(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
-                                                                  const fuhe::types::MapOfPosesSec& odom_poses_by_stamp);
-  /// Lazy overload to return data as shared ptr
-  static const std::shared_ptr<fuhe::edges::MapOfOdomEdges> CreateOdomEdgesBetweenImagesPtr(
-      const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp);
-
- private:
-  std::string tum_file = "";
-  std::shared_ptr<fuhe::types::MapOfPosesSec> odom_poses_by_stamp =
-      nullptr;  // absolute poses from external tum file accessible by timestamps
-  std::shared_ptr<fuhe::types::MapOfImageIdsSec> img_ids_by_stamp = nullptr;  // image ids of colmap model sorted by stamp
-
-  MapOfOdomEdges edges;
-};
 
 }  // namespace edges
 }  // namespace fuhe

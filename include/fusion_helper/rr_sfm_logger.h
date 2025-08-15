@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include "fusion_helper/odom_edges_manager.h"
+#include "fusion_helper/odom_edges.h"
 #include "fusion_helper/types.h"
 #include <colmap/estimators/bundle_adjustment.h>
 #include <colmap/geometry/rigid3.h>

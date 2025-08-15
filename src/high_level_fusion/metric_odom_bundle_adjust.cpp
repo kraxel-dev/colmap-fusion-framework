@@ -32,7 +32,7 @@
 #include "fusion_helper/fusion_evaluation_callback.h"
 #include "fusion_helper/fusion_iteration_callback.h"
 #include "fusion_helper/io.h"
-#include "fusion_helper/odom_edges_manager.h"
+#include "fusion_helper/odom_edges.h"
 #include "fusion_helper/stream_utils.h"
 #include "high_level_fusion/fusion_graph_interface.h"
 #include <Eigen/Core>
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
     VLOG(1) << "Skipping model PCA alignment before optimization!";
   }
 
-  // obtain all images from model in time asceinding order
+  // obtain all images from model in time-ascending order
   const std::set<colmap::image_t>& reg_image_ids = reconstruction->RegImageIds();
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
 

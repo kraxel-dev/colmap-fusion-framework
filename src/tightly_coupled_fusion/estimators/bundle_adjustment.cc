@@ -17,7 +17,7 @@
 #include <colmap/estimators/manifold.h>
 #include <fusion_helper/col_utils.h>
 #include <fusion_helper/io.h>
-#include <fusion_helper/odom_edges_manager.h>
+#include <fusion_helper/odom_edges.h>
 #include <fusion_helper/stream_utils.h>
 #include <fusion_helper/types.h>
 
