@@ -31,5 +31,9 @@ const Eigen::Matrix<double, 6, 6> fuhe::cov_utils::OdomCovManager::GetTimeDepend
   return cov;
 }
 
+const Eigen::Matrix<double, 6, 6> OdomCovManager::GetIdentityCovMat() const {
+  return Eigen::Matrix<double, 6, 6>::Identity();
+}
+
 }  // namespace cov_utils
 }  // namespace fuhe

@@ -158,12 +158,11 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
       const colmap::image_t curr_img_id = img_edge.CurrId();  // node j
       VLOG(3) << "Iteration for image: " << curr_img_id << " of stamp " << curr_img_stamp;
 
-      // Define covariance of relative motion.
-      Eigen::Matrix<double, 6, 6> covarince_i_from_j = img_edge.OdomEdge()->CovMat_ij() * fusion_options_.cov;
-
       // register metric relative pose factor in BA
-      this->AddOdomToProblem(
-          img_edge.OdomEdge()->PrevId(), img_edge.OdomEdge()->CurrId(), img_edge.OdomEdge()->T_i_from_j(), covarince_i_from_j);
+      this->AddOdomToProblem(img_edge.OdomEdge()->PrevId(),
+                             img_edge.OdomEdge()->CurrId(),
+                             img_edge.OdomEdge()->T_i_from_j(),
+                             img_edge.OdomEdge()->CovMat_ij());
       between_factor_counter++;
     }
     VLOG(2) << "Added nr of between factors: " << between_factor_counter;

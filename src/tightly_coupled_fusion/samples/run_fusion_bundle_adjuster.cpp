@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
+  fuhe::cov_utils::OdomCovOptions cov_options;                // covariance options for relative odometry measurements
 
   // classic colmap options
   col_options.AddRequiredOption("input_path", &input_path);
@@ -33,6 +34,14 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
+  // Odom covariance options
+  // std values per Secs
+  col_options.AddDefaultOption("OdomCov.tx_std", &cov_options.std_tx_per_s);
+  col_options.AddDefaultOption("OdomCov.ty_std", &cov_options.std_ty_per_s);
+  col_options.AddDefaultOption("OdomCov.tz_std", &cov_options.std_tz_per_s);
+  col_options.AddDefaultOption("OdomCov.rx_std", &cov_options.std_rx_per_s);
+  col_options.AddDefaultOption("OdomCov.ry_std", &cov_options.std_ry_per_s);
+  col_options.AddDefaultOption("OdomCov.rz_std", &cov_options.std_rz_per_s);
   // deactivate bb around active camposes in rerun since all images are active in this sanity check
   rr_options.is_highlight_active_cams = false;
   // classic colmap BA solver options
@@ -64,8 +73,9 @@ int main(int argc, char** argv) {
   fuhe::io::TumToPosesEigen(fusion_ba_options.tum_file, metric_poses, true);
 
   // data structure holding image sequence with odom edges to iterate over
+  std::shared_ptr<fuhe::cov_utils::OdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::OdomCovManager>(cov_options);
   std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges =
-      fuhe::edges::CreateSequentialImageEdgesPtr(imgs_by_stamp, metric_poses);
+      fuhe::edges::CreateSequentialImageEdgesPtr(imgs_by_stamp, metric_poses, *cov_manager);
 
   // -------------------- Tune BA config to decide which img to consider and/or  are constant in problem
   VLOG(1) << "Selecting colmap images for ceres optimization!";

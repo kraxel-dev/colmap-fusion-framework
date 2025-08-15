@@ -18,9 +18,13 @@ const bool fuhe::edges::DataEdge::IsSourceNode() const { return CurrId() == Prev
 // Odometry Edge
 ////////////////////////////////////////////////////////////////////////////////
 
-fuhe::edges::OdometryEdge::OdometryEdge(
-    const double stamp_j, const double time_diff, const colmap::image_t id_i, const colmap::image_t id_j, const Eigen::Isometry3d T_odom_ij)
-    : DataEdge(stamp_j, time_diff, id_i, id_j), T_odom_ij{T_odom_ij} {}
+fuhe::edges::OdometryEdge::OdometryEdge(const double stamp_j,
+                                        const double time_diff,
+                                        const colmap::image_t id_i,
+                                        const colmap::image_t id_j,
+                                        const Eigen::Isometry3d T_odom_ij,
+                                        const Eigen::Matrix<double, 6, 6> cov_ij)
+    : DataEdge(stamp_j, time_diff, id_i, id_j), T_odom_ij_{T_odom_ij}, cov_ij_{cov_ij} {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Sequential Image Edge
@@ -36,13 +40,15 @@ fuhe::edges::SequentialImageEdge::SequentialImageEdge(const double curr_stamp,
 // Create Sequential Image Edges
 ////////////////////////////////////////////////////////////////////////////////
 fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
-                                                                     const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
+                                                                     const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
+                                                                     const fuhe::cov_utils::OdomCovManager& cov_manager) {
   VLOG(2) << "Creating sequential image edges for the fusion graph!";
   fuhe::edges::MapOfImageEdges edges;
 
   double curr_img_stamp, prev_img_stamp = -1;  // stamps for image chain sequence
-  double prev_odom_stamp = -1;  // stamp for previously successfully utilized external odoms (is not automatically = prev_img_stamp)
-  int odom_edge_counter = 0;    // counter for odometry edges
+  double prev_odom_stamp =
+      -1;  // stamp for previously successfully utilized external odoms (is not automatically = prev_img_stamp)
+  int odom_edge_counter = 0;  // counter for odometry edges
 
   // first iteration init condition
   prev_img_stamp = img_ids_by_stamp.begin()->first;  // let origin edge be prev_id == curr_id
@@ -56,13 +62,14 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
 
     // -------------------- Add sequential edge between images
     auto prev_img_id = img_ids_by_stamp.at(prev_img_stamp);
-    edges[curr_img_stamp] = fuhe::edges::SequentialImageEdge(curr_img_stamp, (curr_img_stamp - prev_img_stamp), prev_img_id, curr_img_id);
+    edges[curr_img_stamp] =
+        fuhe::edges::SequentialImageEdge(curr_img_stamp, (curr_img_stamp - prev_img_stamp), prev_img_id, curr_img_id);
     prev_img_stamp = curr_img_stamp;
 
     // -------------------- Attach odometry edge if available
     // whether current img has associated absolute odometry pose in tum file
     if (odom_poses_by_stamp.find(curr_img_stamp) != odom_poses_by_stamp.end()) {
-      // whether this absolute pose has some previous pose as source node
+      // curr absolute pose has some previous pose as source node?
       if (prev_odom_stamp == -1) {
         prev_odom_stamp = curr_img_stamp;
         continue;
@@ -70,12 +77,18 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
 
       // -------------------- Prev source node is available, so we can attach odometry edge
       // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
-      const Eigen::Isometry3d T_i_from_j = odom_poses_by_stamp.at(prev_odom_stamp).inverse() * odom_poses_by_stamp.at(curr_img_stamp);
+      const Eigen::Isometry3d T_i_from_j =
+          odom_poses_by_stamp.at(prev_odom_stamp).inverse() * odom_poses_by_stamp.at(curr_img_stamp);
       VLOG(4) << "Relative pose from tumfile: " << T_i_from_j.matrix();
 
-      // append edge between current image and some source node  with valid relative pose from external sensor
+      // time scaled 6x6 covariance for rel pose
+      const double imgs_time_diff = std::abs(curr_img_stamp - prev_odom_stamp);
+      const Eigen::Matrix<double, 6, 6> cov_i_from_j = cov_manager.GetTimeDependantCovMat(imgs_time_diff);
+
+      // append edge between current image and some source node with valid relative pose from external sensor
       std::shared_ptr<OdometryEdge> odom_edge = std::make_shared<OdometryEdge>(
-          curr_img_stamp, (curr_img_stamp - prev_odom_stamp), img_ids_by_stamp.at(prev_odom_stamp), curr_img_id, T_i_from_j);
+          curr_img_stamp, imgs_time_diff, img_ids_by_stamp.at(prev_odom_stamp), curr_img_id, T_i_from_j, cov_i_from_j);
+
       edges.at(curr_img_stamp).AttachOdomEdge(odom_edge);
 
       odom_edge_counter++;
@@ -89,8 +102,11 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
 }
 
 std::shared_ptr<fuhe::edges::MapOfImageEdges> fuhe::edges::CreateSequentialImageEdgesPtr(
-    const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp, const fuhe::types::MapOfPosesSec& odom_poses_by_stamp) {
-  return std::make_shared<fuhe::edges::MapOfImageEdges>(fuhe::edges::CreateSequentialImageEdges(img_ids_by_stamp, odom_poses_by_stamp));
+    const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
+    const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
+    const fuhe::cov_utils::OdomCovManager& cov_manager) {
+  return std::make_shared<fuhe::edges::MapOfImageEdges>(
+      fuhe::edges::CreateSequentialImageEdges(img_ids_by_stamp, odom_poses_by_stamp, cov_manager));
 }
 
 fuhe::edges::MapOfImageEdges fuhe::edges::SubsetActiveEdges(const colmap::BundleAdjustmentConfig& ba_config,
@@ -145,7 +161,8 @@ fuhe::edges::MapOfOdomEdges fuhe::edges::OdomEdgesManager::CreateOdomEdgesBetwee
         VLOG(2) << "Found matching pose in tumfile for image! Kickoff edges construction between image and odometry data!";
 
         // create source node which has has itself as source and destination
-        edges[curr_img_stamp] = fuhe::edges::OdometryEdge(curr_img_stamp, 0.0, curr_img_id, curr_img_id, Eigen::Isometry3d::Identity());
+        edges[curr_img_stamp] =
+            fuhe::edges::OdometryEdge(curr_img_stamp, 0.0, curr_img_id, curr_img_id, Eigen::Isometry3d::Identity());
         VLOG(2) << "This image will be source node with edge to itself!";
 
         // preparing next iteration

@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
   fuhe::align::AlignmentOptions alignment_options;            // colmap reconstruction coordinate alingment options
   tcf::IncrementalFusionMapper::FusionMapperOptions fusion_mapper_options;  // options regarding the whole fusion mapping process
+  fuhe::cov_utils::OdomCovOptions cov_options;  // covariance options for relative odometry measurements
 
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
@@ -83,16 +84,24 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Fusion.tum_file", &fusion_ba_options.tum_file);
   col_options.AddDefaultOption("Fusion.time_diff_local_ba",
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
-  col_options.AddDefaultOption("Fusion.odom_cov", &fusion_ba_options.cov);
+
+  col_options.AddDefaultOption("Fusion.odom_cov", &fusion_ba_options.cov);  //! kill
   col_options.AddDefaultOption("Fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
   col_options.AddDefaultOption("Fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
   col_options.AddDefaultOption("Fusion.brute_force_scale_recovery", &fusion_ba_options.brute_force_scale_recovery);
   col_options.AddDefaultOption("Fusion.use_robust_loss_on_scale_estimation",
                                &fusion_ba_options.use_robust_loss_on_scale_estimation);
   col_options.AddDefaultOption("Fusion.fix_first_cam_pose", &fusion_ba_options.fix_first_cam_pose);
-  col_options.AddDefaultOption("Fusion.fix_second_cam_position", &fusion_ba_options.fix_first_cam_pose);
+  col_options.AddDefaultOption("Fusion.fix_second_cam_position", &fusion_ba_options.fix_second_cam_position);
   // custom fusion mapping opts
   col_options.AddDefaultOption("FusionMapper.estimate_scale_on_init", &fusion_mapper_options.estimate_scale_on_init_ba);
+  // odom cov options
+  col_options.AddDefaultOption("OdomCov.tx_std", &cov_options.std_tx_per_s);
+  col_options.AddDefaultOption("OdomCov.ty_std", &cov_options.std_ty_per_s);
+  col_options.AddDefaultOption("OdomCov.tz_std", &cov_options.std_tz_per_s);
+  col_options.AddDefaultOption("OdomCov.rx_std", &cov_options.std_rx_per_s);
+  col_options.AddDefaultOption("OdomCov.ry_std", &cov_options.std_ry_per_s);
+  col_options.AddDefaultOption("OdomCov.rz_std", &cov_options.std_rz_per_s);
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
   col_options.AddDefaultOption("FrameAlign.force_first_pose_to_specified", &alignment_options.align_first_cam_to_specific_pose);
@@ -120,7 +129,7 @@ int main(int argc, char** argv) {
   std::shared_ptr<colmap::DatabaseCache> db_cache = colmap::DatabaseCache::Create(db, 0, false, {});
   // fusion mapper object (the star of the show)
   tcf::IncrementalFusionMapper fusion_mapper(
-      db_cache, fusion_ba_options, fusion_mapper_options, fusion_ba_options.tum_file, rr_options);
+      db_cache, fusion_ba_options, fusion_mapper_options, fusion_ba_options.tum_file, cov_options, rr_options);
   // create empty reconstruction
   std::shared_ptr<colmap::Reconstruction> reconstruction = std::make_shared<colmap::Reconstruction>();
   VLOG(1) << "Begin reconstruction!";

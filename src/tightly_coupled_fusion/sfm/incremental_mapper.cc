@@ -5,9 +5,9 @@
  * @source: (original colmap repo) src/colmap/sfm/incremental_mapper.cc
  * @version 0.1
  * @date 2025-05-12
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include "tightly_coupled_fusion/sfm/incremental_mapper.h"
 
@@ -284,6 +284,7 @@ tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colm
                                                       FusionGraphBundleAdjustmentOptions& ba_fusion_options,
                                                       FusionMapperOptions& fusion_mapper_options,
                                                       const std::string& tum_file,
+                                                      const fuhe::cov_utils::OdomCovOptions& cov_options,
                                                       fuhe::rr::RerunVisualizationOptions& rr_options)
     : IncrementalMapper(database_cache),
       ba_fusion_options_{ba_fusion_options},
@@ -311,8 +312,10 @@ tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colm
   fuhe::io::TumToPosesEigen(tum_file, metric_poses, true);
 
   // -------------------- Create sequential image edges in sorted order (containing odom edges between images)
-  fusion_graph_data_edges_ =
-      std::make_shared<fuhe::edges::MapOfImageEdges>(fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses));
+  // covariance manager for relative odometry measurements
+  const fuhe::cov_utils::OdomCovManager cov_manager = fuhe::cov_utils::OdomCovManager(cov_options);
+  fusion_graph_data_edges_ = std::make_shared<fuhe::edges::MapOfImageEdges>(
+      fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses, cov_manager));
 }
 
 void tcf::IncrementalFusionMapper::IterativeLocalRefinement(int max_num_refinements,

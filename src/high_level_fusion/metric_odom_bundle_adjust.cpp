@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
   std::string output_path;
   // whether to align model with PCA before optimization (e.g. for better visualization)
   bool pca_align = true;
+  fuhe::cov_utils::OdomCovOptions cov_options;     // covariance options for relative odometry measurements
   fuhe::rr::RerunVisualizationOptions rr_options;  // rerun visualization options
   hifuse::HighLevelFusionOptions fusion_options;   // high level fusion option
 
@@ -59,6 +60,7 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("output_path", &output_path);
   // Fusion options
   col_options.AddRequiredOption("Fusion.tum_file", &fusion_options.tum_file);
+  //! kick after cov manager is implemented
   col_options.AddDefaultOption("Fusion.cov", &fusion_options.cov);  // scalar covariance value for relative odometry meas (6x6)
   col_options.AddDefaultOption("Fusion.track_residuals", &fusion_options.track_residuals);
 
@@ -71,6 +73,15 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+
+  // Odom covariance options
+  // std values per Secs
+  col_options.AddDefaultOption("OdomCov.tx_std", &cov_options.std_tx_per_s);
+  col_options.AddDefaultOption("OdomCov.ty_std", &cov_options.std_ty_per_s);
+  col_options.AddDefaultOption("OdomCov.tz_std", &cov_options.std_tz_per_s);
+  col_options.AddDefaultOption("OdomCov.rx_std", &cov_options.std_rx_per_s);
+  col_options.AddDefaultOption("OdomCov.ry_std", &cov_options.std_ry_per_s);
+  col_options.AddDefaultOption("OdomCov.rz_std", &cov_options.std_rz_per_s);
 
   // add vanilla colmap bundle adjustment options that will be used as solver settings
   col_options.AddBundleAdjustmentOptions();
@@ -125,10 +136,12 @@ int main(int argc, char** argv) {
   auto imgs_by_stamp = fuhe::col_utils::ImageIdsByStamp(reconstruction->Images());
 
   // -------------------- Create directed odom edges between images in sorted order
+  // covariance manager for relative odometry measurements
+  std::shared_ptr<fuhe::cov_utils::OdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::OdomCovManager>(cov_options);
   // main data structure that we will iterate over to construct the fusion problem. Contains the image ids of
   // the colmap model in time ascending order. Most importantly this associates the absolute odom poses from the tum file to the
   // constraining image pairs as relative edge (which can be used by the interface as relative pose factor).
-  auto data_graph_edges = fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses);
+  auto data_graph_edges = fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses, *cov_manager);
 
   // -------------------- Create Ceres problem
   // NOTE: keep ceres problem as non-pointer and only pass as reference to avoid double free issues
@@ -199,13 +212,10 @@ int main(int argc, char** argv) {
     const Eigen::Isometry3d T_i_from_j(image_edge.OdomEdge()->T_i_from_j());
     VLOG(4) << "Relataive motion is: " << T_i_from_j;
 
-    // Define covariance of relative motion.
-    Eigen::Matrix<double, 6, 6> covarince_i_from_j = Eigen::Matrix<double, 6, 6>::Identity() * fusion_options.cov;
-
     // -------------------- Inlcude metric relative pose factor in BA
     // colmap-id-i, colmap-id-j, measured pose of j expressed in i, covariance of relative pose
     fusion_interface.AddBetweenFactor(
-        image_edge.OdomEdge()->PrevId(), image_edge.OdomEdge()->CurrId(), T_i_from_j, covarince_i_from_j);
+        image_edge.OdomEdge()->PrevId(), image_edge.OdomEdge()->CurrId(), T_i_from_j, image_edge.OdomEdge()->CovMat_ij());
 
     // preparing next iteration
     prev_stamp = curr_img_stamp;

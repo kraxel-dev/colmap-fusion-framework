@@ -39,6 +39,9 @@ class OdomCovManager {
    * @return const Eigen::Matrix<double, 6, 6>: 6x6 Cov Matrix for a rel pose (first 3 entries rotation, last 3 translation)
    */
   const Eigen::Matrix<double, 6, 6> GetTimeDependantCovMat(const double time_diff) const;
+  const Eigen::Matrix<double, 6, 6> GetIdentityCovMat() const;
+
+  inline const OdomCovOptions options() const { return options_; }
 
  protected:
   OdomCovOptions options_;
@@ -47,7 +50,7 @@ class OdomCovManager {
   double var_rx_per_s = 0.01;  // (per second) var for x axis rotation (rad^2)
   double var_ry_per_s = 0.01;  // (per second) var for y axis rotation (rad^2)
   double var_rz_per_s = 0.01;  // (per second) var for z axis rotation (rad^2)
-  
+
   // translation variances per second
   double var_tx_per_s = 0.01;  // (per second) var for x axis translation [m^2]
   double var_ty_per_s = 0.01;  // (per second) var for y axis translation [m^2]

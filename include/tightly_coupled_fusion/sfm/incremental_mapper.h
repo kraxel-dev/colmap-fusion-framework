@@ -155,6 +155,7 @@ class IncrementalFusionMapper : public colmap::IncrementalMapper {
                           FusionGraphBundleAdjustmentOptions& ba_fusion_options,
                           FusionMapperOptions& fusion_mapper_options,
                           const std::string& tum_file,
+                          const fuhe::cov_utils::OdomCovOptions& cov_options,
                           fuhe::rr::RerunVisualizationOptions& rr_options);
 
   /// Derived to call multiple rounds of derived local bundle adjustment with fusion capabilities.
