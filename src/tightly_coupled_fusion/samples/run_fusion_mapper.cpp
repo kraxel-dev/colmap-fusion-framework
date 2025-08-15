@@ -85,7 +85,6 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Fusion.time_diff_local_ba",
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
 
-  col_options.AddDefaultOption("Fusion.odom_cov", &fusion_ba_options.cov);  //! kill
   col_options.AddDefaultOption("Fusion.fusion_in_local_ba", &fusion_ba_options.fusion_in_local_ba);
   col_options.AddDefaultOption("Fusion.fusion_in_global_ba", &fusion_ba_options.fusion_in_global_ba);
   col_options.AddDefaultOption("Fusion.brute_force_scale_recovery", &fusion_ba_options.brute_force_scale_recovery);

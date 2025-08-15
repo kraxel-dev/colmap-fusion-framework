@@ -30,11 +30,8 @@ namespace tcf {  // tightly coupled fusion
 struct FusionGraphBundleAdjustmentOptions {
   bool is_mapping_with_fusion = true;  // if not, switch to regular (vision-only) incremental mapping with rerun visualization.
 
-  // FIXME: expose to user
+  //! FIXME: expose to user
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
-
-  // odom covariance all entries
-  double cov = 0.015;
 
   // set pose of first camera (time sorted) in active Bundle Adjustemnt as constant param in ceres optimizaton
   bool fix_first_cam_pose = true;
@@ -48,10 +45,10 @@ struct FusionGraphBundleAdjustmentOptions {
   // whether to include odometry edges in global BA
   bool fusion_in_global_ba = true;
 
-  // whether to estimate real world scale between colmap model and odometry as part of ceres optimization or brute force the
-  // scale through enforcing the odometry measurements. If true, scale-aware optim will always be deployed (e.g. during fuion
-  // mapping process). If brute force is toggled make sure to reduce measurement covariance to enforce the relative odometry
-  // sacle onto the camera poses.
+  // whether to estimate real world-scale between colmap-model and odometry as through scale-aware ceres factors or brute-force
+  // scale through enforcing the odometry measurements. If false, scale-aware optim will always be deployed (e.g. during
+  // fuion mapping process). If brute force is toggled make sure to reduce measurement covariance to enforce the relative
+  // odometry scale onto the camera poses.
   bool brute_force_scale_recovery = true;
   // estimated scale diff between colmap model and rel pose measurements abve this value will be ignored
   double scale_diff_thresh = 0.92;

@@ -1,4 +1,13 @@
-// TODO: add docstring
+/**
+ * @file cov_utils.h
+ * @author kraxel
+ * @brief Utils for generating covariance matrices for the external sensor modalities (like 6DoF odometry).
+ * @version 0.1
+ * @date 2025-08-15
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #pragma once
 
 #include <Eigen/Core>
@@ -24,7 +33,8 @@ struct OdomCovOptions {
 
 /**
  * @brief Utiliy class for returning 6x6 covariance matrices for 6DoF relative odometry measurements. Odom Cov is scaled by the
- * time diff of each relative measurement.
+ * time diff of each relative measurement. Odometry uncertainty is treated as black-bock model. The axes error per second should
+ * be obtained by calculating RPE of odom traj against ground truth. RPE sections should be 1 second long.
  *
  */
 class OdomCovManager {

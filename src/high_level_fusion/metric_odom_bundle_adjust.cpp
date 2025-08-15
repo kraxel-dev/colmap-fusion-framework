@@ -60,8 +60,6 @@ int main(int argc, char** argv) {
   col_options.AddRequiredOption("output_path", &output_path);
   // Fusion options
   col_options.AddRequiredOption("Fusion.tum_file", &fusion_options.tum_file);
-  //! kick after cov manager is implemented
-  col_options.AddDefaultOption("Fusion.cov", &fusion_options.cov);  // scalar covariance value for relative odometry meas (6x6)
   col_options.AddDefaultOption("Fusion.track_residuals", &fusion_options.track_residuals);
 
   col_options.AddDefaultOption("Model.pca_align", &pca_align);
