@@ -1,7 +1,7 @@
 /**
  * @file cov_utils.h
  * @author kraxel
- * @brief Utils for generating covariance matrices for the external sensor modalities (like 6DoF odometry).
+ * @brief Utils for generating (time-scaled) covariance matrices for the external sensor modalities (like 6DoF odometry).
  * @version 0.1
  * @date 2025-08-15
  *
@@ -21,14 +21,14 @@ namespace cov_utils {
  */
 struct OdomCovOptions {
   // translation standard deviations per second
-  double std_tx_per_s = 0.1;  // (per second) standard deviation for x axis translation
-  double std_ty_per_s = 0.1;  // (per second) standard deviation for y axis translation
-  double std_tz_per_s = 0.1;  // (per second) standard deviation for z axis translation
+  double std_tx_per_s = 1.0;  // (per second) standard deviation for x axis translation
+  double std_ty_per_s = 1.0;  // (per second) standard deviation for y axis translation
+  double std_tz_per_s = 1.0;  // (per second) standard deviation for z axis translation
 
   // rotation axis standard deviations per second
-  double std_rx_per_s = 0.1;  // (per second) standard deviation for x axis rotation (rad)
-  double std_ry_per_s = 0.1;  // (per second) standard deviation for y axis rotation (rad)
-  double std_rz_per_s = 0.1;  // (per second) standard deviation for z axis rotation (rad)
+  double std_rx_per_s = 1.0;  // (per second) standard deviation for x axis rotation (rad)
+  double std_ry_per_s = 1.0;  // (per second) standard deviation for y axis rotation (rad)
+  double std_rz_per_s = 1.0;  // (per second) standard deviation for z axis rotation (rad)
 };
 
 /**
@@ -58,14 +58,14 @@ class TimeScaledOdomCovManager {
   OdomCovOptions options_;
 
   // rotation axis variances per second
-  double var_rx_per_s = 0.01;  // (per second) var for x axis rotation (rad^2)
-  double var_ry_per_s = 0.01;  // (per second) var for y axis rotation (rad^2)
-  double var_rz_per_s = 0.01;  // (per second) var for z axis rotation (rad^2)
+  double var_rx_per_s = 1.0;  // (per second) var for x axis rotation (rad^2)
+  double var_ry_per_s = 1.0;  // (per second) var for y axis rotation (rad^2)
+  double var_rz_per_s = 1.0;  // (per second) var for z axis rotation (rad^2)
 
   // translation variances per second
-  double var_tx_per_s = 0.01;  // (per second) var for x axis translation [m^2]
-  double var_ty_per_s = 0.01;  // (per second) var for y axis translation [m^2]
-  double var_tz_per_s = 0.01;  // (per second) var for z axis translation [m^2]
+  double var_tx_per_s = 1.0;  // (per second) var for x axis translation [m^2]
+  double var_ty_per_s = 1.0;  // (per second) var for y axis translation [m^2]
+  double var_tz_per_s = 1.0;  // (per second) var for z axis translation [m^2]
 };
 
 }  // namespace cov_utils
