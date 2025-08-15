@@ -1,4 +1,35 @@
 #include "fusion_helper/cov_utils.h"
-#include "fusion_helper/stream_utils.h"
 
+#include "fusion_helper/stream_utils.h"
 #include <glog/logging.h>
+
+namespace fuhe {
+namespace cov_utils {
+
+fuhe::cov_utils::OdomCovManager::OdomCovManager(const OdomCovOptions& options) : options_(options) {
+  var_rx_per_s = pow(options_.std_rx_per_s, 2);
+  var_ry_per_s = pow(options_.std_ry_per_s, 2);
+  var_rz_per_s = pow(options_.std_rz_per_s, 2);
+
+  var_rx_per_s = pow(options_.std_tx_per_s, 2);
+  var_ry_per_s = pow(options_.std_ty_per_s, 2);
+  var_rz_per_s = pow(options_.std_tz_per_s, 2);
+}
+
+const Eigen::Matrix<double, 6, 6> fuhe::cov_utils::OdomCovManager::GetTimeDependantCovMat(const double time_diff) const {
+  // create 6x6 covariance matrix
+  Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
+  // fill in rotation covariances
+  cov(0, 0) = var_rx_per_s * time_diff;
+  cov(1, 1) = var_ry_per_s * time_diff;
+  cov(2, 2) = var_rz_per_s * time_diff;
+  // fill in translation covariances
+  cov(3, 3) = var_rx_per_s * time_diff;
+  cov(4, 4) = var_ry_per_s * time_diff;
+  cov(5, 5) = var_rz_per_s * time_diff;
+
+  return cov;
+}
+
+}  // namespace cov_utils
+}  // namespace fuhe
