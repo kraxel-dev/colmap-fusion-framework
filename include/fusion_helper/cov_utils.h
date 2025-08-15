@@ -32,14 +32,15 @@ struct OdomCovOptions {
 };
 
 /**
- * @brief Utiliy class for returning 6x6 covariance matrices for 6DoF relative odometry measurements. Odom Cov is scaled by the
- * time diff of each relative measurement. Odometry uncertainty is treated as black-bock model. The axes error per second should
- * be obtained by calculating RPE of odom traj against ground truth. RPE sections should be 1 second long.
+ * @brief Utiliy class for returning time-sacled 6x6 covariance matrices for 6DoF relative odometry measurements. Internally
+ * stored odom cov values are in err-per-second. Returned Cov Mats are these values scaled by the time diff of each relpose
+ * measurement. By this formuluation, odometry uncertainty is treated as black-bock model. To obtain the axes error per second,
+ * calculate RPE of odom traj against ground truth with RPE sections of 1 [secs] each.
  *
  */
-class OdomCovManager {
+class TimeScaledOdomCovManager {
  public:
-  OdomCovManager(const OdomCovOptions& options);
+  TimeScaledOdomCovManager(const OdomCovOptions& options);
 
   /**
    * @brief Get the 6x6 Cov Matrix scaled by the time diff of the rel pose. Cov entries follow COLMAP convention (first 3 entries

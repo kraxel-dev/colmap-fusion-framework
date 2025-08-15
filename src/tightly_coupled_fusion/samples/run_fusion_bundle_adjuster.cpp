@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
   fuhe::io::TumToPosesEigen(fusion_ba_options.tum_file, metric_poses, true);
 
   // data structure holding image sequence with odom edges to iterate over
-  std::shared_ptr<fuhe::cov_utils::OdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::OdomCovManager>(cov_options);
+  std::shared_ptr<fuhe::cov_utils::TimeScaledOdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::TimeScaledOdomCovManager>(cov_options);
   std::shared_ptr<fuhe::edges::MapOfImageEdges> fusion_graph_data_edges =
       fuhe::edges::CreateSequentialImageEdgesPtr(imgs_by_stamp, metric_poses, *cov_manager);
 

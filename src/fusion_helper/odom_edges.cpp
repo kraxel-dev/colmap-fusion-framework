@@ -42,7 +42,7 @@ fuhe::edges::SequentialImageEdge::SequentialImageEdge(const double curr_stamp,
 ////////////////////////////////////////////////////////////////////////////////
 fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                                                                      const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
-                                                                     const fuhe::cov_utils::OdomCovManager& cov_manager) {
+                                                                     const fuhe::cov_utils::TimeScaledOdomCovManager& cov_manager) {
   VLOG(2) << "Creating sequential image edges for the fusion graph!";
   fuhe::edges::MapOfImageEdges edges;
 
@@ -105,7 +105,7 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
 std::shared_ptr<fuhe::edges::MapOfImageEdges> fuhe::edges::CreateSequentialImageEdgesPtr(
     const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
     const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
-    const fuhe::cov_utils::OdomCovManager& cov_manager) {
+    const fuhe::cov_utils::TimeScaledOdomCovManager& cov_manager) {
   return std::make_shared<fuhe::edges::MapOfImageEdges>(
       fuhe::edges::CreateSequentialImageEdges(img_ids_by_stamp, odom_poses_by_stamp, cov_manager));
 }

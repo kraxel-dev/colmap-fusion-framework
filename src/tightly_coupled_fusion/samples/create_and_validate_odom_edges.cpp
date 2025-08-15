@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
   // -------------------- Create directed odom edges between images in sorted order
   // covariance manager for relative odometry measurements
-  std::shared_ptr<fuhe::cov_utils::OdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::OdomCovManager>(cov_options);
+  std::shared_ptr<fuhe::cov_utils::TimeScaledOdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::TimeScaledOdomCovManager>(cov_options);
 
   // Create main data structure that will be iterated over to build a fusion BA problem with ceres. SeqImgEdges are (sorted)
   // edges from img i to consecutive img (in time) j (without holes) for the whole COLMAP model. Most importantly, this

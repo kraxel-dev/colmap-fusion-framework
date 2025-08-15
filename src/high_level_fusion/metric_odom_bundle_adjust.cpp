@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
 
   // -------------------- Create directed odom edges between images in sorted order
   // covariance manager for relative odometry measurements
-  std::shared_ptr<fuhe::cov_utils::OdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::OdomCovManager>(cov_options);
+  std::shared_ptr<fuhe::cov_utils::TimeScaledOdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::TimeScaledOdomCovManager>(cov_options);
   // main data structure that we will iterate over to construct the fusion problem. Contains the image ids of
   // the colmap model in time ascending order. Most importantly this associates the absolute odom poses from the tum file to the
   // constraining image pairs as relative edge (which can be used by the interface as relative pose factor).

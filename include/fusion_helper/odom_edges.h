@@ -145,11 +145,11 @@ using MapOfImageEdges = std::map<const double, SequentialImageEdge>;
 
 fuhe::edges::MapOfImageEdges CreateSequentialImageEdges(const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
                                                         const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
-                                                        const fuhe::cov_utils::OdomCovManager& cov_manager);
+                                                        const fuhe::cov_utils::TimeScaledOdomCovManager& cov_manager);
 std::shared_ptr<fuhe::edges::MapOfImageEdges> CreateSequentialImageEdgesPtr(
     const fuhe::types::MapOfImageIdsSec& img_ids_by_stamp,
     const fuhe::types::MapOfPosesSec& odom_poses_by_stamp,
-    const fuhe::cov_utils::OdomCovManager& cov_manager);
+    const fuhe::cov_utils::TimeScaledOdomCovManager& cov_manager);
 
 /// Given the full range of fusion graph edges, subset the odometry edges that are active in the current bundle adjustment
 /// problem. An odom edge is only valid, if both img source and destination to this odom are part of the active image set of the

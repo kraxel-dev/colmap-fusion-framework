@@ -295,7 +295,7 @@ tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colm
   is_fusion_mapping_ = ba_fusion_options_.is_mapping_with_fusion;  // FIXME: move this opt to mapper opts
 
   if (is_fusion_mapping_) {
-    VLOG(1) << "Fusion mapping toggled! Tum file path: " << tum_file_;  // TODO: decide for tum file var
+    VLOG(1) << "Fusion mapping toggled! Tum file path: " << tum_file_;  //! TODO: decide for tum file var
     if (tum_file_.empty() || !colmap::ExistsFile(tum_file_)) {
       LOG(ERROR) << "Fusion is toggled but provided tum file path for metric poses is either faulty or non-existent! Please "
                     "double check your paths!";
@@ -313,7 +313,7 @@ tcf::IncrementalFusionMapper::IncrementalFusionMapper(std::shared_ptr<const colm
 
   // -------------------- Create sequential image edges in sorted order (containing odom edges between images)
   // covariance manager for relative odometry measurements
-  const fuhe::cov_utils::OdomCovManager cov_manager = fuhe::cov_utils::OdomCovManager(cov_options);
+  const fuhe::cov_utils::TimeScaledOdomCovManager cov_manager = fuhe::cov_utils::TimeScaledOdomCovManager(cov_options);
   fusion_graph_data_edges_ = std::make_shared<fuhe::edges::MapOfImageEdges>(
       fuhe::edges::CreateSequentialImageEdges(imgs_by_stamp, metric_poses, cov_manager));
 }
