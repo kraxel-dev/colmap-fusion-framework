@@ -10,6 +10,8 @@ target_include_directories(tightly_coupled_fusion PUBLIC ${PROJECT_SOURCE_DIR}/i
 target_link_libraries(tightly_coupled_fusion PUBLIC ${PROJECT_DEPENDENCIES};fusion_helper) # add dependency found in toplevel cmake
 
 # add executable for tightly_coupled_fusion
+add_executable(create_and_validate_odom_edges samples/create_and_validate_odom_edges.cpp)
+target_link_libraries(create_and_validate_odom_edges tightly_coupled_fusion)
 add_executable(model_align samples/model_align.cpp)
 target_link_libraries(model_align tightly_coupled_fusion)
 add_executable(run_default_bundle_adjuster_rerun samples/run_default_bundle_adjuster_rerun.cpp)
