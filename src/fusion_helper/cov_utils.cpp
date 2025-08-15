@@ -32,6 +32,7 @@ const Eigen::Matrix<double, 6, 6> fuhe::cov_utils::OdomCovManager::GetTimeDepend
   cov(4, 4) = var_ry_per_s * time_diff;
   cov(5, 5) = var_rz_per_s * time_diff;
 
+  VLOG(5) << "Created 6DoF odom cov for time diff of " << time_diff << " secs:\n" << cov;
   return cov;
 }
 

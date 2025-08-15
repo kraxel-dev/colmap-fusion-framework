@@ -1,4 +1,5 @@
 #include "fusion_helper/odom_edges.h"
+#include "fusion_helper/stream_utils.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Data Edge
@@ -79,7 +80,7 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
       // Get metric relative  pose of j (curr) expressed in i (prev) := i_from_j = world_from_i.inverse() * world_from_j
       const Eigen::Isometry3d T_i_from_j =
           odom_poses_by_stamp.at(prev_odom_stamp).inverse() * odom_poses_by_stamp.at(curr_img_stamp);
-      VLOG(4) << "Relative pose from tumfile: " << T_i_from_j.matrix();
+      VLOG(4) << "Relative pose from tumfile:\n" << T_i_from_j;
 
       // time scaled 6x6 covariance for rel pose
       const double imgs_time_diff = std::abs(curr_img_stamp - prev_odom_stamp);
