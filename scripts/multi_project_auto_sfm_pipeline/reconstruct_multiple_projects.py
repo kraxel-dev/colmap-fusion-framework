@@ -34,7 +34,7 @@ class CmdArg:
 
 
 class ColmapCmdArgs:
-    def __init__(self, ws_path, quality="low"):
+    def __init__(self, ws_path, db_name_extension=""):
         self.workspace_path = CmdArg("--workspace_path", ws_path)
         self.output_path = CmdArg(
             "--output_path", ws_path
@@ -42,12 +42,12 @@ class ColmapCmdArgs:
         # subfolder to project ws path
         self.image_path = CmdArg("--image_path", ws_path / "images")
         self.database_path = CmdArg(
-            "--database_path", ws_path / f"db_{quality}_q.db"
-        )
+            "--database_path", ws_path / f"db_{db_name_extension}.db"
+        ) #! TODO: choose db name from yaml file
         self.camera_mask_path = CmdArg(
             "--ImageReader.camera_mask_path", ws_path / "mask/img_mask.png")
         # NOTE : everything below is depracated and should be set in the project.ini file
-        self.quality = CmdArg("--quality", quality)
+        # self.quality = CmdArg("--quality", db_name_extension)
 
         # --- camera and feature extratcion params
         self.single_camera = CmdArg("--ImageReader.single_camera", True)
@@ -297,7 +297,9 @@ if __name__ == "__main__":
     with open(str(cfg_path), "r") as file:
         cfg = yaml.safe_load(file)
 
-    reconstruction_quality = cfg["reconstruction_quality"]
+    # string with which created db files will be extend with
+    db_name_ext = cfg["db_name_extension"]
+    # COLMAP params
     project_ini_file = (
         (get_curr_pyscript_dir() / cfg["project_ini"]).expanduser().resolve()
     )
@@ -338,7 +340,7 @@ if __name__ == "__main__":
         print(f"Preparing workspace at path {ws_path} for feature extraction")
 
         # --- prepare command line arguments for colmap reconstruction
-        col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
+        col_args = ColmapCmdArgs(ws_path, db_name_ext)
 
         # --- perform feature extraction on current workspace
         extract_features(col_args, ini_dict)
@@ -349,7 +351,7 @@ if __name__ == "__main__":
         print(f"Preparing workspace at path {ws_path} for sequential image matching")
         
         # --- prepare command line arguments for colmap reconstruction
-        col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
+        col_args = ColmapCmdArgs(ws_path, db_name_ext)
 
         # --- sequentially match images on curr ws
         sequentially_match_imgs(col_args, ini_dict)
@@ -360,7 +362,7 @@ if __name__ == "__main__":
         print(f"Preparing workspace at path {ws_path} for reconstruction")
 
         # --- prepare command line arguments for colmap reconstruction
-        col_args = ColmapCmdArgs(ws_path, reconstruction_quality)
+        col_args = ColmapCmdArgs(ws_path, db_name_ext)
 
         # --- reconstruct model for current workspace
         reoncstruct_model(col_args, ini_dict)

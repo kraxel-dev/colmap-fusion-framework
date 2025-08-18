@@ -96,6 +96,7 @@ int main(int argc, char** argv) {
   }
 
   // -------------------- Write newly aligned model and tum file
+  VLOG(1) << "Writing .tum camera trajectory to: " << output_path;
   fuhe::col_utils::ToTum(reconstruction.get(), output_path);
   VLOG(1) << "Writing model to: " << output_path;
   reconstruction->WriteText(output_path);

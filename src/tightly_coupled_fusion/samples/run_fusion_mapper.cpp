@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("OdomCov.rz_std", &cov_options.std_rz_per_s);
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
-  col_options.AddDefaultOption("FrameAlign.force_first_pose_to_specified", &alignment_options.align_first_cam_to_specific_pose);
+  col_options.AddDefaultOption("FrameAlign.align_first_cam_to_specific_pose", &alignment_options.align_first_cam_to_specific_pose);
   col_options.AddDefaultOption("FrameAlign.rotate_init_motion_onto_global_x_axis",
                                &alignment_options.rotate_init_motion_onto_global_x_axis);
 
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
   }
 
   ////////////////////////////////////////////////////////////////////////////////
-  // Continues image registration and mapping
+  // Continued image registration and mapping
   ////////////////////////////////////////////////////////////////////////////////
   size_t ba_prev_num_reg_images = reconstruction->NumRegImages();
   size_t ba_prev_num_points = reconstruction->NumPoints3D();

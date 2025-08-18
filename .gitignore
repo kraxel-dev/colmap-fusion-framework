@@ -1,6 +1,7 @@
 ### Project Specific ###
 thirdparty/
 logs/
+.vscode/
 
 ### C++ ###
 # Prerequisites

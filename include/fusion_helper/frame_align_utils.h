@@ -37,7 +37,7 @@ struct AlignmentOptions {
   double specified_x = 1.58;         // w.r.t global world frame
   double specified_y = 0.06;         // w.r.t global world frame
   double specified_z = 1.566;        // w.r.t global world frame
-  double specified_roll = 0.0;       // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
+  double specified_roll = 0.0155;    // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   double specified_pitch = -0.1705;  // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   double specified_yaw = 0.0;        // w.r.t global world frame (zyx intrinsic euler angle (rad) convention)
   // apply final rotation of camera center onto the optical lense frame (from x forward to z forward y down)

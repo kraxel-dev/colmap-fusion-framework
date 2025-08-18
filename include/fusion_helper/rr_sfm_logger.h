@@ -28,7 +28,7 @@ struct RerunVisualizationOptions {
   bool is_log_to_rerun = true;
   // enable saving rerun logged data to disk as rrd file. Note that real-time logging deactivates with this.
   bool is_save_rerun_to_disk = false;
-  std::string recording_path = "";
+  std::string recording_path = ".";
   float img_plane_dist = 0.2f;  // controls size of cam pinhole in rerun viewer
 
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses

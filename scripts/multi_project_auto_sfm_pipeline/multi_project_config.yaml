@@ -1,23 +1,22 @@
 # yaml for auto reconstructions of multiple colmap models. This config defines which folders a colmap reconstruction should run on
 
-reconstruction_quality: low # quality settings {low, medium, high, extreme}
-
 # path to the project ini file containing the colmap settings. Pleas strip the hardocded input and db paths. Will be applied to all workspaces. 
 project_ini: ./cfg/project_zed2i_low_q_easy_init.ini
+db_name_extension: "low_q_easy_init" # how db file names will be appended. name after config.ini you just used and leave out .db ending
 
 # workspace folder a reconstruction should be run on. each workspace should contain a subfolder "images" with the images to be reconstructed.
 workspaces:
-  x72:
-    ws_path: "~/transfer/eval/sq2/sparse7x"
-  x52:
-    ws_path: "~/transfer/eval/sq2/sparse5x"
-  x32:
-    ws_path: "~/transfer/eval/sq2/sparse3x"
-  x7:
-    ws_path: "~/transfer/eval/sq1/sparse7x"
-  x5:
-    ws_path: "~/transfer/eval/sq1/sparse5x"
-  x3:
-    ws_path: "~/transfer/eval/sq1/sparse3x"
-  # x1:
-  #   ws_path: "~/transfer/eval/sq1"
+  sq1in:
+    ws_path: "~/transfer/eval/sq1in/"
+  # sq1in5x:
+  #   ws_path: "~/transfer/eval/sq1in/sparse5x"
+  sq2:
+    ws_path: "~/transfer/eval/sq2/"
+  sq3in:
+    ws_path: "~/transfer/eval/sq3in/"
+  sq4in:
+    ws_path: "~/transfer/eval/sq4in/"
+  sq3out:
+    ws_path: "~/transfer/eval/sq3out/"
+  sq4out:
+    ws_path: "~/transfer/eval/sq4out/"
