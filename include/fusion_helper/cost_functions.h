@@ -207,5 +207,77 @@ struct ScaleAwareRelativePoseCostFunctor
   const colmap::Rigid3d j_from_i_measured_;
 };
 
+/**
+ * @brief Cost functor to estimate extrinsic calibration between two sensor links given a set of relative pose measurements.
+ * Estimates pose of target (e.g. cam) w.r.t. reference (e.g. lidar). Makse sure that rel pose segments are time synchronized
+ * between sensor links.
+ *
+ */
+struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicCalibCostFunctor, 6, 4, 3> {
+ public:
+  /**
+   * @brief Construct a new Extrinsic Calib Cost Functor object
+   *
+   * @param T_ij_ref 6DoF rel pose measurement from ref sensor (e.g. lidar)
+   * @param T_ij_target 6DoF rel pose measurement from target sensor (e.g. camera)
+   */
+  explicit ExtrinsicCalibCostFunctor(const colmap::Rigid3d& T_ij_ref, const colmap::Rigid3d& T_ij_target)
+      : i_from_j_ref_(T_ij_ref), i_from_j_target_(T_ij_target) {}
+
+  template <typename T>
+  bool operator()(const T* const q_ref_from_target, const T* const t_ref_from_target, T* residuals_ptr) const {
+    // T_ref_from_target (extrinsics)
+    colmap::EigenQuaternionMap<T> q_rt(q_ref_from_target);
+    colmap::EigenVector3Map<T> t_rt(t_ref_from_target);
+
+    // R_ij_target (predicted) = inv(q_ref_from_target) * q_ij_ref * q_ref_from_target
+    Eigen::Quaternion<T> q_ij_pred = q_rt.conjugate() * i_from_j_ref_.rotation.cast<T>() * q_rt;
+
+    // Rotation term: ΔR = log(i_R_j_target · i_R_j_predicted⁻¹)
+    const Eigen::Quaternion<T> param_rot_diff = i_from_j_target_.rotation.cast<T>() * q_ij_pred.conjugate();
+    colmap::EigenQuaternionToAngleAxis(param_rot_diff.coeffs().data(), residuals_ptr);
+
+    // t_ij_target (predicted) = inv(q_ref_from_target) * t_ij_ref + inv(q_ref_from_target)*(q_ij_ref*t_rt - I*t_rt)
+    Eigen::Matrix<T, 3, 1> t_ij_pred =
+        q_rt.conjugate() * (i_from_j_ref_.translation.cast<T>() + (i_from_j_ref_.rotation.cast<T>() * t_rt) - t_rt);
+
+    // Translation term
+    Eigen::Map<Eigen::Matrix<T, 3, 1>> param_trans_diff(residuals_ptr + 3);
+    // Δt = i_t_j_target - i_t_j_predicted
+    param_trans_diff = i_from_j_target_.translation.cast<T>() - t_ij_pred;
+
+    return true;
+  }
+
+ private:
+  // relative pose measurement with true scale obtained from external odometry (pose of j w.r.t. i)
+  const colmap::Rigid3d i_from_j_ref_;
+  const colmap::Rigid3d i_from_j_target_;
+};
+
+/**
+ * @brief Taken from colmap::AbsolutePosePositionPriorCostFunctor to avoid the world pose w.r.t. to cam notation. Normal Prior to
+ * constrain the translation component of a 6DoF pose
+ *
+ */
+struct TranslationPriorCostFunctor : public colmap::AutoDiffCostFunctor<TranslationPriorCostFunctor, 3, 3> {
+ public:
+  explicit TranslationPriorCostFunctor(const Eigen::Vector3d& tranlsation_prior, const Eigen::Vector3d& weight)
+      : translation_prior_(tranlsation_prior), weight_(weight) {}
+
+  template <typename T>
+  bool operator()(const T* const t, T* residuals_ptr) const {
+    Eigen::Map<Eigen::Matrix<T, 3, 1>> residuals(residuals_ptr);
+    residuals = translation_prior_.cast<T>() - colmap::EigenVector3Map<T>(t);
+    residuals[0] *= weight_[0];
+    residuals[1] *= weight_[1];
+    residuals[2] *= weight_[2];
+    return true;
+  }
+
+ private:
+  const Eigen::Vector3d translation_prior_;
+  const Eigen::Vector3d weight_;  // inverse cov -> large weight means large influence
+};
 }  // namespace cost
 }  // namespace fuhe
