@@ -213,7 +213,7 @@ struct ScaleAwareRelativePoseCostFunctor
  * between sensor links.
  *
  */
-struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicCalibCostFunctor, 6, 4, 3> {
+struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicCalibCostFunctor, 6, 1, 4, 3> {
  public:
   /**
    * @brief Construct a new Extrinsic Calib Cost Functor object
@@ -225,7 +225,10 @@ struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicC
       : i_from_j_ref_(T_ij_ref), i_from_j_target_(T_ij_target) {}
 
   template <typename T>
-  bool operator()(const T* const q_ref_from_target, const T* const t_ref_from_target, T* residuals_ptr) const {
+  bool operator()(const T* const scale,
+                  const T* const q_ref_from_target,
+                  const T* const t_ref_from_target,
+                  T* residuals_ptr) const {
     // T_ref_from_target (extrinsics)
     colmap::EigenQuaternionMap<T> q_rt(q_ref_from_target);
     colmap::EigenVector3Map<T> t_rt(t_ref_from_target);
@@ -243,8 +246,8 @@ struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicC
 
     // Translation term
     Eigen::Map<Eigen::Matrix<T, 3, 1>> param_trans_diff(residuals_ptr + 3);
-    // Δt = i_t_j_target - i_t_j_predicted
-    param_trans_diff = i_from_j_target_.translation.cast<T>() - t_ij_pred;
+    // Δt = scale * i_t_j_target - i_t_j_predicted
+    param_trans_diff = scale[0] * (i_from_j_target_.translation.cast<T>()) - t_ij_pred;
 
     return true;
   }
@@ -253,6 +256,56 @@ struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicC
   // relative pose measurement with true scale obtained from external odometry (pose of j w.r.t. i)
   const colmap::Rigid3d i_from_j_ref_;
   const colmap::Rigid3d i_from_j_target_;
+};
+
+/**
+ * @brief Given three extrinsic calib matrices between three sensor links (ref, target, aux), this cost functor enforces
+ * consistency between them. I.e. T_ref_from_target = T_target_from_aux * T_ref_from_aux. Note that this cost functor does not
+ * operate on measurements, which means that each extrinsic must be constrained by a regular extrinsic cost functor or prior.
+ *
+ */
+struct TriExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<TriExtrinsicCalibCostFunctor, 6, 4, 3, 4, 3, 4, 3> {
+ public:
+  explicit TriExtrinsicCalibCostFunctor() = default;
+
+  template <typename T>
+  bool operator()(const T* const q_ref_from_target,
+                  const T* const t_ref_from_target,
+                  const T* const q_ref_from_aux,
+                  const T* const t_ref_from_aux,
+                  const T* const q_aux_from_target,
+                  const T* const t_aux_from_target,
+                  T* residuals_ptr) const {
+    // T_ref_from_target (extrinsics lidar -> cam)
+    colmap::EigenQuaternionMap<T> q_rt(q_ref_from_target);
+    colmap::EigenVector3Map<T> t_rt(t_ref_from_target);
+    // T_ref_from_aux (extrinsics lidar -> radar)
+    colmap::EigenQuaternionMap<T> q_ra(q_ref_from_aux);
+    colmap::EigenVector3Map<T> t_ra(t_ref_from_aux);
+    // T_aux_from_target (extrinsics radar -> cam)
+    colmap::EigenQuaternionMap<T> q_at(q_aux_from_target);
+    colmap::EigenVector3Map<T> t_at(t_aux_from_target);
+
+    // * T_ref_from_target (predicted) = T_ref_from_aux * T_aux_from_target
+    // R_rt (predicted) = q_ra * q_at
+    Eigen::Quaternion<T> q_rt_pred = q_ra * q_at;
+
+    // Rotation term: ΔR = log(ref_R_target · ref_R_target_predicted⁻¹)
+    const Eigen::Quaternion<T> param_rot_diff = q_rt * q_rt_pred.conjugate();
+    colmap::EigenQuaternionToAngleAxis(param_rot_diff.coeffs().data(), residuals_ptr);
+
+    // t_rt (predicted) = R_ra * t_at + t_ra
+    Eigen::Matrix<T, 3, 1> t_rt_pred = q_ra * t_at + t_ra;
+
+    // Translation term
+    Eigen::Map<Eigen::Matrix<T, 3, 1>> param_trans_diff(residuals_ptr + 3);
+    // Δt = t_rt - t_rt_pred
+    param_trans_diff = t_rt - t_rt_pred;
+
+    return true;
+  }
+
+ private:
 };
 
 /**
