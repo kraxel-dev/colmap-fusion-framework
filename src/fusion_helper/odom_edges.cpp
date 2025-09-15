@@ -70,7 +70,7 @@ fuhe::edges::MapOfImageEdges fuhe::edges::CreateSequentialImageEdges(const fuhe:
     // -------------------- Attach odometry edge if available
     // whether current img has associated absolute odometry pose in tum file
     if (odom_poses_by_stamp.find(curr_img_stamp) != odom_poses_by_stamp.end()) {
-      // curr absolute pose has some previous pose as source node?
+      // is init node?
       if (prev_odom_stamp == -1) {
         prev_odom_stamp = curr_img_stamp;
         continue;

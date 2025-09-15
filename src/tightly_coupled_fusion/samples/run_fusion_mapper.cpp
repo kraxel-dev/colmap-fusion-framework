@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
   // custom rerun option
   col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.rrd_path", &rr_options.recording_path);
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("Rerun.model_bbox_lower_bound", &rr_options.model_bbox_lb);
   col_options.AddDefaultOption("Rerun.model_bbox_upper_bound", &rr_options.model_bbox_ub);
@@ -103,7 +104,8 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("OdomCov.rz_std", &cov_options.std_rz_per_s);
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);
-  col_options.AddDefaultOption("FrameAlign.align_first_cam_to_specific_pose", &alignment_options.align_first_cam_to_specific_pose);
+  col_options.AddDefaultOption("FrameAlign.align_first_cam_to_specific_pose",
+                               &alignment_options.align_first_cam_to_specific_pose);
   col_options.AddDefaultOption("FrameAlign.rotate_init_motion_onto_global_x_axis",
                                &alignment_options.rotate_init_motion_onto_global_x_axis);
 
@@ -224,7 +226,11 @@ int main(int argc, char** argv) {
     }
 
     // register image in reconstruction
-    VLOG(2) << "Registering image " << next_image_id;
+    VLOG(1) << "\n";
+    VLOG(1) << "================";
+    VLOG(1) << "Registering image " << next_image_id;
+    VLOG(1) << "================";
+
     if (!fusion_mapper.RegisterNextImage(mapper_opts, next_image_id)) {
       LOG(ERROR) << "Registration of current image failed! Stopping mapping process!";
       // break if registration fails //FIXME: make more robust and allow to try other images for reg before failing

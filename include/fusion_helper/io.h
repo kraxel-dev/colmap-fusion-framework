@@ -49,7 +49,7 @@ void TumToStamps(const std::string& tum_file, std::vector<double>& timestamps);
  * @param tum_file path to TUM benchmark file
  * @param out_poses vector to store poses
  */
-void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>& out_file);
+void TumToPosesEigen(const std::string& tum_file, std::vector<Eigen::Isometry3d>& out_poses);
 
 /**
  * @brief Parse poses from tum trajectory file and store in a map, accessible and sorted by their timestamps in seconds

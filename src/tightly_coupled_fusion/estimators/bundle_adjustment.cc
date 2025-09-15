@@ -321,8 +321,9 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
   std::shared_ptr<double> model_scale_ = std::make_shared<double>(1.0);
   // cauchy loss if robust loss for scale estim is desired
   std::unique_ptr<ceres::LossFunction> scale_estimation_loss_func_ = nullptr;
-  // whether this ba instance has applied its estimated scale onto the colmap model
-  bool is_scale_applied_ = false;
+  // whether this ba instance has applied its estimated scale onto the colmap model. Only relevant with scale-aware rel pose
+  // factors
+  bool is_scale_applied_ = false;  //! currently not reachable due to polymorphism
 
   colmap::Reconstruction& reconstruction_;
   std::unique_ptr<colmap::BundleAdjuster> default_bundle_adjuster_;  // composition
@@ -338,7 +339,7 @@ class FusionGraphBundleAdjuster : public colmap::BundleAdjuster {
     iter_callback_ =
         std::make_shared<fuhe::iter_callbacks::ColmapFusionBAIterCallback>(rr_sfm_logger_, &config_, active_fusion_graph_edges_);
 
-    // only with real value updates can rerun log during the optimization process
+    // only with real value updates rerun can log states during the optimization process
     solver_options.update_state_every_iteration = true;
     solver_options.callbacks.push_back(iter_callback_.get());
   }

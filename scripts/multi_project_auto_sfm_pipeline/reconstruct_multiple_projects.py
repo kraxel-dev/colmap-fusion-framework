@@ -53,10 +53,10 @@ class ColmapCmdArgs:
         self.single_camera = CmdArg("--ImageReader.single_camera", True)
         self.camera_model = CmdArg("--ImageReader.camera_model", "PINHOLE")
         # fx, fy, cx, cy
-        self.camera_params = CmdArg(
-            "--ImageReader.camera_params",
-            "501.4757919305817, 501.4757919305817, 421.7953735163109, 167.65799492501083",
-        )
+        # self.camera_params = CmdArg(
+        #     "--ImageReader.camera_params",
+        #     "501.4757919305817, 501.4757919305817, 421.7953735163109, 167.65799492501083",
+        # )
 
         # --- sequential matcher params
         self.matcher_use_gpu = CmdArg("--SiftMatching.use_gpu", 0)

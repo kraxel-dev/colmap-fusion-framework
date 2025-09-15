@@ -453,14 +453,13 @@ colmap::IncrementalMapper::LocalBundleAdjustmentReport tcf::IncrementalFusionMap
     // Prepare the local bundle.
     std::unique_ptr<BundleAdjuster> bundle_adjuster = nullptr;
     FusionGraphBundleAdjustmentOptions ba_fuse_opts = ba_fusion_options_;
-    
+
     // small check whether scale estimation should be perfomed during beginning of mapping. Does nothing if brute force is
-    // deactivated anyways in ba fusion options.
+    // deactivated to begin with through the ba fusion options.
     if (fusion_mapper_options_.estimate_scale_on_init_ba && (this->scale_estimated_once_ == false)) {
       // set brute force scale to false for this one occasion to use the scale-aware const functor.
       ba_fuse_opts.brute_force_scale_recovery = false;
       VLOG(2) << "Scale estimation through odometry toggled for current BA to recover inital scale for the reconstruction!";
-      // FIXME: safety check whether the BA really did have odom edges to estimate scale
       scale_estimated_once_ = true;
     }
 

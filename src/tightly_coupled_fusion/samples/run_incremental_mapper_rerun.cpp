@@ -61,12 +61,13 @@ int main(int argc, char** argv) {
   // custom rerun option
   col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);  
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.rrd_path", &rr_options.recording_path);
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
   // custom init optiosn
   col_options.AddDefaultOption("Init.n_init_pair_skip", &n_init_pair_skip);
   // custom ba options
-  col_options.AddDefaultOption("time_diff_local_ba",                       // FIXME: change to Model. or Mapping.
+  col_options.AddDefaultOption("time_diff_local_ba",                       //! FIXME: change to Model. or Mapping.
                                &fusion_ba_options.time_between_local_ba);  // seconds to pass to allow new round of local BA
   // custom frame alignment options
   col_options.AddDefaultOption("FrameAlign.n_reg_for_alignment", &alignment_options.n_reg_for_alignment);

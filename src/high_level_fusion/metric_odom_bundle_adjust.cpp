@@ -238,7 +238,7 @@ int main(int argc, char** argv) {
   }
 
   // -------------------- residuals tracking during ceres optim
-  // deply residual cost tracking by category during optimization
+  // deploy residual cost tracking by category during optimization
   std::shared_ptr<fuhe::FusionEvaluationCallback> fusion_eval_callback = nullptr;
   if (fusion_interface.GetResidualsTracker()) {
     VLOG(2) << "Deploying residual tracking evaluation callback!";

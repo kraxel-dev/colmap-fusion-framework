@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
     VLOG(1) << "Skipping model PCA alignment before optimization!";
   }
 
+  //! remove since new box strategy was introduced
   // crop model to remove bad points that mess up rerun viz
   if (pre_crop_points) {
     VLOG(1) << "Cropping model pts before optimization!";
@@ -104,12 +105,12 @@ int main(int argc, char** argv) {
     ba_cfg.AddImage(img_id);                  // notify ceres to inlcude this img for optimization
     ba_cfg.SetConstantCamIntrinsics(img_id);  // no intrinsics optimization for now
 
-    // NOTE: no 3d point adding to ba_config required. Points are selected automatically by colmap based on the images selected
+    // NOTE: no 3d point adding to ba_config required. Points are selected automatically by colmap based on the ba_config images
     // in the default bundle adjuster.
 
+    // fix gauge freedom on first image-pose in model
     if (i == 0) {
       VLOG(2) << "Fixing pose of image: " << img_id;
-      // fix gauge freedom on first image-pose in model
       ba_cfg.SetConstantCamPose(img_id);
     }
 
