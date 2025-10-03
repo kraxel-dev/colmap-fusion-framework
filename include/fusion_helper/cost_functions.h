@@ -208,6 +208,7 @@ struct ScaleAwareRelativePoseCostFunctor
 };
 
 /**
+ * ! this factor is highly experimental and should not be used
  * @brief Cost functor to estimate extrinsic calibration between two sensor links given a set of relative pose measurements.
  * Estimates pose of target (e.g. cam) w.r.t. reference (e.g. lidar). Makse sure that rel pose segments are time synchronized
  * between sensor links.
@@ -259,6 +260,7 @@ struct ExtrinsicCalibCostFunctor : public colmap::AutoDiffCostFunctor<ExtrinsicC
 };
 
 /**
+ * ! this factor is highly experimental and should not be used
  * @brief Given three extrinsic calib matrices between three sensor links (ref, target, aux), this cost functor enforces
  * consistency between them. I.e. T_ref_from_target = T_target_from_aux * T_ref_from_aux. Note that this cost functor does not
  * operate on measurements, which means that each extrinsic must be constrained by a regular extrinsic cost functor or prior.

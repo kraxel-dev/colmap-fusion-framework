@@ -21,14 +21,14 @@ namespace cov_utils {
  */
 struct OdomCovOptions {
   // translation standard deviations per second
-  double std_tx_per_s = 0.0266809;  // (per second) standard deviation for x axis translation
-  double std_ty_per_s = 0.0131503;  // (per second) standard deviation for y axis translation
-  double std_tz_per_s = 0.0434274;  // (per second) standard deviation for z axis translation
+  double std_tx_per_s = 0.0198;  // (per second) standard deviation for x axis translation
+  double std_ty_per_s = 0.010695;  // (per second) standard deviation for y axis translation
+  double std_tz_per_s = 0.040811;  // (per second) standard deviation for z axis translation
 
   // rotation axis standard deviations per second
-  double std_rx_per_s = 0.0021704;  // (per second) standard deviation for x axis rotation (rad)
-  double std_ry_per_s = 0.0046306;  // (per second) standard deviation for y axis rotation (rad)
-  double std_rz_per_s = 0.0019503;  // (per second) standard deviation for z axis rotation (rad)
+  double std_rx_per_s = 0.002153;  // (per second) standard deviation for x axis rotation (rad)
+  double std_ry_per_s = 0.004717;  // (per second) standard deviation for y axis rotation (rad)
+  double std_rz_per_s = 0.001794;  // (per second) standard deviation for z axis rotation (rad)
 };
 
 /**

@@ -63,6 +63,8 @@ int main(int argc, char** argv) {
   std::string db_path;      // database path
   std::string output_path;  // output path for fully reconstructed model
 
+  std::string log_out_path = "";  // output path for glog files
+
   colmap::OptionManager col_options;                          // classic colmap options and cmd arg parser
   fuhe::rr::RerunVisualizationOptions rr_options;             // rerun visualization options
   tcf::FusionGraphBundleAdjustmentOptions fusion_ba_options;  // options (e.g. tum path) for FusionGraphBundleAdjuster
@@ -73,6 +75,8 @@ int main(int argc, char** argv) {
   // classic colmap options
   col_options.AddRequiredOption("db_path", &db_path);
   col_options.AddRequiredOption("output_path", &output_path);
+
+  col_options.AddDefaultOption("log_path", &log_out_path);
   // custom rerun option
   col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
@@ -121,9 +125,14 @@ int main(int argc, char** argv) {
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
-  FLAGS_log_dir = log_dir;
-  VLOG(2) << "Logging path is: " << log_dir;
+  if (log_out_path != "") {
+    FLAGS_log_dir = log_out_path;
+  } else {
+    // use default logging path inside repo
+    const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
+    FLAGS_log_dir = log_dir;
+  }
+  VLOG(2) << "Logging path is: " << FLAGS_log_dir;
 
   // -------------------- Read database cache and init fusion Mapper object
   colmap::Database db = colmap::Database(db_path);
@@ -198,7 +207,7 @@ int main(int argc, char** argv) {
   // -------------------- Global bundle adjustment for the inital pair
   VLOG(1) << "Kick off a round of global bundle adjustment for initial par!";
   fusion_mapper.AdjustGlobalBundle(mapper_opts, incr_pipieline_opts->GlobalBundleAdjustment());
-  fusion_mapper.Reconstruction()->Normalize();
+
   // for first global ba use separate set of 3d point filtering options due to low triangulation angle in init
   colmap::IncrementalMapper::Options init_filter_mapper_opts = mapper_opts;
   init_filter_mapper_opts.filter_min_tri_angle = init_filter_mapper_opts.init_min_tri_angle * 1.5;

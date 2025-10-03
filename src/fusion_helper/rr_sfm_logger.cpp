@@ -18,6 +18,7 @@ RerunSfmLogger::RerunSfmLogger(const RerunVisualizationOptions& rr_opts, std::sh
   // -------------------- Set rerun context
   VLOG(2) << "Initializing rerun viewer for fusion graph!";
   rr_rec_ = std::make_shared<rerun::RecordingStream>("bundle", "shared");
+
   this->GetRerunRec()->spawn().exit_on_failure();
   this->GetRerunRec()->log_static("/", rerun::ViewCoordinates::RIGHT_HAND_Z_UP);  // Set an z-up-axis
 

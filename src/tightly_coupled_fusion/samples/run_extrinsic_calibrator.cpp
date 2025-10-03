@@ -1,8 +1,8 @@
 /**
  * @file run_extrinsic_calibrator.cpp
  * @author kraxel
- * @brief Given a ref, a target, and an aux tum trajectory of 3 different sensor links w.r.t. the same diriving sequence, find
- * the optimal extrinsics using ceres optimization.
+ * @brief WARNING: This exe is highly experimental and should not be used. Given a ref, a target, and an aux tum trajectory of 3
+ * different sensor links w.r.t. the same diriving sequence, find the optimal extrinsics using ceres optimization.
  * @version 0.1
  * @date 2025-09-12
  *

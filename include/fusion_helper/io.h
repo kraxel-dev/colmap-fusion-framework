@@ -23,7 +23,7 @@ namespace fuhe {  // fusion helper
 namespace io {
 
 // keep 2 digits after decimal points for ten millisecond precision
-constexpr int DIGIT_PRECISION = 2;
+constexpr int DIGIT_PRECISION = 4;
 
 /**
  * @brief cut off decimal digits of double value after specified precision. Use this to round off large timestamps for comparison of
