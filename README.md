@@ -1,45 +1,91 @@
-# Colmap Fusion Framework
+# Colmap Fusion Framework (Fuma)
 
-Prototyping platform for COLMAP 3D reconstruction enhanced with multi-modal sensor fusion. Structure-from-Motion revisited, this time with more sensors to include in the ceres Bundle Adjustment process.
+COLMAP **3D reconstruction** **fused** with additional senor modalities (e.g. **external odometry**). **Structure-from-Motion** revisited; This time with more sensors and under the **factor graph formalism**.
 
 **DISCLAIMER** This repo is still under heavy maintenance. Do not expect any warranty for usability, correctness or code quality.
 
+## Overview
+
+This repo is a prototyping platform that enhances COLMAP's (vision-only) incremental mapping process with measurement factors from other sensors. Specifically, demos for fusing relative pose factors from external odometry are implemented. However, integration of other modalities (e.g. IMU pre-integration) is easily done, when following the instructions of this repo.
+
+![showcase-fuma](docs/marketing/showcase-fuma-zoom-slow.gif)
+
+This platform was developed as part of my Master Thesis in cooperation with [Expleo](https://expleo.com/global/de/branchen/automotive/#overview) Germany's  <u>[ADAS department](https://expleo.com/global/en/insights/campaigns/autonomous-driving-adas/)</u> in Berlin. Main objective was a generalizable framework to easily obtain metric-scale (SfM) maps in which our demonstrator vehicle can re-localize itself using only a monocular camera. Speaking about vehicles and sensors, check out our awesome <u>[demonstrator vehicle](https://expleo.com/global/en/case-studies/automated-valet-parking/)</u>, which has been utilized to prototype and showcase many exciting applications in the domain of ADAS and AD.
+
+## Table of Contents
+
+- [Colmap Fusion Framework (Fuma)](#colmap-fusion-framework-fuma)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+    - [Variety of SfM and Fusion Helpers - Visualization and Ceres Stuff](#variety-of-sfm-and-fusion-helpers---visualization-and-ceres-stuff)
+    - [High Level Fusion](#high-level-fusion)
+    - [Tightly-coupled Fusion (Incremental Fusion Mapping)](#tightly-coupled-fusion-incremental-fusion-mapping)
+    - [Samples and resources for a better understanding of COLMAP's internal reconstruction process](#samples-and-resources-for-a-better-understanding-of-colmaps-internal-reconstruction-process)
+    - [Handy Scripts for Evaluation and Data Processing - Mix and Match](#handy-scripts-for-evaluation-and-data-processing---mix-and-match)
+  - [Build](#build)
+    - [Dependencies and prerequisites](#dependencies-and-prerequisites)
+    - [Build instructions](#build-instructions)
+  - [Usage and Samples](#usage-and-samples)
+    - [High level fusion with external odometry](#high-level-fusion-with-external-odometry)
+    - [Tightly-coupled Fusion with external odometry](#tightly-coupled-fusion-with-external-odometry)
+  - [Prepare your own Data](#prepare-your-own-data)
+  - [Open Issues](#open-issues)
+    - [Scale and cost factors](#scale-and-cost-factors)
+    - [Scale and frame alignment](#scale-and-frame-alignment)
+    - [Reconstruction quality and filtering](#reconstruction-quality-and-filtering)
+    - [Rerun](#rerun)
+    - [Fusion Iteration Callback](#fusion-iteration-callback)
+    - [Cost logging](#cost-logging)
+    - [Incremental fusion mapper](#incremental-fusion-mapper)
+
 ## Features
 
-### Variety of SfM and Fusion Helpers
+### Variety of SfM and Fusion Helpers - Visualization and Ceres Stuff
 
 1. Custom Rerun SfM Logger class -> [include/fusion_helper/rr_sfm_logger.h](include/fusion_helper/rr_sfm_logger.h):
    1. Stream your COLMAP model (cam poses and 3d points) directly to your rerun viewer
+   ![showcase-rerun-model-stream](docs/marketing/showcase-rerun-model-streamer.gif)
    2. Visualizes the odometry edges between your camera poses during fusion
+   <img src="docs/marketing/showcase-odom-edge-annotated.png" width="60%">
    3. Deploy the logger into COLMAP's incremental reconstruction to see whats happening in between mapping
 2. Ceres iteration callbacks -> [include/fusion_helper/fusion_iteration_callback.h](include/fusion_helper/fusion_iteration_callback.h):
    1. Stream your COLMAP model's bundle adjustment process directly to rerun viewer
-   2. Highlight local and global BA during incremental reconstruction in the rerun viewer
-   3. Stream the fusion BA process (both high-level and tightly-coupled) to rerun viewer
+   2. Highlight local and global BA during default incremental reconstruction in the rerun viewer
+   3. Stream the fusion local and global BA (both high-level and tightly-coupled) to rerun viewer
 3. A variety of cost functions
-   1. Covariance Weighted Reprojection Error
-4. Helper scripts:
-   1. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction)
+   1. Covariance weighted re-projection error
+   2. Scale-aware relative pose factor (7-DoF)
 
 ### High Level Fusion
 
 1. [High Level Fusion Module Description](docs/module_high_lvl_fusion.md)
 
 Fusion of fully reconstructed COLMAP models with relative pose constraints from corresponding external odometry data:
-![showcase-high-lvl](docs/marketing/high_lvl_fusion_showcase.gif)
 
-### Tightly-coupled Fusion
+### Tightly-coupled Fusion (Incremental Fusion Mapping)
+
+The star of this repo.
 
 1. [Tightly Coupled Fusion Module Description](docs/module_tightly_coupled_fusion.md)
 
 Fusion of relative pose constraints from external odometry data during COLMAP's incremental mapping from scratch:
 
-### Rerun Visualization
-
 ### Samples and resources for a better understanding of COLMAP's internal reconstruction process
 
 1. See what's happening in your vanilla incremental reconstruction through visualization during reconstruction in rerun.
 2. Understand COLMAP's internal vanilla reconstruction steps through nice code samples and additional explanations.
+
+### Handy Scripts for Evaluation and Data Processing - Mix and Match
+
+TODO
+
+1. Multi-project auto Reconstruction Pipeline (default COLMAP models)
+   1. Automatically reconstruct COLMAP models for independent COLMAP projects (e.g. same image dataset under different conditions) at once.
+2. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction)
+   1. TODO
+3. Prepare public dataset images for COLMAP reconstruction
+   1. TODO
 
 ## Build
 
@@ -88,7 +134,19 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 ## Usage and Samples
 
+Before running the executables for awesome fusion-aided 3D reconstruction, you need to prepare you default COLMAP database and external odometry tum file as described in [prepare-your-own-data](#prepare-your-own-data).
+
 ### High level fusion with external odometry
+
+TODO
+
+### Tightly-coupled Fusion with external odometry
+
+TODO
+
+## Prepare your own Data
+
+TODO
 
 ## Open Issues
 
@@ -124,19 +182,8 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 2. Add residual tracking to tcf
 3. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
 
-### OdomEdgesManager
-
-1. Decide if edges are created outside of mapper and delete setter method accordingly
-2. Deal with multiple tums simultaneously
-3. Deal with disconnected poses in tum file or disconnected image ids
-4. Find better class name
-
 ### Incremental fusion mapper
 
 1. create superset of mapping options to control actions that belong to mapper and not to FusionBA object
 
 1. PCA alginment options is task of mapper
-
-### Auto eval pipeline
-
-Automatically reconstruct multiple colmap models for same image dataset under different conditions.
