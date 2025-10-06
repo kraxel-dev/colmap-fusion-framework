@@ -2,13 +2,14 @@
 
 COLMAP **3D reconstruction** **fused** with additional senor modalities (e.g. **external odometry**). **Structure-from-Motion** revisited; This time with more sensors and under the **factor graph formalism**.
 
-**DISCLAIMER** This repo is still under heavy maintenance. Do not expect any warranty for usability, correctness or code quality.
+> [!WARNING]
+> This repo is still under heavy maintenance. Do not expect any warranty for usability, correctness, or code quality.
 
 ## Overview
 
 This repo is a prototyping platform that enhances COLMAP's (vision-only) incremental mapping process with measurement factors from other sensors. Specifically, demos for fusing relative pose factors from external odometry are implemented. However, integration of other modalities (e.g. IMU pre-integration) is easily done, when following the instructions of this repo.
 
-![showcase-fuma](docs/marketing/showcase-fuma-zoom-slow.gif)
+![showcase-fuma](docs/marketing/showcase-fuma-zoom-slow-downscaled.gif)
 
 This platform was developed as part of my Master Thesis in cooperation with [Expleo](https://expleo.com/global/de/branchen/automotive/#overview) Germany's  <u>[ADAS department](https://expleo.com/global/en/insights/campaigns/autonomous-driving-adas/)</u> in Berlin. Main objective was a generalizable framework to easily obtain metric-scale (SfM) maps in which our demonstrator vehicle can re-localize itself using only a monocular camera. Speaking about vehicles and sensors, check out our awesome <u>[demonstrator vehicle](https://expleo.com/global/en/case-studies/automated-valet-parking/)</u>, which has been utilized to prototype and showcase many exciting applications in the domain of ADAS and AD.
 
@@ -21,7 +22,7 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
     - [Variety of SfM and Fusion Helpers - Visualization and Ceres Stuff](#variety-of-sfm-and-fusion-helpers---visualization-and-ceres-stuff)
     - [High Level Fusion](#high-level-fusion)
     - [Tightly-coupled Fusion (Incremental Fusion Mapping)](#tightly-coupled-fusion-incremental-fusion-mapping)
-    - [Samples and resources for a better understanding of COLMAP's internal reconstruction process](#samples-and-resources-for-a-better-understanding-of-colmaps-internal-reconstruction-process)
+    - [Samples for better understanding COLMAP's default reconstruction process](#samples-for-better-understanding-colmaps-default-reconstruction-process)
     - [Handy Scripts for Evaluation and Data Processing - Mix and Match](#handy-scripts-for-evaluation-and-data-processing---mix-and-match)
   - [Build](#build)
     - [Dependencies and prerequisites](#dependencies-and-prerequisites)
@@ -31,13 +32,6 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
     - [Tightly-coupled Fusion with external odometry](#tightly-coupled-fusion-with-external-odometry)
   - [Prepare your own Data](#prepare-your-own-data)
   - [Open Issues](#open-issues)
-    - [Scale and cost factors](#scale-and-cost-factors)
-    - [Scale and frame alignment](#scale-and-frame-alignment)
-    - [Reconstruction quality and filtering](#reconstruction-quality-and-filtering)
-    - [Rerun](#rerun)
-    - [Fusion Iteration Callback](#fusion-iteration-callback)
-    - [Cost logging](#cost-logging)
-    - [Incremental fusion mapper](#incremental-fusion-mapper)
 
 ## Features
 
@@ -45,10 +39,8 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
 
 1. Custom Rerun SfM Logger class -> [include/fusion_helper/rr_sfm_logger.h](include/fusion_helper/rr_sfm_logger.h):
    1. Stream your COLMAP model (cam poses and 3d points) directly to your rerun viewer
-   ![showcase-rerun-model-stream](docs/marketing/showcase-rerun-model-streamer.gif)
-   2. Visualizes the odometry edges between your camera poses during fusion
-   <img src="docs/marketing/showcase-odom-edge-annotated.png" width="60%">
-   3. Deploy the logger into COLMAP's incremental reconstruction to see whats happening in between mapping
+   2. Visualizes the odometry edges between your camera poses during fusion <img src="docs/marketing/showcase-odom-edge-annotated.png" width="50%">
+   3. Deploy the logger into COLMAP's incremental reconstruction to see whats happening in between mapping <img alt="rerun stream colmap model" src="docs/marketing/showcase-rerun-model-streamer.gif" width="94%">
 2. Ceres iteration callbacks -> [include/fusion_helper/fusion_iteration_callback.h](include/fusion_helper/fusion_iteration_callback.h):
    1. Stream your COLMAP model's bundle adjustment process directly to rerun viewer
    2. Highlight local and global BA during default incremental reconstruction in the rerun viewer
@@ -59,19 +51,25 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
 
 ### High Level Fusion
 
-1. [High Level Fusion Module Description](docs/module_high_lvl_fusion.md)
+Originally used for familiarization with Ceres cost function concepts. Details under:
 
-Fusion of fully reconstructed COLMAP models with relative pose constraints from corresponding external odometry data:
+- <u>[High Level Fusion Module Description](docs/module_high_lvl_fusion.md)</u>
+
+Fusion of fully reconstructed COLMAP models with relative pose constraints from corresponding external odometry data. Watch your unscaled COLMAP model grow to the true real-world scale through the fusion Bundle Adjustment process on your finalized model.
+
+<img src="docs/marketing/showcase-high-level-growing-small-pts.gif" width="50%"><img src="docs/marketing/showcase-high-level-growing-front-small-pts.gif" width="50%">
 
 ### Tightly-coupled Fusion (Incremental Fusion Mapping)
 
-The star of this repo.
+The star of this repo. Details under:
 
-1. [Tightly Coupled Fusion Module Description](docs/module_tightly_coupled_fusion.md)
+- <u>[Tightly Coupled Fusion Module Description](docs/module_tightly_coupled_fusion.md)</u>
 
 Fusion of relative pose constraints from external odometry data during COLMAP's incremental mapping from scratch:
 
-### Samples and resources for a better understanding of COLMAP's internal reconstruction process
+TODO
+
+### Samples for better understanding COLMAP's default reconstruction process
 
 1. See what's happening in your vanilla incremental reconstruction through visualization during reconstruction in rerun.
 2. Understand COLMAP's internal vanilla reconstruction steps through nice code samples and additional explanations.
@@ -103,7 +101,8 @@ Except for the rerun_viewer, cloning and building these 3rd party packages are h
 
 Make sure to apt install all colmap dependencies, listed here: <https://colmap.github.io/install.html#debian-ubuntu> (do not install COLMAP itself)
 
-On toplevel root dir of repo, create a build directory, source the cmake config and execute make.
+- Clone this repo
+- On toplevel root dir of cloned repo, create a build directory, source the cmake config and execute make.
 
 ```bash
 mkdir build && cd build  # at root level of this repo
@@ -111,20 +110,23 @@ cmake ..  # will exit early during first time cmaking to focus on the 3rd party 
 make -j4
 ```
 
-Running `cmake ..` and `make` for the first time will fetch, build and locally install the 3rd party repos (COLMAP + rerun SDK) automatically. Do not worry about stray install paths polluting your system, 3rd party build and install paths are scoped locally within this repo. If colmap decides to abort its build process in the middle, try `make` again .<br>
+> [!NOTE]
+> Everything is fetched and installed locally (awesome)! Running `cmake ..` and `make` for the first time will fetch, build, and locally install the 3rd party repos (COLMAP + rerun SDK) automatically. Do not worry about stray install paths polluting your system; 3rd party build and install paths are scoped within this repo.
 
-After the 3rd party packages are build, `cmake ..` and `make` again for a 2nd time:
+- If colmap decides to abort its build process in the middle, try `make` again .<br>
+
+- After the 3rd party packages are build, `cmake ..` and `make` again for a 2nd time:
 
 ```bash
 cmake ..  # again from build directory of main repo
 make -j4
 ```
 
-This builds the main `colmap-fusion-framework` library. Links to 3rd party dependencies are resolved automatically, no need to adjust any paths unless you want to point to your own custom build comlmap version.
+- This builds the main `colmap-fusion-framework` library. Links to 3rd party dependencies are resolved automatically, no need to adjust any paths unless you want to point to your own custom build comlmap version.
 
-Finally, `apt install` the `rerun_viewer` dependencies listed here: <https://rerun.io/docs/getting-started/troubleshooting#running-on-linux> and <https://rerun.io/docs/getting-started/troubleshooting#wsl2> for a wsl2 setup.
+- Finally, `apt install` the `rerun_viewer` dependencies listed here: <https://rerun.io/docs/getting-started/troubleshooting#running-on-linux> and <https://rerun.io/docs/getting-started/troubleshooting#wsl2> for a wsl2 setup.
 
-Afterwards, pip install the `rerun viewer` through the rerun python sdk.
+- Afterwards, pip install the `rerun viewer` through the rerun python sdk.
 
 ```bash
 pip3 install --upgrade pip  # upgrade pip to find rerun python sdk for ubuntu 20.04
@@ -150,40 +152,32 @@ TODO
 
 ## Open Issues
 
-### Scale and cost factors
+1. Scale and cost factors
+   1. between factor with scale as optimization param from glomap
 
-1. between factor with scale as optimization param from glomap
+2. Scale and frame alignment
+   1. Adapt strategy: scale estimation after n poses and only brute force afterwards to tackle mono sfm scale drift
+   2. Use pca to align to ground-plane after n reg images
 
-### Scale and frame alignment
+3. Reconstruction quality and filtering
+   1. Test different quality presets for OptionsManager
+   2. Validated filtering of 3d points with reconstruction bounding box
 
-1. Adapt strategy: scale estimation after n poses and only brute force afterwards to tackle mono sfm scale drift
-2. Use pca to align to ground-plane after n reg images
+4. Rerun
+   1. 3d points cropping bounding box needs to update during iter callbacks in high level fusion otherwise growing models will loose all points
+   2. Insert pngs into pinhole plane
+   3. color extraction
+   4. add rerun graph view
+   5. debug pose shift when setting campose as const ceresparam
 
-### Reconstruction quality and filtering
+5. Fusion Iteration Callback
+   1. Merge marathon and vanilla fusion iter class
 
-1. Test different quality presets for OptionsManager
-2. Validated filtering of 3d points with reconstruction bounding box
+6. Cost logging
+   1. Find a way to wrap loss function around cost in ResidualCostTracker
+   2. Add residual tracking to tcf
+   3. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
 
-### Rerun
-
-1. 3d points cropping bounding box needs to update during iter callbacks in high level fusion otherwise growing models will loose all points
-2. Insert pngs into pinhole plane
-3. color extraction
-4. add rerun graph view
-5. debug pose shift when setting campose as const ceresparam
-
-### Fusion Iteration Callback
-
-1. Merge marathon and vanilla fusion iter class
-
-### Cost logging
-
-1. Find a way to wrap loss function around cost in ResidualCostTracker
-2. Add residual tracking to tcf
-3. Eventually remove ceres_eval_utils completely, once newer ResidualCostTracker is validated to all use cases.
-
-### Incremental fusion mapper
-
-1. create superset of mapping options to control actions that belong to mapper and not to FusionBA object
-
-1. PCA alginment options is task of mapper
+7. Incremental fusion mapper
+   1. create superset of mapping options to control actions that belong to mapper and not to FusionBA object
+   2. PCA alginment options is task of mapper
