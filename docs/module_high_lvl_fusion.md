@@ -17,13 +17,15 @@ This module was mainly written for:
 
 ## Samples and Usage
 
-As always, prepare your own data before usage as described [here](../README.md#prepare-your-own-data).
+- As always, [prepare your own data](../README.md#prepare-your-own-data) before usage.
+- Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) for using the Rerun viewer for the samples.
 
 ### Metric Odometry Bundle Adjustment
 
 Please refer to [metric_odom_bundle_adjust.cpp](../src/high_level_fusion/metric_odom_bundle_adjust.cpp) for more implementation details.
 
 1. Exe is found in repo's build folder:
+
 ```bash
 build/src/high_level_fusion/.metric_odom_bundle_adjust \
 --log_level 2 \
@@ -37,7 +39,9 @@ build/src/high_level_fusion/.metric_odom_bundle_adjust \
 --Rerun.save_rrd 0 \
 --Rerun.ignore_out_of_bbox_pts 0
 ```
+
 Options you can play around with are below. Use `/.metric_odom_bundle_adjust -h` to see more available options
+
 ```bash
 # play around with covariance values for each rel pose edge
 --OdomCov.tx_std 0.2 \
