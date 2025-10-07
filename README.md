@@ -140,7 +140,9 @@ Before running the executables for awesome fusion-aided 3D reconstruction, you n
 
 ### High level fusion with external odometry
 
-TODO
+Check the module description:
+
+- [docs/module_high_lvl_fusion.md](docs/module_high_lvl_fusion.md)
 
 ### Tightly-coupled Fusion with external odometry
 

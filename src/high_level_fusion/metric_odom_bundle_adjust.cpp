@@ -47,6 +47,8 @@ int main(int argc, char** argv) {
   // -------------------- Parse COLMAP and Ceres inputs
   std::string input_path;
   std::string output_path;
+  std::string log_out_path = "";  // output path for glog files
+
   // whether to align model with PCA before optimization (e.g. for better visualization)
   bool pca_align = true;
   fuhe::cov_utils::OdomCovOptions cov_options;     // covariance options for relative odometry measurements
@@ -58,6 +60,8 @@ int main(int argc, char** argv) {
   // arguments for performing high level fusion
   col_options.AddRequiredOption("input_path", &input_path);
   col_options.AddRequiredOption("output_path", &output_path);
+  col_options.AddDefaultOption("log_path", &log_out_path);
+
   // Fusion options
   col_options.AddRequiredOption("Fusion.tum_file", &fusion_options.tum_file);
   col_options.AddDefaultOption("Fusion.track_residuals", &fusion_options.track_residuals);
@@ -69,8 +73,11 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Rerun.log", &rr_options.is_log_to_rerun);
   // whether to save logged rerun data to rr file
   col_options.AddDefaultOption("Rerun.save_rrd", &rr_options.is_save_rerun_to_disk);
+  col_options.AddDefaultOption("Rerun.rrd_path", &rr_options.recording_path);
   // whether to draw external odometry as predicted poses with respect to source camera or as absolute poses
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
+  // whether to ignore 3D points that are out of COLMAP model bbox in rerun viewer
+  col_options.AddDefaultOption("Rerun.ignore_out_of_bbox_pts", &rr_options.is_ignore_pts_beyond_model_bbox);
 
   // Odom covariance options
   // std values per Secs
@@ -86,15 +93,20 @@ int main(int argc, char** argv) {
   col_options.Parse(argc, argv);
 
   // -------------------- Logging stuff
+  colmap::InitializeGlog(argv);
   FLAGS_logtostderr = 0;
   FLAGS_alsologtostderr = 1;
 
   // Set log directory
-  const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
-  FLAGS_log_dir = log_dir;
-  VLOG(3) << "Logging path is: " << log_dir;
-
-  google::InitGoogleLogging(argv[0]);
+  // Set log directory
+  if (log_out_path != "") {
+    FLAGS_log_dir = log_out_path;
+  } else {
+    // use default logging path inside repo
+    const std::string log_dir = fuhe::io::GetRepoRootDir() + "/logs";
+    FLAGS_log_dir = log_dir;
+  }
+  VLOG(2) << "Logging path is: " << FLAGS_log_dir;
 
   // -------------------- check directoreis
   if (!colmap::ExistsDir(input_path)) {
@@ -135,7 +147,8 @@ int main(int argc, char** argv) {
 
   // -------------------- Create directed odom edges between images in sorted order
   // covariance manager for relative odometry measurements
-  std::shared_ptr<fuhe::cov_utils::TimeScaledOdomCovManager> cov_manager = std::make_shared<fuhe::cov_utils::TimeScaledOdomCovManager>(cov_options);
+  std::shared_ptr<fuhe::cov_utils::TimeScaledOdomCovManager> cov_manager =
+      std::make_shared<fuhe::cov_utils::TimeScaledOdomCovManager>(cov_options);
   // main data structure that we will iterate over to construct the fusion problem. Contains the image ids of
   // the colmap model in time ascending order. Most importantly this associates the absolute odom poses from the tum file to the
   // constraining image pairs as relative edge (which can be used by the interface as relative pose factor).
