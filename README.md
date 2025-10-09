@@ -30,12 +30,17 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
   - [Usage and Samples](#usage-and-samples)
     - [High level fusion with external odometry](#high-level-fusion-with-external-odometry)
     - [Tightly-coupled Fusion with external odometry](#tightly-coupled-fusion-with-external-odometry)
+    - [Visualize the samples with Rerun Viewer](#visualize-the-samples-with-rerun-viewer)
   - [Prepare your own Data](#prepare-your-own-data)
   - [Open Issues](#open-issues)
 
 ## Features
 
 ### Variety of SfM and Fusion Helpers - Visualization and Ceres Stuff
+
+---
+
+Helper modules used for both high level and tightly-coupled fusion.
 
 1. Custom Rerun SfM Logger class -> [include/fusion_helper/rr_sfm_logger.h](include/fusion_helper/rr_sfm_logger.h):
    1. Stream your COLMAP model (cam poses and 3d points) directly to your rerun viewer
@@ -51,30 +56,52 @@ This platform was developed as part of my Master Thesis in cooperation with [Exp
 
 ### High Level Fusion
 
+---
+
 Originally used for familiarization with Ceres cost function concepts. Details under:
 
 - <u>[High Level Fusion Module Description](docs/module_high_lvl_fusion.md)</u>
 
 Fusion of fully reconstructed COLMAP models with relative pose constraints from corresponding external odometry data. Watch your unscaled COLMAP model grow to the true real-world scale through the fusion Bundle Adjustment process on your finalized model.
 
-<img src="docs/marketing/showcase-high-level-growing-small-pts.gif" width="50%"><img src="docs/marketing/showcase-high-level-growing-front-small-pts.gif" width="50%">
+<p align="center">
+<img src="docs/marketing/showcase-high-level-growing-small-pts.gif" width="79%">
+</p>
+
+<p align="center">
+<img src="docs/marketing/showcase-high-level-growing-front-small-pts.gif" width="65%">
+</p>
 
 ### Tightly-coupled Fusion (Incremental Fusion Mapping)
+
+---
 
 The star of this repo. Details under:
 
 - <u>[Tightly Coupled Fusion Module Description](docs/module_tightly_coupled_fusion.md)</u>
 
-Fusion of relative pose constraints from external odometry data during COLMAP's incremental mapping from scratch:
+Fusion of relative pose constraints from external odometry data during COLMAP's active incremental mapping process:
+
+<p align="center">
+  <img src="docs/marketing/showcase-fuma-zoom-slow-downscaled.gif" alt="showcase-fuma" width="75%"/>
+</p>
+
+<p align="center">
+  <img src="docs/marketing/showcase-fuma-active-mapping-frontal-dscaled.gif" alt="showcase-fuma-frontal" width="55%"/>
+</p>
 
 TODO
 
 ### Samples for better understanding COLMAP's default reconstruction process
 
+---
+
 1. See what's happening in your vanilla incremental reconstruction through visualization during reconstruction in rerun.
 2. Understand COLMAP's internal vanilla reconstruction steps through nice code samples and additional explanations.
 
 ### Handy Scripts for Evaluation and Data Processing - Mix and Match
+
+---
 
 TODO
 
@@ -146,7 +173,13 @@ Check the module description:
 
 ### Tightly-coupled Fusion with external odometry
 
-TODO
+Check the module description:
+
+- [docs/module_tightly_coupled_fusion.md](docs/module_tightly_coupled_fusion.md)
+
+### Visualize the samples with Rerun Viewer
+
+1. [docs/how-to-rerun-viewer.md](docs/how-to-rerun-viewer.md)
 
 ## Prepare your own Data
 

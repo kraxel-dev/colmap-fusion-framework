@@ -2,9 +2,13 @@
 
 Fusion of fully reconstructed COLMAP models with relative pose constraints from corresponding external odometry data. Watch your unscaled COLMAP model grow to the true real-world scale through the fusion Bundle Adjustment process on your finalized model.
 
-<img alt="high-lvl-showcase" src="./marketing/showcase-high-level-growing-small-pts.gif" width="90%">
+<p align="center">
+<img src="./marketing/showcase-high-level-growing-small-pts.gif" width="79%">
+</p>
 
-<img alt="high-lvl-front-showcase" src="./marketing/showcase-high-level-growing-front-small-pts.gif" width="90%">
+<p align="center">
+<img src="./marketing/showcase-high-level-growing-front-small-pts.gif" width="65%">
+</p>
 
 This module was mainly written for:
 
@@ -17,8 +21,10 @@ This module was mainly written for:
 
 ## Samples and Usage
 
-- As always, [prepare your own data](../README.md#prepare-your-own-data) before usage.
-- Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) for using the Rerun viewer for the samples.
+> [!TIP] Prerequisites
+>
+> - As always, [prepare your own data](../README.md#prepare-your-own-data) before usage.
+> - Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to visualize the samples below.
 
 ### Metric Odometry Bundle Adjustment
 
