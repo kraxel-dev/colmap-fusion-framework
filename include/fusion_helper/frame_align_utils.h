@@ -50,7 +50,7 @@ struct AlignmentOptions {
   bool rotate_init_motion_onto_global_x_axis = false;
 };
 
-/// simple check on whether to run coordinage frame alignment strategies on colmap model. Returns true when specified nr of
+/// simple check on whether to run coordinate frame alignment strategies on colmap model. Returns true when specified nr of
 /// images were registered
 bool CheckRunAlignment(const int n_registered_imgs, const AlignmentOptions& align_opts);
 

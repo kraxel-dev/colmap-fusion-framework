@@ -2,7 +2,7 @@
  * @file run_default_bundle_adjuster_rerun.cpp
  * @author kraxel
  * @brief Small sample of how to use the default colmap Bundle Adjuster with extra rerun visualization on a fully
- * reconstructed model. The rerun visualization loggs each iteration of the BA (all points and poses of model) process. Also acts
+ * reconstructed model. The rerun visualization logs each iteration of the BA (all points and poses of model) process. Also acts
  * as showcase how to populate the ba_config, which will dictate which images are considered in the BA process by ceres.
  * @version 0.1
  * @date 2025-05-26

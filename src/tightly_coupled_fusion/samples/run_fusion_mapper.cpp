@@ -3,8 +3,8 @@
  * @author kraxel
  * @brief Sanity check for the FusionIncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
  * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch with fusion
- * (odometry) capabilities. Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are
- * forced as initial pair for mapping. Camera intrinsics are fixed.
+ * (odometry) capabilities. Order of images for registration will be sorted by ascending time. Very first and 2nd image (by time) in 
+ * database are forced as initial pair for mapping. Camera intrinsics are fixed. Output will be of a default COLMAP model. 
  * @version 0.1
  * @date 2025-04-23
  *

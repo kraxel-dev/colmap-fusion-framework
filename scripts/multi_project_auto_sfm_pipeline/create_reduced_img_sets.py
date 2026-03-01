@@ -62,7 +62,7 @@ def main():
 
         # copy original images to new dst
         shutil.copytree(og_imgs_path, reduced_imgs_path, dirs_exist_ok=is_overwrite)
-        # check wheter img mask exists and copy it as well
+        # check whether img mask exists and copy it as well
         if (project_dir/"mask").is_dir():
             print(f"Found image mask in: {project_dir}. Copying it to reduced images folder.")
             shutil.copytree(
