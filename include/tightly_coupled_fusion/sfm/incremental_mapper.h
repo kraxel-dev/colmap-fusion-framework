@@ -1,7 +1,7 @@
 /**
  * @file incremental_mapper.h
  * @author kraxel
- * @brief Drived versions of colmaps default IncrementalMapper to:
+ * @brief Derived versions of colmaps default IncrementalMapper to:
  -  introduce rerun visualization of colmaps standard incremental mapping process.
  -  introduce custom sensor fusion bundle adjustment into colmaps standard incremental mapping process.
  The incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch. You can either
@@ -94,7 +94,7 @@ class IncrementalMapperRerun : public colmap::IncrementalMapper {
 
 /**
  * @brief Derived incremental mapper to extend colmaps default mapping behavior with sensor fusion (e.g. relative odometry
-constraints) capabilities. The fusion is integrated into the local and global Bundle Adjustemnt steps of the mapping process. The
+constraints) capabilities. The fusion is integrated into the local and global Bundle Adjustment steps of the mapping process. The
 incremental mapper class acts as library with clean APIs to perform a colmap mapping process from scratch and the fusion mapper
 mirrors this. Order of images processed for mapping is decided externally (either manually or by incremental_pipeline class). You
 can either use this class in your own script to perform incremental mapping from scratch or have a look at the

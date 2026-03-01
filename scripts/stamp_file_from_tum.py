@@ -1,5 +1,5 @@
 """Create timestamp file (required by "SE3_Pose_Interp" python package) from a tum file. Use this ideally on the colmap cam trajectory tum,
-as other sensors will be matched towards the images. Can upsample original timestamps by a specified factor. This easens downstream evaluation
+as other sensors will be matched towards the images. Can upsample original timestamps by a specified factor. This eases downstream evaluation
 tasks given slow ground truth data.
 
 https://github.com/MichaelGrupp/evo/blob/9f77be90cad46abf76fbe3fe1baf3b39b86569c1/evo/core/trajectory.py#L393

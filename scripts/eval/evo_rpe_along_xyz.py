@@ -1,5 +1,6 @@
-"""EVO's Relative Pose Error (RPE) along XYZ axes independantly. Can distinguish between translation (m) and rotation (rad) error.
-Plots and saves as EVO results for further analysis.
+"""EVO's Relative Pose Error (RPE) along XYZ axes independently. Can distinguish between translation (m) and rotation (rad) error.
+Plots and saves as EVO results for further analysis. This can be used to calculate the RPE per second to estimate the cov of 
+some odometry traj around all 6 axes.
 
 This script was written in a haste. For the future, directly code in the evo repo
 to avoid duplicating the steps that already exists.
@@ -26,7 +27,7 @@ from evo.core import sync
 
 
 class RPESingleAxis(RPE):
-    """Deived Evo RPE Class to hold rel-pose error along each axis."""
+    """Derived the Evo RPE Class to hold rel-pose error along each axis."""
 
     def __init__(
         self,
@@ -177,7 +178,7 @@ def save_rpe_results(
 
 
 DESC = (
-    "EVO's Relative Pose Error (RPE) along XYZ axes independantly. Plot and save as EVO results for further analysis. Saves results in parent "
+    "EVO's Relative Pose Error (RPE) along XYZ axes independently. Plot and save as EVO results for further analysis. Saves results in parent "
     "directory of the reference trajectory."
 )
 

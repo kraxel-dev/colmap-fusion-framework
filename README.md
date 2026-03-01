@@ -167,7 +167,6 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 Before running the executables for awesome fusion-aided 3D reconstruction, you need to prepare your default COLMAP database and external odometry tum file as described in [prepare-your-own-data](#prepare-your-own-data).
 
 > [!TIP] Prerequisites
->
 > * [Prepare your own data](docs/how-to-prepare-own-data.md) before usage.
 > * Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to open rr viewer before mapping to visualize the samples below.
 > * Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` to run tcf executables.

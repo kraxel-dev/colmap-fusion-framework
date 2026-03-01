@@ -3,7 +3,14 @@
  * @author kraxel
  * @brief Sanity check for the vanilla IncrementalMapper class (with rerun logging capabilities). Applies manual steps of Mapper
  * (described in: orig colmap repo src/colmap/sfm/incremental_mapper.h) to reconstruct a model from scratch without fusion
- * capabilities. Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as
+ * capabilities. 
+ * 
+ * This script reflects the original COLMAP incremental mapping behavior, stripped from its strict initialization routines and
+ * other safety measures. It can be used to understand the original mapping steps in a simplified manner as well as
+ * drastically speed up a reconstruction process by reducing the number of registered images that trigger a local BA. 
+ * Rerun visualization helps to debug important steps like init triangulation, local BA and global BA influence, etc. 
+ * 
+ * Order of images will be sorted by ascending time. Very first and 2nd image (by time) in database are forced as
  * initial pair for mapping. Camera intrinsics are fixed. If model alignment is applied, normalization of the model in each
  * global BA will be turned off.
  * @version 0.1
@@ -64,7 +71,7 @@ int main(int argc, char** argv) {
   col_options.AddDefaultOption("Rerun.rrd_path", &rr_options.recording_path);
   col_options.AddDefaultOption("Rerun.odom_as_pred", &rr_options.draw_rerun_odom_as_predicted_poses);
   col_options.AddDefaultOption("Rerun.img_plane_dist", &rr_options.img_plane_dist);
-  // custom init optiosn
+  // custom init options
   col_options.AddDefaultOption("Init.n_init_pair_skip", &n_init_pair_skip);
   // custom ba options
   col_options.AddDefaultOption("time_diff_local_ba",                       //! FIXME: change to Model. or Mapping.
@@ -153,7 +160,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  // -------------------- Force register selected intial image pair
+  // -------------------- Force register selected initial image pair
   VLOG(1) << "Initial Pair found with ids: " << id_1 << " and " << id_2;
   fuhe::col_utils::PrintTwoViewStatistics(tvg);
   mapper.RegisterInitialImagePair(mapper_opts, tvg, id_1, id_2);  // lock in

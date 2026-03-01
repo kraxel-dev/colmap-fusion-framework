@@ -30,13 +30,13 @@ namespace tcf {  // tightly coupled fusion
 struct FusionGraphBundleAdjustmentOptions {
   bool is_mapping_with_fusion = true;  // if not, switch to regular (vision-only) incremental mapping with rerun visualization.
 
-  //! FIXME: expose to user
+  //! FIXME: remove eventually since its not used anymore
   std::string tum_file = "/home/azuo/transfer/eval/backwards/vehicle_wo_as_campose_training_matched_stamps.tum";
 
-  // set pose of first camera (time sorted) in active Bundle Adjustemnt as constant param in ceres optimizaton
+  // set pose of first camera (time sorted) in active Bundle Adjustment as constant param in ceres optimization
   bool fix_first_cam_pose = true;
-  // set position of 2nd camera (time sorted) in active Bundle Adjustemnt (global + local) as constant param in ceres
-  // optimizaton. true in original colmap default behavior to fix the scale during vision only BA. But should be false in fusion
+  // set position of 2nd camera (time sorted) in active Bundle Adjustment (global + local) as constant param in ceres
+  // optimization. true in original colmap default behavior to fix the scale during vision only BA. But should be false in fusion
   // to adjust to metric scale from odometry.
   bool fix_second_cam_position = false;
 
@@ -47,10 +47,10 @@ struct FusionGraphBundleAdjustmentOptions {
 
   // whether to estimate real world-scale between colmap-model and odometry as through scale-aware ceres factors or brute-force
   // scale through enforcing the odometry measurements. If false, scale-aware optim will always be deployed (e.g. during
-  // fuion mapping process). If brute force is toggled make sure to reduce measurement covariance to enforce the relative
+  // fusion mapping process). If brute force is toggled make sure to reduce measurement covariance to enforce the relative
   // odometry scale onto the camera poses.
   bool brute_force_scale_recovery = true;
-  // estimated scale diff between colmap model and rel pose measurements abve this value will be ignored
+  // estimated scale diff between colmap model and rel pose measurements above this value will be ignored
   double scale_diff_thresh = 0.92;
   // Cauchy loss on ceres scale parameter estimatinon. only valid if not brute force scale recovery
   bool use_robust_loss_on_scale_estimation = true;

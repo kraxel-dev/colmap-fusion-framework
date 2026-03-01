@@ -21,9 +21,9 @@ namespace fuhe {
 namespace cost {
 
 /**
- * @brief Derived colmap::CovarianceWeightedCostFunctor, behaving exacly as colmap parent but with addition of exposing its
+ * @brief Derived colmap::CovarianceWeightedCostFunctor, behaving exactly as colmap parent but with addition of exposing its
  * calculated residuals to outside world. Can be used for accessing residuals during ceres iteration or evaluation callbacks, if
- * an stalker obejct is attached to it during creation. Please check associated class in fusion_evaluation_callback.h to build an
+ * an stalker object is attached to it during creation. Please check associated class in fusion_evaluation_callback.h to build an
  * understanding of how to use residual tracking.
  *
  * @tparam CostFunctor
@@ -162,7 +162,7 @@ ceres::CostFunction* CreateWeightedCamCostExposedResiduals(const std::shared_ptr
  afterwards with a Sim3 tf. The residual is computed in the frame of camera i. Its first and last three components correspond to
  the rotation and translation errors, respectively.
  * Derivation: i_T_w = ΔT_i·i_T_j_meas·j_T_w
- * where ΔT_i = exp(η_i) is the resjdual in SE(3) and η_i in tangent space.
+ * where ΔT_i = exp(η_i) is the residual in SE(3) and η_i in tangent space.
  * Thus η_i = log(i_T_w·j_T_w⁻¹·j_T_i_measured)
  * Rotation term: ΔR = log(i_R_w·j_R_w⁻¹·j_R_i)
  * Translation term: Δt = scale * i_t_w + i_R_w·j_R_w⁻¹·(j_t_i_measured - scale * j_t_w)

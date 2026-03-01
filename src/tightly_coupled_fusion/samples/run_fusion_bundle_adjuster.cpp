@@ -1,8 +1,8 @@
 /**
  * @file run_fusion_bundle_adjuster.cpp
  * @author kraxel
- * @brief Sanity check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusions "metric_odom_bundle_adjust"
- * (reproj + odom error optimization for the whole reconstruction).
+ * @brief Sanity check for the FusionGraphBundleAdjuster class. Does the same as high_level_fusion "metric_odom_bundle_adjust"
+ * (e.g. reproj + odom error optimization for the whole reconstruction). Streams the optimization process to rerun viewer.
  * @version 0.1
  * @date 2025-03-12
  *
@@ -79,9 +79,9 @@ int main(int argc, char** argv) {
 
   // -------------------- Tune BA config to decide which img to consider and/or  are constant in problem
   VLOG(1) << "Selecting colmap images for ceres optimization!";
-  colmap::BundleAdjustmentConfig ba_cfg;  // cfg deciding which images to considere for ceres optim
+  colmap::BundleAdjustmentConfig ba_cfg;  // cfg deciding which images to considered for ceres optim
 
-  // FIXME: here, all reg images are considered for optim while internally the graph drops images that preceed odometry edges
+  // FIXME: here, all reg images are considered for optim while internally the graph drops images that precede odometry edges
   int i = 0;
   for (const auto& [stamp, img_id] : imgs_by_stamp) {
     ba_cfg.AddImage(img_id);                  // notify ceres to inlcude this img for optimization
