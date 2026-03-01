@@ -1,5 +1,12 @@
 # Streaming Mapping Data to Rerun Viewer
 
+- [Streaming Mapping Data to Rerun Viewer](#streaming-mapping-data-to-rerun-viewer)
+  - [References](#references)
+  - [Rerun Fusion Mapping User Guide](#rerun-fusion-mapping-user-guide)
+    - [Open rerun viewer before running this projects's binaries](#open-rerun-viewer-before-running-this-projectss-binaries)
+    - [Write the data stream to disk](#write-the-data-stream-to-disk)
+    - [General Visualization Options](#general-visualization-options)
+
 ## References
 
 - [Navigating the viewer — Rerun](https://rerun.io/docs/getting-started/navigating-the-viewer#launching-an-example)
@@ -21,6 +28,9 @@ rerun --renderer vulkan
 
 - The `--renderer vulkan` flag is for a `wsl2` setup, if not required simply omit it
 - After the viewer started, you can run your desired executable with the `--Rerun.log 1` flag toggled
+
+> [!TIP]
+> More infos about the cli args for `rerun` are in [include/fusion_helper/rr_sfm_logger.h](../include/fusion_helper/rr_sfm_logger.h)
 
 ### Write the data stream to disk
 

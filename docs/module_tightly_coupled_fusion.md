@@ -13,16 +13,30 @@ Fusion of relative pose constraints from external odometry data during COLMAP's 
 Table of Contents:
 
 - [Tightly-Coupled Fusion Module (tcf)](#tightly-coupled-fusion-module-tcf)
-  - [Features](#features)
+  - [Features and Concept](#features-and-concept)
   - [Implementation Structure](#implementation-structure)
   - [Samples and Usage](#samples-and-usage)
     - [Default Bundle Adjuster vs Fusion Bundle Adjuster](#default-bundle-adjuster-vs-fusion-bundle-adjuster)
-    - [Default Incremental Mapper with Rerun Visualuzation](#default-incremental-mapper-with-rerun-visualuzation)
+    - [Default Incremental Mapper with Rerun Visualization](#default-incremental-mapper-with-rerun-visualization)
     - [Fusion Incremental Mapper (Fuma)](#fusion-incremental-mapper-fuma)
 
-## Features
+## Features and Concept
 
-1. Fusion of relative pose constraints from external odometry data during COLMAP's active incremental mapping:
+Fusion of relative pose constraints from external odometry data during COLMAP's active incremental mapping:
+<p align="center">
+  <span style="background-color: white; padding: 10px; display: inline-block; border-radius: 8px;">
+   <img src="marketing/pipeline-fusion-mapping-implemented.png" width="65%">
+</p>
+
+- Figure 1: Pipeline overview of this works implemented incremental fusion mapping system. This overview was adapted from the original concept figure of the [COLMAP](https://github.com/colmap/colmap) framework ~ (Schönberger & Frahm, "Structure-from-Motion Revisited," CVPR 2016)
+
+Concepts:
+
+- Odometry sources (TBD)
+- 6DoF Relative Pose Costfactor as odom edges (TBD)
+- Local Bundle Adjustment vs Global Bundle Adjustment (TBD)
+- Fusion Bundle Adjustment with odom edges between images (TBD)
+- Brute-force vs Estimation-based Scale recovery for monocular COLMAP using fusion (TBD)
 
 ## Implementation Structure
 
@@ -65,35 +79,84 @@ include/  # from $REPO_ROOT_DIR
 
 > [!TIP] Prerequisites
 >
-> - As always, [prepare your own data](../README.md#prepare-your-own-data) before usage.
-> - Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to visualize the samples below.
-> - All tcf executables are located in `$REPO_DIR/build/src/tightly_coupled_fusion/`
+> - [Prepare your own data](./how-to-prepare-own-data.md) before usage.
+> - Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to open rr viewer before mapping to visualize the samples below.
+> - Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` to run tcf executables.
+> - Check [Fusion mapping CLI args](how-to-cli-options.md) for more details on the cli args
+
+Example ENV exports to set COLMAP db and paths:
+
+```bash
+# example setup
+export DB=/path/db_low_q.db \  # standard COLMAP db after ft-extraction and sequential matching
+export OUT=/path/fuma \        # path for resulting COLMAP model 
+export TUM=/path/radar_traj_as_campose_matched.tum  # time match external odom expressed as camera poses
+```
 
 ### Default Bundle Adjuster vs Fusion Bundle Adjuster
 
-Refer to
+Run default or fusion bundle adjuster on an already fully reconstructed model as sanity check. Rerun logging helps with visualization. Each iteration of the internal Ceres optimization process is logged to the rerun viewer.
+
+Refer to doxygen @brief at the top of the files:
 
 - [src/tightly_coupled_fusion/samples/run_default_bundle_adjuster_rerun.cpp](../src/tightly_coupled_fusion/samples/run_default_bundle_adjuster_rerun.cpp)
 - [src/tightly_coupled_fusion/samples/run_fusion_bundle_adjuster.cpp](../src/tightly_coupled_fusion/samples/run_fusion_bundle_adjuster.cpp)
 
 for a detailed description of what both modules do.
 
-TODO: cli commands
+Example execution
 
-### Default Incremental Mapper with Rerun Visualuzation
+```bash
+# takes in same cli args as the original BundleAdjuster exe from original COLMAP repo
+./run_default_bundle_adjuster_rerun -h
+```
 
-Refer to [src/tightly_coupled_fusion/samples/run_incremental_mapper_rerun.cpp](../src/tightly_coupled_fusion/samples/run_incremental_mapper_rerun.cpp) for a detailed description
+```bash
+./run_fusion_bundle_adjuster -h
+```
 
-TODO: cli commands
+TODO: actual cli command for running
+
+### Default Incremental Mapper with Rerun Visualization
+
+This script reflects the original COLMAP incremental mapping behavior, stripped from its strict initialization routines and other safety measures. It can be used to understand the original mapping steps in a simplified manner as well as drastically speed up a reconstruction process by reducing the number of registered images that trigger a local BA. Rerun visualization helps to debug important steps like init triangulation, local BA and global BA influence, etc.
+
+Refer to doxygen @brief at the top of the file [src/tightly_coupled_fusion/samples/run_incremental_mapper_rerun.cpp](../src/tightly_coupled_fusion/samples/run_incremental_mapper_rerun.cpp) for more detailed description.
+
+Example execution:
+
+```bash
+./run_incremental_mapper_rerun \
+--db_path $DB \
+--output_path $OUT \
+--log_level 3 \
+--Mapper.ba_global_max_refinements 2 \
+--Mapper.ba_local_max_refinements 2 \
+--time_diff_local_ba 0.3 \
+--Mapper.ba_global_max_num_iterations 15 \
+--Mapper.ba_local_max_num_iterations 15 \
+--Mapper.ba_local_num_images 6 \
+--FrameAlign.n_reg_for_alignment 24 \
+--Init.n_init_pair_skip 2
+```
+
+To see all options:
+
+```bash
+./run_incremental_mapper_rerun -h
+```
+
 
 ### Fusion Incremental Mapper (Fuma)
 
-Refer to [src/tightly_coupled_fusion/samples/run_fusion_mapper.cpp](../src/tightly_coupled_fusion/samples/run_fusion_mapper.cpp) for a detailed description
+This script performs COLMAP's incremental mapping process with fusion of relative pose constraints from external odometry data during active reconstruction (tightly-coupled manner). The external pose constraints are fused in the local and global BA steps of the ongoing mapping process.
+
+Refer to doxygen @brief at the top of the file [src/tightly_coupled_fusion/samples/run_fusion_mapper.cpp](../src/tightly_coupled_fusion/samples/run_fusion_mapper.cpp) for a detailed description.
 
 > [!NOTE]
 > Below are the cli args to produce the results from my master thesis.
 
-1. Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` and execute:
+Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` and run:
 
 ```bash
 ./run_fusion_mapper \
@@ -115,4 +178,12 @@ Refer to [src/tightly_coupled_fusion/samples/run_fusion_mapper.cpp](../src/tight
 --Rerun.rrd_path $OUT
 ```
 
-- More information about the forwarded fusion parameters can be found at the respective options struct definition -> [include/tightly_coupled_fusion/estimators/bundle_adjustment.h](../include/tightly_coupled_fusion/estimators/bundle_adjustment.h)
+To see all options:
+
+```bash
+./run_fusion_mapper -h
+```
+
+For explanation on fusion options:
+
+- Check [COLMAP fusion cli options](how-to-cli-options.md) for explanations of the params for fusion.
