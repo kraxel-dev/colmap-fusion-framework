@@ -77,8 +77,8 @@ include/  # from $REPO_ROOT_DIR
 
 ## Samples and Usage
 
-> [!TIP] Prerequisites
->
+> [!TIP] 
+> Prerequisites
 > - [Prepare your own data](./how-to-prepare-own-data.md) before usage.
 > - Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to open rr viewer before mapping to visualize the samples below.
 > - Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` to run tcf executables.
