@@ -105,11 +105,15 @@ Check the binaries in description of [docs/module_tightly_coupled_fusion.md](doc
 2. Understand COLMAP's internal vanilla reconstruction steps through nice code samples and additional explanations.
 
 ### Handy Scripts for Evaluation and Data Processing - Mix and Match
+>
+> [!WARNING]
+> Following python helper scripts are not wrapped in any packaging/env that takes care of resolving dependencies so for now it's just copy-paste of functionality you might need.
 
 1. Multi-project auto Reconstruction Pipeline (default COLMAP models)
+2.
    1. Automatically reconstruct COLMAP models for independent COLMAP projects (e.g. same image dataset under different conditions) at once -> [scripts/multi_project_auto_sfm_pipeline](scripts/multi_project_auto_sfm_pipeline)
-2. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction) -> [scripts/to_tum.py](scripts/to_tum.py)
-3. Prepare public dataset images for COLMAP reconstruction
+3. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction) -> [scripts/to_tum.py](scripts/to_tum.py)
+4. Prepare public dataset images for COLMAP reconstruction
    1. KITTI -> [scripts/dataset_processing/kitti_rename_imgs_to_stamped.py](scripts/dataset_processing/kitti_rename_imgs_to_stamped.py)
    2. TUM4Seasons -> [scripts/dataset_processing/4seasons_result_to_tum.py](scripts/dataset_processing/4seasons_result_to_tum.py)
 
@@ -166,8 +170,9 @@ pip3 install rerun-sdk==0.22.0  # rerun viewer is bundled in the python rerun-sd
 
 Before running the executables for awesome fusion-aided 3D reconstruction, you need to prepare your default COLMAP database and external odometry tum file as described in [prepare-your-own-data](#prepare-your-own-data).
 
-> [!TIP] 
+> [!TIP]
 > Prerequisites
+>
 > * [Prepare your own data](docs/how-to-prepare-own-data.md) before usage.
 > * Check [how-to-rerun-viewer.md](how-to-rerun-viewer.md) to open rr viewer before mapping to visualize the samples below.
 > * Navigate to `$REPO_DIR/build/src/tightly_coupled_fusion/` to run tcf executables.
@@ -214,6 +219,7 @@ Check the module description:
    2. PCA alginment options is task of mapper
 
 ## Acknowledgments and License
+This project extensively relies on [COLMAP](https://github.com/colmap/colmap), [Ceres](http://ceres-solver.org/) and [Rerun](https://rerun.io/). Many thanks to the awesome work of the original contributors. Please see `3rd party license` below for more info.
 
 * [LICENSE](LICENSE)
 * [3rd party licenses](THIRD_PARTY_LICENSES.md)
