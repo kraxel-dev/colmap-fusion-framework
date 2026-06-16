@@ -20,7 +20,7 @@ This repo is a prototyping platform that enhances COLMAP's (vision-only) increme
 
 * Figure 1: Pipeline overview of this works implemented incremental fusion mapping system. This overview was adapted from the original concept figure of the [COLMAP](https://github.com/colmap/colmap) framework ~ (Schönberger & Frahm, "Structure-from-Motion Revisited," CVPR 2016).
 
-This platform was developed as part of my Master Thesis in cooperation with [Expleo](https://expleo.com/global/de/branchen/automotive/#overview) Germany's <u>[ADAS department](https://expleo.com/global/en/insights/campaigns/autonomous-driving-adas/)</u> in Berlin. Main objective was a generalizable framework to easily obtain metric-scale (SfM) maps in which our demonstrator vehicle can re-localize itself using only a monocular camera. Speaking about vehicles and sensors, check out our awesome <u>[demonstrator vehicle](https://expleo.com/global/en/case-studies/automated-valet-parking/)</u>, which has been utilized to prototype and showcase many exciting applications in the domain of ADAS and AD.
+This platform was developed as part of my Master's Thesis, supervised by [‪Prof. Dr. Guillermo Gallego‬](https://scholar.google.com/citations?user=v0_XxF0AAAAJ&hl=en) and conducted at [Expleo](https://expleo.com/global/de/branchen/automotive/#overview) Germany's <u>[ADAS department](https://expleo.com/global/en/insights/campaigns/autonomous-driving-adas/)</u> in Berlin. Main objective was a generalizable framework to easily obtain metric-scale (SfM) maps in which our demonstrator vehicle can re-localize itself using only a monocular camera. Speaking about vehicles and sensors, check out our awesome <u>[demonstrator vehicle](https://expleo.com/global/en/case-studies/automated-valet-parking/)</u>, which has been utilized to prototype and showcase many exciting applications in the domain of ADAS and AD.
 
 ## Table of Contents
 
@@ -110,10 +110,9 @@ Check the binaries in description of [docs/module_tightly_coupled_fusion.md](doc
 > Following python helper scripts are not wrapped in any packaging/env that takes care of resolving dependencies so for now it's just copy-paste of functionality you might need.
 
 1. Multi-project auto Reconstruction Pipeline (default COLMAP models)
-2.
-   1. Automatically reconstruct COLMAP models for independent COLMAP projects (e.g. same image dataset under different conditions) at once -> [scripts/multi_project_auto_sfm_pipeline](scripts/multi_project_auto_sfm_pipeline)
-3. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction) -> [scripts/to_tum.py](scripts/to_tum.py)
-4. Prepare public dataset images for COLMAP reconstruction
+   * Automatically reconstruct COLMAP models for independent COLMAP projects (e.g. same image dataset under different conditions) at once -> [scripts/multi_project_auto_sfm_pipeline](scripts/multi_project_auto_sfm_pipeline)
+1. Export cam poses in COLMAP model as tum trajectory (requires imgs name to be nsec timestamp before reconstruction) -> [scripts/to_tum.py](scripts/to_tum.py)
+1. Prepare public dataset images for COLMAP reconstruction
    1. KITTI -> [scripts/dataset_processing/kitti_rename_imgs_to_stamped.py](scripts/dataset_processing/kitti_rename_imgs_to_stamped.py)
    2. TUM4Seasons -> [scripts/dataset_processing/4seasons_result_to_tum.py](scripts/dataset_processing/4seasons_result_to_tum.py)
 
