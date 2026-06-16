@@ -27,6 +27,7 @@ This platform was developed as part of my Master's Thesis, supervised by [‪Pro
 - [Colmap Fusion Framework (Fuma)](#colmap-fusion-framework-fuma)
   - [Overview](#overview)
   - [Table of Contents](#table-of-contents)
+  - [Abstract](#abstract)
   - [Features](#features)
     - [Variety of SfM and Fusion Helpers - Visualization and Ceres Stuff](#variety-of-sfm-and-fusion-helpers---visualization-and-ceres-stuff)
     - [High Level Fusion](#high-level-fusion)
@@ -40,8 +41,36 @@ This platform was developed as part of my Master's Thesis, supervised by [‪Pro
     - [High level fusion with external odometry](#high-level-fusion-with-external-odometry)
     - [Tightly-coupled Fusion with external odometry](#tightly-coupled-fusion-with-external-odometry)
     - [Visualize the samples with Rerun Viewer](#visualize-the-samples-with-rerun-viewer)
+  - [Results](#results)
   - [Open Issues](#open-issues)
   - [Acknowledgments and License](#acknowledgments-and-license)
+
+## Abstract
+Below is the condensed abstract to the corresponding Master's Thesis submitted in October 2025 at Technical University Berlin:
+
+>Accurate maps for visual localization are crucial for a wide range of automated driving
+applications, given the ubiquity of cameras in modern vehicles. Probabilistic sensor fusion is
+used in vision-based mapping systems to overcome the scale ambiguity of monocular cameras.
+However, many available solutions are either tailored to a specific sensor configuration,
+limited in regard to map re-use, or brittle when operating on real-world data. The enforcement
+of IMU measurements make off-the-shelf platforms especially difficult to use in automotive
+scenarios which are known for planar motion patterns. Conversely, the Structure-from-Motion
+(SfM) framework COLMAP [1] is widely adopted for its ease of usage and reliable mapping
+performance, but little effort has been made to introduce a generalized sensor fusion paradigm
+to the platform.
+
+>This thesis proposes a generic fusion mapping system that extends COLMAP’s active
+reconstruction process with measurements from common automotive sensors (e.g., radars or
+wheel encoders). Specifically, the bundle adjustment modules in COLMAP are interfaced to fuse
+sensor-agnostic relative pose measurements under the factor graph formalism. By exploiting
+the metric scale of the fused modality, the implemented system recovers metrically consistent
+maps without the need for stereo rigs or extensive IMU calibration.
+
+Supplemental images to set the mood:
+<p align="center">
+  <img src="docs/marketing/figure-3D-vision-map-in-parking-parage.png" width="52%" />
+  <img src="docs/marketing/figure-valid-odom-sources.png" width="30%" />
+</p>
 
 ## Features
 
@@ -192,6 +221,22 @@ Check the module description:
 ### Visualize the samples with Rerun Viewer
 
 1. [docs/how-to-rerun-viewer.md](docs/how-to-rerun-viewer.md)
+
+## Results
+The fusion mapping system was benchmarked against a company internal dataset that consists of driving sequences within a commercial parking garage. Below is the quantitative results table of the corresponding Master's Thesis.
+
+> The table contains ATE and RPE metrics for trajectories reconstructed
+with the proposed fusion mapping system as well as the trajectories of the baseline
+methods w.r.t. the provided LiDAR GT of a sequence.
+
+<p align="center">
+  <img src="docs/marketing/figure-results-quant-table.png" width="90%" />
+</p>
+
+The qualitative result for the best performing sequence `sq3in`:
+<p align="center">
+  <img src="docs/marketing/figure-results-sq3in-traj.png" width="74%" />
+</p>
 
 ## Open Issues
 
